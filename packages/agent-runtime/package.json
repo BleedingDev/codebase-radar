@@ -1,0 +1,9 @@
+{
+  "name": "@codebase-radar/agent-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@anthropic-ai/claude-code": "2.1.226",
+    "@openai/codex": "0.147.0"
+  }
+}

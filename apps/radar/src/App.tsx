@@ -1,17 +1,17 @@
 import { Effect } from '@modern-js/plugin-bff/effect-client';
-import { makeEffectHttpApiClient } from '@modern-js/plugin-bff/effect-client';
-import { useCallback, useEffect, useState } from 'react';
+import { Machine } from '@typeonce/effect-machine';
+import { Fiber, Schema, Stream } from 'effect';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { RadarApi } from '../shared/api';
 import {
   audienceCopy,
   audienceLabel,
   decisionHeadline,
 } from '../shared/audience';
 import { Audience, ScanRecord } from '../shared/domain';
+import { AgentPriority } from './AgentPriority';
+import { RadarClient } from './radar-client';
 import './styles.css';
-
-const RadarClient = makeEffectHttpApiClient(RadarApi, { baseUrl: '/api' });
 
 const audienceOptions = Audience.literals;
 
@@ -24,112 +24,296 @@ const analyzerTitle = {
   configuration: 'Configuration concern',
 };
 
+const ScanWorkflowState = Schema.TaggedUnion({
+  Loading: {},
+  Ready: {
+    scans: Schema.Array(ScanRecord),
+    selected: Schema.NullOr(ScanRecord),
+    showScanner: Schema.Boolean,
+    error: Schema.String,
+  },
+  Submitting: {
+    scans: Schema.Array(ScanRecord),
+    selected: Schema.NullOr(ScanRecord),
+    repositoryUrl: Schema.String,
+    displayName: Schema.String,
+    audience: Audience,
+  },
+  Refreshing: {
+    scans: Schema.Array(ScanRecord),
+    selected: ScanRecord,
+    showScanner: Schema.Boolean,
+  },
+});
+
+const ScanWorkflowEvent = Schema.TaggedUnion({
+  Select: { scan: ScanRecord },
+  ToggleScanner: {},
+  Refresh: {},
+  Submit: {
+    repositoryUrl: Schema.String,
+    displayName: Schema.String,
+    audience: Audience,
+  },
+});
+
+const ScanWorkflowResult = Schema.TaggedUnion({
+  Loaded: { scans: Schema.Array(ScanRecord) },
+  LoadFailed: {},
+  ScanCreated: { scan: ScanRecord },
+  SubmitFailed: {},
+  PollComplete: { scan: ScanRecord },
+  PollFailed: {},
+});
+
+const ScanWorkflowStates = Machine.defineStates(ScanWorkflowState.cases);
+
+const ScanWorkflow = Machine.make({
+  id: 'ScanWorkflow',
+  states: ScanWorkflowStates.states,
+  events: [
+    ScanWorkflowEvent.cases.Select,
+    ScanWorkflowEvent.cases.ToggleScanner,
+    ScanWorkflowEvent.cases.Refresh,
+    ScanWorkflowEvent.cases.Submit,
+  ],
+  internalEvents: [
+    ScanWorkflowResult.cases.Loaded,
+    ScanWorkflowResult.cases.LoadFailed,
+    ScanWorkflowResult.cases.ScanCreated,
+    ScanWorkflowResult.cases.SubmitFailed,
+    ScanWorkflowResult.cases.PollComplete,
+    ScanWorkflowResult.cases.PollFailed,
+  ],
+  initial: () => ScanWorkflowStates.initial.Loading.from(),
+}).handle({
+  Loading: {
+    invoke: () =>
+      Machine.invokeEffect({
+        id: 'load-reviews',
+        effect: RadarClient.pipe(
+          Effect.flatMap(client =>
+            client.radar.listScans({ query: { limit: 8 } }),
+          ),
+        ),
+        onSuccess: response =>
+          ScanWorkflowResult.cases.Loaded.make({ scans: response.items }),
+        onFailure: () => ScanWorkflowResult.cases.LoadFailed.make({}),
+      }),
+    on: {
+      Loaded: ({ event, target }) =>
+        target.full.Ready.from({
+          scans: event.scans,
+          selected: event.scans[0] ?? null,
+          showScanner: false,
+          error: '',
+        }),
+      LoadFailed: ({ target }) =>
+        target.full.Ready.from({
+          scans: [],
+          selected: null,
+          showScanner: true,
+          error: 'Reviews could not be loaded. Refresh and try again.',
+        }),
+    },
+  },
+  Ready: {
+    on: {
+      Select: ({ event, state, target }) =>
+        target.full.Ready.from({
+          ...state,
+          selected: event.scan,
+          error: '',
+        }),
+      ToggleScanner: ({ state, target }) =>
+        target.full.Ready.from({
+          ...state,
+          showScanner: !state.showScanner,
+        }),
+      Submit: ({ event, state, target }) =>
+        target.full.Submitting.from({
+          scans: state.scans,
+          selected: state.selected,
+          repositoryUrl: event.repositoryUrl,
+          displayName: event.displayName,
+          audience: event.audience,
+        }),
+      Refresh: ({ state, target }) =>
+        state.selected
+          ? target.full.Refreshing.from({
+              scans: state.scans,
+              selected: state.selected,
+              showScanner: state.showScanner,
+            })
+          : undefined,
+    },
+  },
+  Refreshing: {
+    invoke: ({ state }) =>
+      Machine.invokeEffect({
+        id: 'refresh-review',
+        effect: RadarClient.pipe(
+          Effect.flatMap(client =>
+            client.radar.getScan({ params: { scanId: state.selected.id } }),
+          ),
+        ),
+        onSuccess: scan =>
+          ScanWorkflowResult.cases.PollComplete.make({ scan }),
+        onFailure: () => ScanWorkflowResult.cases.PollFailed.make({}),
+      }),
+    on: {
+      PollComplete: ({ event, state, target }) =>
+        target.full.Ready.from({
+          scans: state.scans.map(item =>
+            item.id === event.scan.id ? event.scan : item,
+          ),
+          selected: event.scan,
+          showScanner: state.showScanner,
+          error: '',
+        }),
+      PollFailed: ({ state, target }) =>
+        target.full.Ready.from({
+          scans: state.scans,
+          selected: state.selected,
+          showScanner: state.showScanner,
+          error: 'This review could not be refreshed. Trying again.',
+        }),
+    },
+  },
+  Submitting: {
+    invoke: ({ state }) =>
+      Machine.invokeEffect({
+        id: 'submit-review',
+        effect: RadarClient.pipe(
+          Effect.flatMap(client =>
+            client.radar
+              .createProfile({
+                payload: {
+                  audience: state.audience,
+                  ...(state.displayName.trim()
+                    ? { displayName: state.displayName.trim() }
+                    : {}),
+                },
+              })
+              .pipe(
+                Effect.flatMap(profile =>
+                  client.radar.createScan({
+                    payload: {
+                      githubUrl: state.repositoryUrl,
+                      audience: state.audience,
+                      profileId: profile.id,
+                    },
+                  }),
+                ),
+              ),
+          ),
+        ),
+        onSuccess: scan =>
+          ScanWorkflowResult.cases.ScanCreated.make({ scan }),
+        onFailure: () => ScanWorkflowResult.cases.SubmitFailed.make({}),
+      }),
+    on: {
+      ScanCreated: ({ event, state, target }) =>
+        target.full.Ready.from({
+          scans: [
+            event.scan,
+            ...state.scans.filter(item => item.id !== event.scan.id),
+          ],
+          selected: event.scan,
+          showScanner: false,
+          error: '',
+        }),
+      SubmitFailed: ({ state, target }) =>
+        target.full.Ready.from({
+          scans: state.scans,
+          selected: state.selected,
+          showScanner: true,
+          error: 'The review could not be started. Check the link and try again.',
+        }),
+    },
+  },
+});
+
+const ScanWorkflowStart = Machine.start(ScanWorkflow);
+
 export default function App() {
   const [repositoryUrl, setRepositoryUrl] = useState(
     'https://github.com/realworld-apps/angular-realworld-example-app',
   );
   const [displayName, setDisplayName] = useState('');
   const [audience, setAudience] = useState<ScanRecord['audience']>('technical');
-  const [scans, setScans] = useState<ReadonlyArray<ScanRecord>>([]);
-  const [selected, setSelected] = useState<ScanRecord>();
-  const [showScanner, setShowScanner] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-
-  const loadScans = useCallback(() => {
-    Effect.runFork(
-      RadarClient.pipe(
-        Effect.flatMap(client =>
-          client.radar.listScans({ query: { limit: 8 } }),
-        ),
-        Effect.tap(response =>
-          Effect.sync(() => {
-            setScans(response.items);
-            setSelected(current => current ?? response.items[0]);
-          }),
-        ),
-        Effect.catch(errorValue =>
-          Effect.sync(() => setError(String(errorValue))),
-        ),
-      ),
-    );
-  }, []);
-
-  const loadScan = useCallback((scanId: string) => {
-    Effect.runFork(
-      RadarClient.pipe(
-        Effect.flatMap(client =>
-          client.radar.getScan({ params: { scanId } }),
-        ),
-        Effect.tap(scan =>
-          Effect.sync(() => {
-            setSelected(scan);
-            setScans(current =>
-              current.map(item => (item.id === scan.id ? scan : item)),
-            );
-          }),
-        ),
-        Effect.catch(errorValue =>
-          Effect.sync(() => setError(String(errorValue))),
-        ),
-      ),
-    );
-  }, []);
-
-  useEffect(loadScans, [loadScans]);
+  const workflowRef = useRef<Effect.Success<typeof ScanWorkflowStart> | undefined>(
+    undefined,
+  );
+  const [workflow, setWorkflow] = useState<
+    Machine.Machine.Snapshot<Machine.Machine.States<typeof ScanWorkflow>>
+  >();
 
   useEffect(() => {
-    if (!selected || !['queued', 'running'].includes(selected.status)) return;
-    const interval = window.setInterval(() => loadScan(selected.id), 1_800);
-    return () => window.clearInterval(interval);
-  }, [loadScan, selected]);
+    const fiber = Effect.runFork(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const ref = yield* ScanWorkflowStart;
+          workflowRef.current = ref;
+          yield* ref.state.pipe(
+            Effect.tap(snapshot => Effect.sync(() => setWorkflow(snapshot))),
+          );
+          yield* ref.changes.pipe(
+            Stream.runForEach(snapshot =>
+              Effect.sync(() => setWorkflow(snapshot.state)),
+            ),
+          );
+        }),
+      ),
+    );
+    return () => {
+      workflowRef.current = undefined;
+      Effect.runFork(Fiber.interrupt(fiber));
+    };
+  }, []);
+
+  const send = (event: Machine.Machine.InputEvent<typeof ScanWorkflow>) => {
+    const ref = workflowRef.current;
+    if (ref) Effect.runFork(ref.send(event));
+  };
+
+  const workflowValue = workflow?.value;
+  const settled =
+    workflowValue?._tag === 'Ready' ||
+    workflowValue?._tag === 'Submitting' ||
+    workflowValue?._tag === 'Refreshing'
+      ? workflowValue
+      : undefined;
+  const scans = settled?.scans ?? [];
+  const selected = settled?.selected ?? undefined;
+  const showScanner =
+    workflowValue?._tag === 'Ready' || workflowValue?._tag === 'Refreshing'
+      ? workflowValue.showScanner
+      : false;
+  const submitting = workflowValue?._tag === 'Submitting';
+  const error = workflowValue?._tag === 'Ready' ? workflowValue.error : '';
+
+  useEffect(() => {
+    if (
+      workflowValue?._tag !== 'Ready' ||
+      !selected ||
+      (selected.status !== 'queued' && selected.status !== 'running')
+    ) return;
+    const timeout = window.setTimeout(
+      () => send(ScanWorkflowEvent.cases.Refresh.make({})),
+      1_800,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [selected, workflowValue?._tag]);
 
   const submitScan = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSubmitting(true);
-    setError('');
-    Effect.runFork(
-      RadarClient.pipe(
-        Effect.flatMap(client =>
-          client.radar
-            .createProfile({
-              payload: {
-                audience,
-                ...(displayName.trim()
-                  ? { displayName: displayName.trim() }
-                  : {}),
-              },
-            })
-            .pipe(
-              Effect.flatMap(profile =>
-                client.radar.createScan({
-                  payload: {
-                    githubUrl: repositoryUrl,
-                    audience,
-                    profileId: profile.id,
-                  },
-                }),
-              ),
-            ),
-        ),
-        Effect.tap(scan =>
-          Effect.sync(() => {
-            setSelected(scan);
-            setScans(current => [
-              scan,
-              ...current.filter(item => item.id !== scan.id),
-            ]);
-            setShowScanner(false);
-            setSubmitting(false);
-          }),
-        ),
-        Effect.catch(errorValue =>
-          Effect.sync(() => {
-            setError(String(errorValue));
-            setSubmitting(false);
-          }),
-        ),
-      ),
+    send(
+      ScanWorkflowEvent.cases.Submit.make({
+        repositoryUrl,
+        displayName,
+        audience,
+      }),
     );
   };
 
@@ -167,7 +351,7 @@ export default function App() {
           <button
             className="new-review-button"
             type="button"
-            onClick={() => setShowScanner(current => !current)}
+            onClick={() => send(ScanWorkflowEvent.cases.ToggleScanner.make({}))}
           >
             {showScanner ? 'CLOSE' : 'NEW REVIEW'}
           </button>
@@ -271,7 +455,9 @@ export default function App() {
                     type="button"
                     className={scan.id === selected?.id ? 'scan-item active' : 'scan-item'}
                     key={scan.id}
-                    onClick={() => setSelected(scan)}
+                    onClick={() =>
+                      send(ScanWorkflowEvent.cases.Select.make({ scan }))
+                    }
                   >
                     <span className={`status-mark ${scan.status}`} />
                     <span>
@@ -326,6 +512,8 @@ export default function App() {
                   <div><span>LEAVE ALONE</span><b>{result.summary.doNotFix}</b></div>
                   <div><span>CHANGE</span><b>{presentedChange}</b></div>
                 </div>
+
+                <AgentPriority scan={selected} result={result} />
 
                 <div className="backlog-head">
                   <div>

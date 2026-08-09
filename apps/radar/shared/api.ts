@@ -5,7 +5,23 @@ import {
   HttpApiSchema,
   Schema,
 } from '@modern-js/plugin-bff/effect-client';
-import { Audience, AudienceProfile, ScanRecord } from './domain';
+import { HttpApiSecurity } from 'effect/unstable/httpapi';
+import {
+  AgentLoginChallenge,
+  AgentPriorityReview,
+  AgentProfile,
+  AgentProfileList,
+  AgentProvider,
+  Audience,
+  AudienceProfile,
+  BrowserSession,
+  ScanRecord,
+} from './domain';
+
+export const SessionCookie = HttpApiSecurity.apiKey({
+  key: 'radar_session',
+  in: 'cookie',
+});
 
 export class ApiFailure extends Schema.TaggedErrorClass<ApiFailure>()(
   'ApiFailure',
@@ -58,6 +74,83 @@ export const RadarApi = HttpApi.make('RadarApi').add(
       HttpApiEndpoint.get('ready', '/ready', {
         error: ApiFailureHttp,
         success: ReadyResponse,
+      }),
+    )
+    .add(
+      HttpApiEndpoint.get('getSession', '/session', {
+        error: ApiFailureHttp,
+        success: BrowserSession,
+      }),
+    )
+    .add(
+      HttpApiEndpoint.get('listAgentProfiles', '/agent-profiles', {
+        error: ApiFailureHttp,
+        success: AgentProfileList,
+      }),
+    )
+    .add(
+      HttpApiEndpoint.post('createAgentProfile', '/agent-profiles', {
+        error: ApiFailureHttp,
+        payload: Schema.Struct({ provider: AgentProvider }),
+        success: AgentProfile,
+      }),
+    )
+    .add(
+      HttpApiEndpoint.post('beginAgentLogin', '/agent-profiles/:profileId/login', {
+        error: Schema.Union([NotFoundHttp, ApiFailureHttp]),
+        params: { profileId: Schema.String },
+        success: AgentLoginChallenge,
+      }),
+    )
+    .add(
+      HttpApiEndpoint.get('pollAgentLogin', '/agent-logins/:challengeId', {
+        error: ApiFailureHttp,
+        params: { challengeId: Schema.String },
+        success: AgentLoginChallenge,
+      }),
+    )
+    .add(
+      HttpApiEndpoint.post('submitAgentLoginInput', '/agent-logins/:challengeId/input', {
+        error: ApiFailureHttp,
+        params: { challengeId: Schema.String },
+        payload: Schema.Struct({ value: Schema.String }),
+        success: AgentLoginChallenge,
+      }),
+    )
+    .add(
+      HttpApiEndpoint.delete('cancelAgentLogin', '/agent-logins/:challengeId', {
+        error: ApiFailureHttp,
+        params: { challengeId: Schema.String },
+        success: Schema.Void,
+      }),
+    )
+    .add(
+      HttpApiEndpoint.post('refreshAgentProfile', '/agent-profiles/:profileId/status', {
+        error: Schema.Union([NotFoundHttp, ApiFailureHttp]),
+        params: { profileId: Schema.String },
+        success: AgentProfile,
+      }),
+    )
+    .add(
+      HttpApiEndpoint.delete('disconnectAgentProfile', '/agent-profiles/:profileId', {
+        error: Schema.Union([NotFoundHttp, ApiFailureHttp]),
+        params: { profileId: Schema.String },
+        success: Schema.Void,
+      }),
+    )
+    .add(
+      HttpApiEndpoint.post('createPriorityReview', '/scans/:scanId/priority-reviews', {
+        error: Schema.Union([InvalidInputHttp, NotFoundHttp, ApiFailureHttp]),
+        params: { scanId: Schema.String },
+        payload: Schema.Struct({ profileId: Schema.String }),
+        success: AgentPriorityReview,
+      }),
+    )
+    .add(
+      HttpApiEndpoint.get('getPriorityReview', '/priority-reviews/:reviewId', {
+        error: Schema.Union([NotFoundHttp, ApiFailureHttp]),
+        params: { reviewId: Schema.String },
+        success: AgentPriorityReview,
       }),
     )
     .add(

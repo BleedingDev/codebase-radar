@@ -290,6 +290,39 @@ fieldset { padding: 0; margin: 0 0 24px; border: 0; }
 .metric-row span { display: block; margin-bottom: 13px; font: 500 1rem/1 'DM Mono', monospace; color: var(--muted); }
 .metric-row b { font: 600 1.75rem/1 'Space Grotesk', sans-serif; }
 .metric-row .critical { background: var(--signal); }
+.account-priority { margin-top: 3rem; border: 1px solid var(--ink); background: var(--panel); }
+.account-priority-head { display: grid; grid-template-columns: minmax(0, .75fr) minmax(0, 1fr); gap: 2rem; padding: 1.5rem; border-bottom: 1px solid var(--ink); }
+.account-priority-head .eyebrow { margin-bottom: .6rem; }
+.account-priority-head h3 { margin: 0; font: 600 clamp(1.75rem, 3vw, 2.6rem)/1 'Space Grotesk', sans-serif; letter-spacing: -.04em; }
+.account-priority-head > p { max-width: 42rem; margin: 0; align-self: end; font-size: 1rem; line-height: 1.6; color: var(--muted); }
+.provider-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.provider-actions button { display: flex; align-items: center; justify-content: space-between; min-height: 4.5rem; padding: 1rem 1.5rem; border: 0; border-right: 1px solid var(--ink); background: transparent; cursor: pointer; }
+.provider-actions button:last-child { border-right: 0; }
+.provider-actions button:hover:not(:disabled) { background: var(--signal); }
+.provider-actions button:disabled { cursor: wait; opacity: .58; }
+.provider-actions span { font: 600 1.25rem/1 'Space Grotesk', sans-serif; }
+.provider-actions b { font: 500 1rem/1 'DM Mono', monospace; }
+.login-challenge, .priority-progress { margin: 0; padding: 1.25rem 1.5rem; border-top: 1px solid var(--ink); font-size: 1rem; line-height: 1.55; }
+.login-challenge > *:last-child { margin-bottom: 0; }
+.login-challenge > a { display: inline-block; margin-bottom: 1rem; font-weight: 700; text-decoration-thickness: .12rem; text-underline-offset: .25rem; }
+.login-code { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+.login-code strong { padding: .6rem .8rem; background: var(--ink); color: #fff; font: 500 1rem/1 'DM Mono', monospace; letter-spacing: .1em; }
+.login-challenge form { margin-top: 1rem; }
+.login-challenge label { display: block; margin-bottom: .65rem; font-size: 1rem; }
+.login-challenge form div { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+.login-challenge input { min-width: 0; padding: .9rem; border: 1px solid var(--ink); font-size: 1rem; }
+.login-challenge button { padding: .9rem 1.25rem; border: 1px solid var(--ink); border-left: 0; background: var(--signal); font: 500 1rem/1 'DM Mono', monospace; cursor: pointer; }
+.priority-answer { padding: 1.5rem; }
+.priority-answer-title { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+.priority-answer-title span { padding: .55rem .7rem; background: var(--signal); font: 500 1rem/1 'DM Mono', monospace; }
+.priority-answer-title p { margin: 0; font-size: 1.125rem; line-height: 1.55; }
+.priority-answer ol { display: grid; gap: .75rem; margin: 1.5rem 0 0; padding: 0; list-style: none; counter-reset: priority-item; }
+.priority-answer li { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); counter-increment: priority-item; }
+.priority-answer li > span { font: 500 1rem/1.3 'DM Mono', monospace; color: var(--signal-dark); text-transform: uppercase; }
+.priority-answer h4 { margin-bottom: .4rem; font: 600 1.25rem/1.2 'Space Grotesk', sans-serif; }
+.priority-answer li p { margin-bottom: .65rem; font-size: 1rem; line-height: 1.5; color: var(--muted); }
+.priority-answer li b { font-size: 1rem; line-height: 1.5; }
+.priority-answer details p { margin: .75rem 0 0; font-size: 1rem; line-height: 1.5; color: var(--muted); }
 .backlog-head { display: flex; align-items: end; justify-content: space-between; margin: 72px 0 22px; }
 .backlog-head .eyebrow { margin-bottom: 9px; }
 .backlog-head h3 { margin: 0; font: 600 clamp(2rem, 3vw, 3rem)/1 'Space Grotesk', sans-serif; letter-spacing: -.045em; }
@@ -336,7 +369,7 @@ summary { cursor: pointer; font: 500 1rem/1 'DM Mono', monospace; color: var(--m
   h1 { font-size: clamp(3.625rem, 20vw, 5.25rem); }
   .scan-console { width: calc(100% - 32px); margin: 32px 16px 44px; box-shadow: 7px 7px 0 var(--ink); }
   .audience-grid { grid-template-columns: 1fr; }
-  .workspace { grid-template-columns: 1fr; }
+  .workspace { grid-template-columns: minmax(0, 1fr); }
   .scan-rail { border-right: 0; border-bottom: 1px solid var(--ink); }
   .results-panel { padding: 34px 16px 58px; }
   .result-header h2 { overflow-wrap: anywhere; }
@@ -344,6 +377,13 @@ summary { cursor: pointer; font: 500 1rem/1 'DM Mono', monospace; color: var(--m
   .metric-row > div { border-bottom: 1px solid var(--ink); }
   .metric-row > div:nth-child(2n) { border-right: 0; }
   .metric-row > div:last-child { border-bottom: 0; }
+  .account-priority-head { grid-template-columns: 1fr; gap: 1rem; }
+  .provider-actions { grid-template-columns: 1fr; }
+  .provider-actions button { border-right: 0; border-bottom: 1px solid var(--ink); }
+  .provider-actions button:last-child { border-bottom: 0; }
+  .priority-answer-title, .priority-answer li { grid-template-columns: 1fr; }
+  .login-challenge form div { grid-template-columns: 1fr; }
+  .login-challenge button { border-top: 0; border-left: 1px solid var(--ink); }
   .backlog-head { align-items: start; flex-direction: column; gap: 16px; }
   .finding { grid-template-columns: 36px minmax(0, 1fr); }
   .finding-body { padding: 18px 15px; }

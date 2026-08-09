@@ -9,20 +9,23 @@
     "deploy": "modern deploy",
     "dev": "modern dev",
     "start": "modern start",
-    "test": "vitest run shared/contracts.test.ts server/prioritize.test.ts"
+    "test": "vitest run shared/contracts.test.ts server/prioritize.test.ts server/agent-priority.test.ts server/agent-store.test.ts"
   },
   "engines": {
     "node": ">=24"
   },
   "dependencies": {
+    "@effect/atom-react": "4.0.0-beta.102",
     "@effect/platform-node": "4.0.0-beta.102",
     "@effect/sql-pg": "4.0.0-beta.102",
     "@modern-js/plugin-bff": "npm:@bleedingdev/modern-js-plugin-bff@3.5.0-ultramodern.100",
     "@modern-js/runtime": "npm:@bleedingdev/modern-js-runtime@3.5.0-ultramodern.100",
+    "@typeonce/effect-machine": "0.3.0",
     "effect": "4.0.0-beta.102",
-    "strip-json-comments": "5.0.3",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "scheduler": "0.27.0",
+    "strip-json-comments": "5.0.3"
   },
   "devDependencies": {
     "@modern-js/app-tools": "npm:@bleedingdev/modern-js-app-tools@3.5.0-ultramodern.100",

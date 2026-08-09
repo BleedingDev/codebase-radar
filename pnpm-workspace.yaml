@@ -8,6 +8,8 @@ overrides:
   react-router: 8.3.0
 
 allowBuilds:
+  '@anthropic-ai/claude-code': true
+  '@parcel/watcher': false
   '@swc/core': true
   core-js: false
   esbuild: true

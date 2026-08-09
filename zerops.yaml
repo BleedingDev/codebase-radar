@@ -10,21 +10,28 @@ zerops:
         - /home/zerops/.local/bin/pnpm --filter @codebase-radar/app check
         - /home/zerops/.local/bin/pnpm --filter @codebase-radar/app run deploy
         - /home/zerops/.local/bin/pnpm --filter @codebase-radar/analyzer-runtime deploy --prod .zerops/analyzer-runtime
+        - /home/zerops/.local/bin/pnpm --filter @codebase-radar/agent-runtime deploy --prod .zerops/agent-runtime
         - bash scripts/prepare-runtime-tools.sh .zerops/analyzer-runtime/bin
         - /home/zerops/.local/bin/pnpm run verify:runtime-tools
+        - test -x .zerops/agent-runtime/node_modules/.bin/claude
+        - test -x .zerops/agent-runtime/node_modules/.bin/codex
       deployFiles:
         - apps/radar/.output
         - .zerops/analyzer-runtime
+        - .zerops/agent-runtime
       cache:
         - .pnpm-store
     deploy:
       readinessCheck:
         httpGet:
           port: 3000
-          path: /api/ready
+          path: /api/health
     run:
       os: ubuntu
       base: nodejs@24
+      prepareCommands:
+        - sudo apt-get update
+        - sudo apt-get install -y bubblewrap
       ports:
         - port: 3000
           protocol: tcp
@@ -34,6 +41,8 @@ zerops:
         PORT: "3000"
         DATABASE_URL: ${db_connectionString}
         RADAR_ANALYZER_ROOT: /var/www/.zerops/analyzer-runtime
+        RADAR_AGENT_ROOT: /var/www/.zerops/agent-runtime
+        RADAR_AGENT_HOME_KEY: ${db_password}
         SCAN_CONCURRENCY: "1"
       start: node apps/radar/.output/index.js
       healthCheck:

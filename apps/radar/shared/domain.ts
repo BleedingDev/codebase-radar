@@ -196,3 +196,79 @@ export class PrioritizationBrief extends Schema.Class<PrioritizationBrief>(
   candidates: Schema.Array(Finding),
   requiredOutput: Schema.Array(Schema.String),
 }) {}
+
+export const AgentProvider = Schema.Literals(['codex', 'claude']);
+export const AgentConnectionState = Schema.Literals([
+  'disconnected',
+  'connecting',
+  'connected',
+  'failed',
+  'deleting',
+]);
+
+export class BrowserSession extends Schema.Class<BrowserSession>('BrowserSession')({
+  status: Schema.Literal('ready'),
+}) {}
+
+export class AgentProfile extends Schema.Class<AgentProfile>('AgentProfile')({
+  id: Schema.String,
+  provider: AgentProvider,
+  state: AgentConnectionState,
+  accountLabel: Schema.optional(Schema.String),
+  diagnostic: Schema.optional(Schema.String),
+  createdAt: Schema.String,
+  updatedAt: Schema.String,
+}) {}
+
+export class AgentProfileList extends Schema.Class<AgentProfileList>(
+  'AgentProfileList',
+)({
+  items: Schema.Array(AgentProfile),
+}) {}
+
+export class AgentLoginChallenge extends Schema.Class<AgentLoginChallenge>(
+  'AgentLoginChallenge',
+)({
+  id: Schema.String,
+  profileId: Schema.String,
+  provider: AgentProvider,
+  status: Schema.Literals(['starting', 'waiting', 'completed', 'failed']),
+  verificationUrl: Schema.optional(Schema.String),
+  userCode: Schema.optional(Schema.String),
+  prompt: Schema.optional(Schema.String),
+  diagnostic: Schema.optional(Schema.String),
+  expiresAt: Schema.String,
+}) {}
+
+export class AgentPriorityItem extends Schema.Class<AgentPriorityItem>(
+  'AgentPriorityItem',
+)({
+  findingId: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(200)),
+  action: ActionClass,
+  reason: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(1_000)),
+  nextMove: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(1_000)),
+}) {}
+
+export class AgentPriorityOutput extends Schema.Class<AgentPriorityOutput>(
+  'AgentPriorityOutput',
+)({
+  summary: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(1_200)),
+  orderedItems: Schema.Array(AgentPriorityItem).check(Schema.isMaxLength(5)),
+  notNowFindingIds: Schema.Array(Schema.String).check(Schema.isMaxLength(10)),
+  unsupportedClaims: Schema.Array(Schema.String).check(Schema.isMaxLength(10)),
+}) {}
+
+export class AgentPriorityReview extends Schema.Class<AgentPriorityReview>(
+  'AgentPriorityReview',
+)({
+  schemaVersion: Schema.Literal('codebase-radar.priority-review/v1'),
+  id: Schema.String,
+  scanId: Schema.String,
+  profileId: Schema.String,
+  provider: AgentProvider,
+  status: Schema.Literals(['queued', 'running', 'completed', 'failed']),
+  output: Schema.optional(AgentPriorityOutput),
+  diagnostic: Schema.optional(Schema.String),
+  createdAt: Schema.String,
+  updatedAt: Schema.String,
+}) {}

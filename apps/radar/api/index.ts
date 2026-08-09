@@ -27,16 +27,26 @@ import {
   RadarApi,
   ReadyResponse,
   ScanListResponse,
+  SessionCookie,
 } from '../shared/api';
 import { parseGithubRepository } from '../shared/contracts';
 import {
   Audience,
+  AgentProfileList,
+  BrowserSession,
   FindingTaskpack,
   PrioritizationBrief,
   ScanRecord,
   ScanResult,
 } from '../shared/domain';
+import {
+  AgentCoordinator,
+  AgentCoordinatorLive,
+} from '../server/agent-coordinator';
+import { AgentRuntime, AgentRuntimeLive } from '../server/agent-runtime';
+import { AgentStore, AgentStoreLive } from '../server/agent-store';
 import { ScanCoordinator, ScanCoordinatorLive } from '../server/scan-runner';
+import { prioritizationBrief } from '../server/prioritization-brief';
 import { RadarStore, RadarStoreLive } from '../server/store';
 
 class ToolFailure extends Schema.TaggedErrorClass<ToolFailure>()('ToolFailure', {
@@ -170,34 +180,13 @@ const ToolHandlersLive = RadarToolkit.toLayer(
               onNone: () => Effect.fail(toolFailure(`Scan ${scanId} was not found.`)),
               onSome: scan =>
                 scan.result
-                  ? Effect.succeed(
-                      new PrioritizationBrief({
-                        schemaVersion: 'codebase-radar.prioritization-brief/v1',
-                        scanId,
-                        repository: scan.result.repository,
-                        audience: scan.audience,
-                        objective:
-                          'Choose no more than five next decisions and explain why each deserves attention before the remaining findings.',
-                        decisionRules: [
-                          'Prefer direct, corroborated evidence over inference or raw volume.',
-                          'Keep consequence, reach, confidence, effort, and change risk separate; no composite score proves codebase health.',
-                          'Use fix now only for a concrete, consequential, high-confidence problem.',
-                          'Do not let style preferences or duplication counts displace security, reliability, or structural risk.',
-                          'When evidence is insufficient, ask for investigation instead of inventing impact.',
-                          'Audience changes wording, never the evidence or ordered decisions.',
-                        ],
-                        candidates: scan.result.findings.slice(0, 20),
-                        requiredOutput: [
-                          'An ordered list of finding IDs with fix now, investigate, monitor, or do not fix.',
-                          'One plain-language reason and one concrete next move for every selected finding.',
-                          'An explicit list of tempting findings that should not be scheduled now.',
-                          'Claims the available evidence cannot support.',
-                        ],
-                      }),
+                  ? Effect.succeed(prioritizationBrief(scan)).pipe(
+                      Effect.filterOrFail(
+                        brief => brief !== undefined,
+                        () => toolFailure(`Scan ${scanId} has no completed backlog yet.`),
+                      ),
                     )
-                  : Effect.fail(
-                      toolFailure(`Scan ${scanId} has no completed backlog yet.`),
-                    ),
+                  : Effect.fail(toolFailure(`Scan ${scanId} has no completed backlog yet.`)),
             }),
           ),
           Effect.mapError(error =>
@@ -253,6 +242,45 @@ const ToolHandlersLive = RadarToolkit.toLayer(
   }),
 );
 
+const currentOwner = Effect.gen(function* () {
+  const request = yield* HttpServerRequest.HttpServerRequest;
+  const store = yield* AgentStore;
+  const candidate = request.cookies['radar_session'];
+  const ownerId = yield* store.getOrCreateSession(candidate).pipe(
+    Effect.mapError(error => new ApiFailure({ message: error.message })),
+  );
+  if (candidate !== ownerId) {
+    const forwardedProtocol = request.headers['x-forwarded-proto']
+      ?.split(',')[0]
+      ?.trim();
+    yield* HttpApiBuilder.securitySetCookie(SessionCookie, ownerId, {
+      httpOnly: true,
+      path: '/',
+      sameSite: 'lax',
+      secure: forwardedProtocol === 'https',
+      maxAge: '365 days',
+    });
+  }
+  return ownerId;
+});
+
+const requiredAgentProfile = Effect.fn('requiredAgentProfile')(function* (
+  ownerId: string,
+  profileId: string,
+) {
+  const store = yield* AgentStore;
+  return yield* store.getProfile(ownerId, profileId).pipe(
+    Effect.mapError(error => new ApiFailure({ message: error.message })),
+    Effect.flatMap(
+      Option.match({
+        onNone: () =>
+          Effect.fail(new NotFound({ resource: 'provider profile', id: profileId })),
+        onSome: Effect.succeed,
+      }),
+    ),
+  );
+});
+
 const RadarGroupLive = HttpApiBuilder.group(RadarApi, 'radar', handlers =>
   handlers
     .handle('health', () =>
@@ -265,14 +293,162 @@ const RadarGroupLive = HttpApiBuilder.group(RadarApi, 'radar', handlers =>
       ),
     )
     .handle('ready', () =>
-      RadarStore.use(store =>
-        store.ready.pipe(
-          Effect.map(
-            () => new ReadyResponse({ status: 'ready', storage: store.storage }),
-          ),
+      Effect.gen(function* () {
+        const radarStore = yield* RadarStore;
+        const agentStore = yield* AgentStore;
+        yield* Effect.all([
+          radarStore.ready,
+          agentStore.ready,
+        ]).pipe(
           Effect.mapError(error => new ApiFailure({ message: error.message })),
-        ),
+        );
+        return new ReadyResponse({
+          status: 'ready',
+          storage: radarStore.storage,
+        });
+      }),
+    )
+    .handle('getSession', () =>
+      currentOwner.pipe(
+        Effect.map(() => new BrowserSession({ status: 'ready' })),
       ),
+    )
+    .handle('listAgentProfiles', () =>
+      Effect.gen(function* () {
+        const ownerId = yield* currentOwner;
+        const store = yield* AgentStore;
+        const items = yield* store.listProfiles(ownerId).pipe(
+          Effect.mapError(error => new ApiFailure({ message: error.message })),
+        );
+        return new AgentProfileList({ items });
+      }),
+    )
+    .handle('createAgentProfile', ({ payload }) =>
+      Effect.gen(function* () {
+        const ownerId = yield* currentOwner;
+        const store = yield* AgentStore;
+        const profiles = yield* store.listProfiles(ownerId).pipe(
+          Effect.mapError(error => new ApiFailure({ message: error.message })),
+        );
+        const existing = profiles.find(profile => profile.provider === payload.provider);
+        if (existing) return existing;
+        return yield* store.createProfile(ownerId, payload.provider).pipe(
+          Effect.mapError(error => new ApiFailure({ message: error.message })),
+        );
+      }),
+    )
+    .handle('beginAgentLogin', ({ params }) =>
+      Effect.gen(function* () {
+        const ownerId = yield* currentOwner;
+        const profile = yield* requiredAgentProfile(ownerId, params.profileId);
+        const runtime = yield* AgentRuntime;
+        return yield* runtime.beginLogin(ownerId, profile).pipe(
+          Effect.mapError(error => new ApiFailure({ message: error.message })),
+        );
+      }),
+    )
+    .handle('pollAgentLogin', ({ params }) =>
+      Effect.gen(function* () {
+        const ownerId = yield* currentOwner;
+        const runtime = yield* AgentRuntime;
+        return yield* runtime.pollLogin(ownerId, params.challengeId).pipe(
+          Effect.mapError(error => new ApiFailure({ message: error.message })),
+        );
+      }),
+    )
+    .handle('submitAgentLoginInput', ({ params, payload }) =>
+      Effect.gen(function* () {
+        const ownerId = yield* currentOwner;
+        const runtime = yield* AgentRuntime;
+        return yield* runtime.submitLoginInput(
+          ownerId,
+          params.challengeId,
+          payload.value,
+        ).pipe(
+          Effect.mapError(error => new ApiFailure({ message: error.message })),
+        );
+      }),
+    )
+    .handle('cancelAgentLogin', ({ params }) =>
+      Effect.gen(function* () {
+        const ownerId = yield* currentOwner;
+        const runtime = yield* AgentRuntime;
+        yield* runtime.cancelLogin(ownerId, params.challengeId).pipe(
+          Effect.mapError(error => new ApiFailure({ message: error.message })),
+        );
+      }),
+    )
+    .handle('refreshAgentProfile', ({ params }) =>
+      Effect.gen(function* () {
+        const ownerId = yield* currentOwner;
+        const profile = yield* requiredAgentProfile(ownerId, params.profileId);
+        const runtime = yield* AgentRuntime;
+        return yield* runtime.refreshStatus(ownerId, profile).pipe(
+          Effect.mapError(error => new ApiFailure({ message: error.message })),
+        );
+      }),
+    )
+    .handle('disconnectAgentProfile', ({ params }) =>
+      Effect.gen(function* () {
+        const ownerId = yield* currentOwner;
+        const profile = yield* requiredAgentProfile(ownerId, params.profileId);
+        const runtime = yield* AgentRuntime;
+        yield* runtime.disconnect(ownerId, profile).pipe(
+          Effect.mapError(error => new ApiFailure({ message: error.message })),
+        );
+      }),
+    )
+    .handle('createPriorityReview', ({ params, payload }) =>
+      Effect.gen(function* () {
+        const ownerId = yield* currentOwner;
+        const agentStore = yield* AgentStore;
+        const radarStore = yield* RadarStore;
+        const coordinator = yield* AgentCoordinator;
+        const profile = yield* requiredAgentProfile(ownerId, payload.profileId);
+        if (profile.state !== 'connected') {
+          return yield* new InvalidInput({
+            message: 'Sign in before requesting agent prioritization.',
+          });
+        }
+        const scan = yield* radarStore.getScan(params.scanId).pipe(
+          Effect.mapError(error => new ApiFailure({ message: error.message })),
+        );
+        if (Option.isNone(scan)) {
+          return yield* new NotFound({ resource: 'scan', id: params.scanId });
+        }
+        if (!scan.value.result) {
+          return yield* new InvalidInput({
+            message: 'The codebase review is not ready yet.',
+          });
+        }
+        const review = yield* agentStore.createReview(
+          ownerId,
+          profile.id,
+          scan.value.id,
+        ).pipe(
+          Effect.mapError(error => new ApiFailure({ message: error.message })),
+        );
+        yield* coordinator.enqueue(ownerId, review);
+        return review;
+      }),
+    )
+    .handle('getPriorityReview', ({ params }) =>
+      Effect.gen(function* () {
+        const ownerId = yield* currentOwner;
+        const store = yield* AgentStore;
+        return yield* store.getReview(ownerId, params.reviewId).pipe(
+          Effect.mapError(error => new ApiFailure({ message: error.message })),
+          Effect.flatMap(
+            Option.match({
+              onNone: () =>
+                Effect.fail(
+                  new NotFound({ resource: 'priority review', id: params.reviewId }),
+                ),
+              onSome: Effect.succeed,
+            }),
+          ),
+        );
+      }),
     )
     .handle('createProfile', ({ payload }) =>
       RadarStore.use(store =>
@@ -334,9 +510,14 @@ const RadarGroupLive = HttpApiBuilder.group(RadarApi, 'radar', handlers =>
 );
 
 const PlatformLive = Layer.mergeAll(NodeServices.layer, NodeHttpClient.layerUndici);
-const ServicesLive = ScanCoordinatorLive.pipe(
-  Layer.provideMerge(RadarStoreLive),
+const StoresLive = Layer.merge(RadarStoreLive, AgentStoreLive).pipe(
   Layer.provideMerge(PlatformLive),
+);
+const RuntimeLive = Layer.merge(ScanCoordinatorLive, AgentRuntimeLive).pipe(
+  Layer.provideMerge(StoresLive),
+);
+const ServicesLive = AgentCoordinatorLive.pipe(
+  Layer.provideMerge(RuntimeLive),
 );
 const McpOriginGuardLive = HttpRouter.middleware(
   Effect.gen(function* () {
