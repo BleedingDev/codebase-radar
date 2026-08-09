@@ -4,14 +4,14 @@ zerops:
       os: ubuntu
       base: nodejs@24
       prepareCommands:
-        - npm install --global pnpm@11.17.0
+        - npm install --global --prefix /home/zerops/.local pnpm@11.17.0
       buildCommands:
-        - pnpm install --frozen-lockfile --store-dir .pnpm-store
-        - pnpm --filter @codebase-radar/app check
-        - pnpm --filter @codebase-radar/app run deploy
-        - pnpm --filter @codebase-radar/analyzer-runtime deploy --prod .zerops/analyzer-runtime
+        - /home/zerops/.local/bin/pnpm install --frozen-lockfile --store-dir .pnpm-store
+        - /home/zerops/.local/bin/pnpm --filter @codebase-radar/app check
+        - /home/zerops/.local/bin/pnpm --filter @codebase-radar/app run deploy
+        - /home/zerops/.local/bin/pnpm --filter @codebase-radar/analyzer-runtime deploy --prod .zerops/analyzer-runtime
         - bash scripts/prepare-runtime-tools.sh .zerops/analyzer-runtime/bin
-        - pnpm run verify:runtime-tools
+        - /home/zerops/.local/bin/pnpm run verify:runtime-tools
       deployFiles:
         - apps/radar/.output
         - .zerops/analyzer-runtime
