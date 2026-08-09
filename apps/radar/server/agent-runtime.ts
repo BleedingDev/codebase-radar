@@ -222,7 +222,7 @@ const sandboxCommand = (
         '--dir',
         '/proc/self',
         '--symlink',
-        '/opt/radar-agent/node_modules/@anthropic-ai/claude-code/bin/claude.exe',
+        '/opt/radar-node/node',
         '/proc/self/exe',
       ]
     : [];
