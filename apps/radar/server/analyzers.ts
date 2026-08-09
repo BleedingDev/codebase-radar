@@ -468,9 +468,25 @@ export const runOxlint = Effect.fn('runOxlint')(function* (
                 ? 'reliability'
                 : 'maintainability';
         const policyOnly = policyRulePattern.test(code);
+        const title = policyOnly
+          ? 'consistency preference'
+          : category === 'security'
+            ? 'risky code pattern'
+            : category === 'performance'
+              ? 'performance concern'
+              : category === 'architecture'
+                ? 'dependency concern'
+                : category === 'reliability'
+                  ? 'reliability concern'
+                  : 'maintainability concern';
+        const recommendation = policyOnly
+          ? 'Apply this preference only while editing nearby code; do not schedule a repository-wide cleanup.'
+          : category === 'security'
+            ? 'Inspect representative locations, confirm whether inputs can reach them, then fix the smallest proven risk.'
+            : 'Inspect representative locations, confirm the pattern matters, then address it within one bounded change.';
         return new FindingCandidate({
           fingerprintSeed: `oxlint:${code}:${path ?? 'repository'}`,
-          title: `${matches.length} ${code} ${matches.length === 1 ? 'signal' : 'signals'}`,
+          title: `${matches.length} ${title}${matches.length === 1 ? '' : 's'}`,
           category,
           summary:
             policyOnly
@@ -479,9 +495,7 @@ export const runOxlint = Effect.fn('runOxlint')(function* (
               ? 'Static analysis found a risky code pattern that needs prompt human validation; this is not proof of exploitability.'
               : 'A repeated quality pattern is increasing review friction or defect risk.',
           technicalSummary: `${matches.length} diagnostics from the pinned Ultracite/Oxlint policy. First location: ${path ?? 'repository scope'}.`,
-          recommendation: policyOnly
-            ? 'Do not schedule repository-wide cleanup from count alone; apply this rule only during nearby functional work.'
-            : `Inspect representative locations, confirm intent, then address ${code} within one bounded change.`,
+          recommendation,
           evidence: matches.slice(0, 3).map(
             match =>
               new Evidence({
