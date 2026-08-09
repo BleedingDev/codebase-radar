@@ -8,8 +8,8 @@
   },
   "scripts": {
     "build": "pnpm --filter @codebase-radar/app build",
+    "build:production": "pnpm --filter @codebase-radar/app run deploy",
     "check": "pnpm --filter @codebase-radar/app check",
-    "deploy": "pnpm --filter @codebase-radar/app run deploy",
     "dev": "pnpm --filter @codebase-radar/app dev",
     "start": "node apps/radar/.output/index.js",
     "test": "pnpm --filter @codebase-radar/app test",

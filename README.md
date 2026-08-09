@@ -74,7 +74,7 @@ Without `DATABASE_URL`, Radar uses an in-memory store. The JavaScript analyzers 
 Build and preview the exact production artifact:
 
 ```bash
-pnpm deploy
+pnpm run build:production
 PORT=3000 node apps/radar/.output/index.js
 ```
 
@@ -106,7 +106,7 @@ Optional LLM reranking is disabled unless `LLM_API_KEY` is configured. Determini
 ```bash
 pnpm check
 pnpm test
-pnpm deploy
+pnpm run build:production
 ```
 
 `pnpm check` includes a source-policy gate for application TypeScript: no type assertions, no `unknown`, and no `any`. External data is decoded through concrete Effect Schemas.
