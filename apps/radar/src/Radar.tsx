@@ -1,7 +1,15 @@
+import { useAtomSet, useAtomValue } from '@effect/atom-react';
+import {
+  Link,
+  Navigate,
+  useMatch,
+} from '@modern-js/plugin-tanstack/runtime';
 import { Effect } from '@modern-js/plugin-bff/effect-client';
 import { Machine } from '@typeonce/effect-machine';
-import { Fiber, Schema, Stream } from 'effect';
-import { useEffect, useRef, useState } from 'react';
+import { AtomMachine } from '@typeonce/effect-machine/reactivity';
+import { Option, Schema } from 'effect';
+import { AsyncResult } from 'effect/unstable/reactivity';
+import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
   audienceCopy,
@@ -24,32 +32,42 @@ const analyzerTitle = {
   configuration: 'Configuration concern',
 };
 
+const ReviewRoute = Schema.TaggedUnion({
+  Home: {},
+  NewReview: {},
+  Review: { scanId: Schema.String },
+});
+
+const scanIsPending = (scan: ScanRecord) =>
+  scan.status === 'queued' || scan.status === 'running';
+
 const ScanWorkflowState = Schema.TaggedUnion({
-  Loading: {},
+  Loading: { route: ReviewRoute },
   Ready: {
+    route: ReviewRoute,
     scans: Schema.Array(ScanRecord),
     selected: Schema.NullOr(ScanRecord),
-    showScanner: Schema.Boolean,
     error: Schema.String,
   },
   Submitting: {
     scans: Schema.Array(ScanRecord),
-    selected: Schema.NullOr(ScanRecord),
     repositoryUrl: Schema.String,
     displayName: Schema.String,
     audience: Audience,
   },
-  Refreshing: {
+  Waiting: {
+    route: ReviewRoute,
     scans: Schema.Array(ScanRecord),
     selected: ScanRecord,
-    showScanner: Schema.Boolean,
+  },
+  Refreshing: {
+    route: ReviewRoute,
+    scans: Schema.Array(ScanRecord),
+    selected: ScanRecord,
   },
 });
 
 const ScanWorkflowEvent = Schema.TaggedUnion({
-  Select: { scan: ScanRecord },
-  ToggleScanner: {},
-  Refresh: {},
   Submit: {
     repositoryUrl: Schema.String,
     displayName: Schema.String,
@@ -58,10 +76,15 @@ const ScanWorkflowEvent = Schema.TaggedUnion({
 });
 
 const ScanWorkflowResult = Schema.TaggedUnion({
-  Loaded: { scans: Schema.Array(ScanRecord) },
-  LoadFailed: {},
+  Loaded: {
+    route: ReviewRoute,
+    scans: Schema.Array(ScanRecord),
+    selected: Schema.NullOr(ScanRecord),
+  },
+  LoadFailed: { route: ReviewRoute },
   ScanCreated: { scan: ScanRecord },
   SubmitFailed: {},
+  Refresh: {},
   PollComplete: { scan: ScanRecord },
   PollFailed: {},
 });
@@ -71,81 +94,105 @@ const ScanWorkflowStates = Machine.defineStates(ScanWorkflowState.cases);
 const ScanWorkflow = Machine.make({
   id: 'ScanWorkflow',
   states: ScanWorkflowStates.states,
-  events: [
-    ScanWorkflowEvent.cases.Select,
-    ScanWorkflowEvent.cases.ToggleScanner,
-    ScanWorkflowEvent.cases.Refresh,
-    ScanWorkflowEvent.cases.Submit,
-  ],
+  events: [ScanWorkflowEvent.cases.Submit],
   internalEvents: [
     ScanWorkflowResult.cases.Loaded,
     ScanWorkflowResult.cases.LoadFailed,
     ScanWorkflowResult.cases.ScanCreated,
     ScanWorkflowResult.cases.SubmitFailed,
+    ScanWorkflowResult.cases.Refresh,
     ScanWorkflowResult.cases.PollComplete,
     ScanWorkflowResult.cases.PollFailed,
   ],
-  initial: () => ScanWorkflowStates.initial.Loading.from(),
+  input: ReviewRoute,
+  initial: route => ScanWorkflowStates.initial.Loading.from({ route }),
 }).handle({
   Loading: {
-    invoke: () =>
+    invoke: ({ state }) =>
       Machine.invokeEffect({
         id: 'load-reviews',
         effect: RadarClient.pipe(
           Effect.flatMap(client =>
-            client.radar.listScans({ query: { limit: 8 } }),
+            client.radar.listScans({ query: { limit: 8 } }).pipe(
+              Effect.flatMap(response => {
+                if (state.route._tag !== 'Review') {
+                  return Effect.succeed(
+                    ScanWorkflowResult.cases.Loaded.make({
+                      route: state.route,
+                      scans: response.items,
+                      selected: null,
+                    }),
+                  );
+                }
+                return client.radar.getScan({
+                  params: { scanId: state.route.scanId },
+                }).pipe(
+                  Effect.map(scan =>
+                    ScanWorkflowResult.cases.Loaded.make({
+                      route: state.route,
+                      scans: [
+                        scan,
+                        ...response.items.filter(item => item.id !== scan.id),
+                      ],
+                      selected: scan,
+                    }),
+                  ),
+                );
+              }),
+            ),
           ),
         ),
-        onSuccess: response =>
-          ScanWorkflowResult.cases.Loaded.make({ scans: response.items }),
-        onFailure: () => ScanWorkflowResult.cases.LoadFailed.make({}),
+        onSuccess: event => event,
+        onFailure: () =>
+          ScanWorkflowResult.cases.LoadFailed.make({ route: state.route }),
       }),
     on: {
-      Loaded: ({ event, target }) =>
-        target.full.Ready.from({
+      Loaded: ({ event, target }) => {
+        if (event.selected && scanIsPending(event.selected)) {
+          return target.full.Waiting.from({
+            route: event.route,
+            scans: event.scans,
+            selected: event.selected,
+          });
+        }
+        return target.full.Ready.from({
+          route: event.route,
           scans: event.scans,
-          selected: event.scans[0] ?? null,
-          showScanner: false,
+          selected: event.selected,
           error: '',
-        }),
-      LoadFailed: ({ target }) =>
+        });
+      },
+      LoadFailed: ({ event, target }) =>
         target.full.Ready.from({
+          route: event.route,
           scans: [],
           selected: null,
-          showScanner: true,
-          error: 'Reviews could not be loaded. Refresh and try again.',
+          error: event.route._tag === 'Review'
+            ? 'This review could not be loaded.'
+            : 'Reviews could not be loaded. Refresh and try again.',
         }),
     },
   },
   Ready: {
     on: {
-      Select: ({ event, state, target }) =>
-        target.full.Ready.from({
-          ...state,
-          selected: event.scan,
-          error: '',
-        }),
-      ToggleScanner: ({ state, target }) =>
-        target.full.Ready.from({
-          ...state,
-          showScanner: !state.showScanner,
-        }),
       Submit: ({ event, state, target }) =>
         target.full.Submitting.from({
           scans: state.scans,
-          selected: state.selected,
           repositoryUrl: event.repositoryUrl,
           displayName: event.displayName,
           audience: event.audience,
         }),
+    },
+  },
+  Waiting: {
+    invoke: Machine.after('1800 millis', ScanWorkflowResult.cases.Refresh.make({})),
+    on: {
       Refresh: ({ state, target }) =>
-        state.selected
-          ? target.full.Refreshing.from({
-              scans: state.scans,
-              selected: state.selected,
-              showScanner: state.showScanner,
-            })
-          : undefined,
+        target.full.Refreshing.from({
+          route: state.route,
+          scans: state.scans,
+          selected: state.selected,
+        }),
     },
   },
   Refreshing: {
@@ -162,21 +209,29 @@ const ScanWorkflow = Machine.make({
         onFailure: () => ScanWorkflowResult.cases.PollFailed.make({}),
       }),
     on: {
-      PollComplete: ({ event, state, target }) =>
-        target.full.Ready.from({
-          scans: state.scans.map(item =>
+      PollComplete: ({ event, state, target }) => {
+        const scans = state.scans.map(item =>
             item.id === event.scan.id ? event.scan : item,
-          ),
+          );
+        if (scanIsPending(event.scan)) {
+          return target.full.Waiting.from({
+            route: state.route,
+            scans,
+            selected: event.scan,
+          });
+        }
+        return target.full.Ready.from({
+          route: state.route,
+          scans,
           selected: event.scan,
-          showScanner: state.showScanner,
           error: '',
-        }),
+        });
+      },
       PollFailed: ({ state, target }) =>
-        target.full.Ready.from({
+        target.full.Waiting.from({
+          route: state.route,
           scans: state.scans,
           selected: state.selected,
-          showScanner: state.showScanner,
-          error: 'This review could not be refreshed. Trying again.',
         }),
     },
   },
@@ -214,97 +269,69 @@ const ScanWorkflow = Machine.make({
       }),
     on: {
       ScanCreated: ({ event, state, target }) =>
-        target.full.Ready.from({
+        target.full.Waiting.from({
+          route: ReviewRoute.cases.Review.make({ scanId: event.scan.id }),
           scans: [
             event.scan,
             ...state.scans.filter(item => item.id !== event.scan.id),
           ],
           selected: event.scan,
-          showScanner: false,
-          error: '',
         }),
       SubmitFailed: ({ state, target }) =>
         target.full.Ready.from({
+          route: ReviewRoute.cases.NewReview.make({}),
           scans: state.scans,
-          selected: state.selected,
-          showScanner: true,
+          selected: null,
           error: 'The review could not be started. Check the link and try again.',
         }),
     },
   },
 });
 
-const ScanWorkflowStart = Machine.start(ScanWorkflow);
-
-export default function App() {
+function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
   const [repositoryUrl, setRepositoryUrl] = useState(
     'https://github.com/realworld-apps/angular-realworld-example-app',
   );
   const [displayName, setDisplayName] = useState('');
   const [audience, setAudience] = useState<ScanRecord['audience']>('technical');
-  const workflowRef = useRef<Effect.Success<typeof ScanWorkflowStart> | undefined>(
-    undefined,
+  const machineAtom = useMemo(
+    () => AtomMachine.make(ScanWorkflow, route),
+    [route],
   );
-  const [workflow, setWorkflow] = useState<
-    Machine.Machine.Snapshot<Machine.Machine.States<typeof ScanWorkflow>>
-  >();
-
-  useEffect(() => {
-    const fiber = Effect.runFork(
-      Effect.scoped(
-        Effect.gen(function* () {
-          const ref = yield* ScanWorkflowStart;
-          workflowRef.current = ref;
-          yield* ref.state.pipe(
-            Effect.tap(snapshot => Effect.sync(() => setWorkflow(snapshot))),
-          );
-          yield* ref.changes.pipe(
-            Stream.runForEach(snapshot =>
-              Effect.sync(() => setWorkflow(snapshot.state)),
-            ),
-          );
-        }),
-      ),
-    );
-    return () => {
-      workflowRef.current = undefined;
-      Effect.runFork(Fiber.interrupt(fiber));
-    };
-  }, []);
-
-  const send = (event: Machine.Machine.InputEvent<typeof ScanWorkflow>) => {
-    const ref = workflowRef.current;
-    if (ref) Effect.runFork(ref.send(event));
-  };
-
-  const workflowValue = workflow?.value;
-  const settled =
-    workflowValue?._tag === 'Ready' ||
-    workflowValue?._tag === 'Submitting' ||
-    workflowValue?._tag === 'Refreshing'
-      ? workflowValue
+  const machineResult = useAtomValue(machineAtom.result);
+  const send = useAtomSet(machineAtom.send);
+  const snapshot = AsyncResult.isSuccess(machineResult)
+    ? machineResult.value
+    : undefined;
+  const loadingState = snapshot
+    ? Option.getOrUndefined(ScanWorkflowStates.get(snapshot, 'Loading'))
+    : undefined;
+  const ready = snapshot
+    ? Option.getOrUndefined(ScanWorkflowStates.get(snapshot, 'Ready'))
+    : undefined;
+  const submittingState = snapshot
+    ? Option.getOrUndefined(ScanWorkflowStates.get(snapshot, 'Submitting'))
+    : undefined;
+  const waiting = snapshot
+    ? Option.getOrUndefined(ScanWorkflowStates.get(snapshot, 'Waiting'))
+    : undefined;
+  const refreshing = snapshot
+    ? Option.getOrUndefined(ScanWorkflowStates.get(snapshot, 'Refreshing'))
+    : undefined;
+  const scans =
+    ready?.scans ??
+    submittingState?.scans ??
+    waiting?.scans ??
+    refreshing?.scans ??
+    [];
+  const selected = ready?.selected ?? waiting?.selected ?? refreshing?.selected;
+  const submitting = Boolean(submittingState);
+  const error = ready?.error ?? '';
+  const createdReview = waiting?.route._tag === 'Review'
+    ? waiting.route
+    : refreshing?.route._tag === 'Review'
+      ? refreshing.route
       : undefined;
-  const scans = settled?.scans ?? [];
-  const selected = settled?.selected ?? undefined;
-  const showScanner =
-    workflowValue?._tag === 'Ready' || workflowValue?._tag === 'Refreshing'
-      ? workflowValue.showScanner
-      : false;
-  const submitting = workflowValue?._tag === 'Submitting';
-  const error = workflowValue?._tag === 'Ready' ? workflowValue.error : '';
-
-  useEffect(() => {
-    if (
-      workflowValue?._tag !== 'Ready' ||
-      !selected ||
-      (selected.status !== 'queued' && selected.status !== 'running')
-    ) return;
-    const timeout = window.setTimeout(
-      () => send(ScanWorkflowEvent.cases.Refresh.make({})),
-      1_800,
-    );
-    return () => window.clearTimeout(timeout);
-  }, [selected, workflowValue?._tag]);
 
   const submitScan = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -338,107 +365,54 @@ export default function App() {
     }
   }
 
+  if (
+    route._tag === 'NewReview' &&
+    createdReview
+  ) {
+    return (
+      <Navigate
+        to="/reviews/$scanId"
+        params={{ scanId: createdReview.scanId }}
+        replace
+      />
+    );
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
-        <a className="brand" href="#top" aria-label="Codebase Radar home">
+        <Link className="brand" to="/" aria-label="Codebase Radar home">
           <span className="brand-mark" aria-hidden="true">
             <span />
           </span>
           <span>CODEBASE RADAR</span>
-        </a>
-        {selected ? (
-          <button
-            className="new-review-button"
-            type="button"
-            onClick={() => send(ScanWorkflowEvent.cases.ToggleScanner.make({}))}
-          >
-            {showScanner ? 'CLOSE' : 'NEW REVIEW'}
-          </button>
+        </Link>
+        {route._tag !== 'NewReview' ? (
+          <Link className="new-review-button" to="/reviews/new">
+            NEW REVIEW
+          </Link>
         ) : null}
       </header>
 
       <main id="top">
-        <section
-          className={selected ? 'hero-grid repeat' : 'hero-grid'}
-          hidden={selected ? !showScanner : false}
-        >
-          <div className="hero-copy">
-            <p className="eyebrow">Your codebase, in priority order</p>
-            <h1>
-              Fix the right <em>things.</em>
-            </h1>
-            <p className="lede">
-              Paste a public GitHub link. Get the few changes worth doing first—and
-              the noise you can safely leave alone.
-            </p>
-          </div>
-
-          <form className="scan-console" onSubmit={submitScan}>
-            <div className="console-head">
-              <span>START A REVIEW</span>
+        {route._tag !== 'Review' ? (
+          <section className="hero-grid">
+            <div className="hero-copy">
+              <p className="eyebrow">Your codebase, in priority order</p>
+              <h1>
+                Fix the right <em>things.</em>
+              </h1>
+              <p className="lede">
+                Paste a public GitHub link. Get the few changes worth doing first—and
+                the noise you can safely leave alone.
+              </p>
+              <Link className="scan-button hero-action" to="/reviews/new">
+                <span>START A REVIEW</span>
+                <span aria-hidden="true">↗</span>
+              </Link>
             </div>
-            <label className="field-label" htmlFor="repository-url">
-              GitHub repository
-            </label>
-            <div className="url-input-wrap">
-              <span aria-hidden="true">GH/</span>
-              <input
-                id="repository-url"
-                type="url"
-                value={repositoryUrl}
-                onChange={event => setRepositoryUrl(event.currentTarget.value)}
-                placeholder="https://github.com/owner/repository"
-                required
-              />
-            </div>
-
-            <fieldset>
-              <legend>Explain this for</legend>
-              <div className="audience-grid">
-                {audienceOptions.map(option => (
-                  <label
-                    className={option === audience ? 'audience active' : 'audience'}
-                    key={option}
-                  >
-                    <input
-                      type="radio"
-                      name="audience"
-                      value={option}
-                      checked={option === audience}
-                      onChange={() => setAudience(option)}
-                    />
-                    <span>{audienceLabel[option]}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-
-            <details className="profile-options">
-              <summary>Personalize this view</summary>
-              <label className="field-label" htmlFor="display-name">
-                Profile name <span>optional</span>
-              </label>
-              <input
-                className="name-input"
-                id="display-name"
-                value={displayName}
-                onChange={event => setDisplayName(event.currentTarget.value)}
-                placeholder="Ada / Platform team"
-                maxLength={80}
-              />
-            </details>
-
-            <button className="scan-button" disabled={submitting} type="submit">
-              <span>{submitting ? 'STARTING REVIEW' : 'SHOW ME WHAT MATTERS'}</span>
-              <span aria-hidden="true">↗</span>
-            </button>
-            <p className="boundary-note">
-              Read-only review. We never run your code.
-            </p>
-            {error ? <p className="error-note">{error}</p> : null}
-          </form>
-        </section>
+          </section>
+        ) : null}
 
         <section className="workspace">
           <aside className="scan-rail">
@@ -451,13 +425,11 @@ export default function App() {
             ) : (
               <div className="scan-list">
                 {scans.map(scan => (
-                  <button
-                    type="button"
+                  <Link
                     className={scan.id === selected?.id ? 'scan-item active' : 'scan-item'}
                     key={scan.id}
-                    onClick={() =>
-                      send(ScanWorkflowEvent.cases.Select.make({ scan }))
-                    }
+                    to="/reviews/$scanId"
+                    params={{ scanId: scan.id }}
                   >
                     <span className={`status-mark ${scan.status}`} />
                     <span>
@@ -465,14 +437,29 @@ export default function App() {
                       <small>{scan.stage}</small>
                     </span>
                     <b>{scan.progress}%</b>
-                  </button>
+                  </Link>
                 ))}
               </div>
             )}
           </aside>
 
           <div className="results-panel">
-            {!selected ? (
+            {route._tag === 'Review' && (!snapshot || loadingState) ? (
+              <div className="running-state">
+                <div className="scan-visual" aria-hidden="true">
+                  <span className="sweep" />
+                </div>
+                <h2>Loading this review…</h2>
+              </div>
+            ) : route._tag === 'Review' && !selected && error ? (
+              <div className="empty-state">
+                <p>REVIEW NOT AVAILABLE</p>
+                <h2>{error}</h2>
+                <Link className="scan-button empty-action" to="/">
+                  RETURN HOME
+                </Link>
+              </div>
+            ) : !selected ? (
               <div className="empty-state">
                 <span className="radar-orbit" aria-hidden="true"><i /></span>
                 <p>NO REVIEW YET</p>
@@ -590,6 +577,101 @@ export default function App() {
         </section>
       </main>
 
+      {route._tag === 'NewReview' ? (
+        <>
+          <Link
+            className="dialog-backdrop"
+            to="/"
+            replace
+            aria-label="Close new review"
+          />
+          <dialog className="review-dialog" open aria-labelledby="new-review-title">
+            <form className="scan-console" onSubmit={submitScan}>
+              <div className="console-head dialog-head">
+                <span id="new-review-title">START A REVIEW</span>
+                <Link to="/" replace aria-label="Close new review">CLOSE</Link>
+              </div>
+              <label className="field-label" htmlFor="repository-url">
+                GitHub repository
+              </label>
+              <div className="url-input-wrap">
+                <span aria-hidden="true">GH/</span>
+                <input
+                  id="repository-url"
+                  type="url"
+                  value={repositoryUrl}
+                  onChange={event => setRepositoryUrl(event.currentTarget.value)}
+                  placeholder="https://github.com/owner/repository"
+                  required
+                />
+              </div>
+
+              <fieldset>
+                <legend>Explain this for</legend>
+                <div className="audience-grid">
+                  {audienceOptions.map(option => (
+                    <label
+                      className={option === audience ? 'audience active' : 'audience'}
+                      key={option}
+                    >
+                      <input
+                        type="radio"
+                        name="audience"
+                        value={option}
+                        checked={option === audience}
+                        onChange={() => setAudience(option)}
+                      />
+                      <span>{audienceLabel[option]}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              <details className="profile-options">
+                <summary>Personalize this view</summary>
+                <label className="field-label" htmlFor="display-name">
+                  Profile name <span>optional</span>
+                </label>
+                <input
+                  className="name-input"
+                  id="display-name"
+                  value={displayName}
+                  onChange={event => setDisplayName(event.currentTarget.value)}
+                  placeholder="Ada / Platform team"
+                  maxLength={80}
+                />
+              </details>
+
+              <button className="scan-button" disabled={submitting} type="submit">
+                <span>{submitting ? 'STARTING REVIEW' : 'SHOW ME WHAT MATTERS'}</span>
+                <span aria-hidden="true">↗</span>
+              </button>
+              <p className="boundary-note">
+                Read-only review. We never run your code.
+              </p>
+              {error ? <p className="error-note">{error}</p> : null}
+            </form>
+          </dialog>
+        </>
+      ) : null}
+
     </div>
+  );
+}
+
+export function HomePage() {
+  return <Radar route={ReviewRoute.cases.Home.make({})} />;
+}
+
+export function NewReviewPage() {
+  return <Radar route={ReviewRoute.cases.NewReview.make({})} />;
+}
+
+export function ReviewPage() {
+  const match = useMatch({ from: '/reviews/$scanId' });
+  return (
+    <Radar
+      route={ReviewRoute.cases.Review.make({ scanId: match.params.scanId })}
+    />
   );
 }

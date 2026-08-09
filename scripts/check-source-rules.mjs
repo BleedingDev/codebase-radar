@@ -3,7 +3,7 @@ import { dirname, extname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../apps/radar');
-const ignored = new Set(['.output', 'dist', 'node_modules']);
+const ignored = new Set(['.output', 'dist', 'modern-tanstack', 'node_modules']);
 const extensions = new Set(['.ts', '.tsx']);
 const tokens = [
   String.fromCharCode(97, 115),

@@ -19,11 +19,12 @@
     "@effect/platform-node": "4.0.0-beta.102",
     "@effect/sql-pg": "4.0.0-beta.102",
     "@modern-js/plugin-bff": "npm:@bleedingdev/modern-js-plugin-bff@3.5.0-ultramodern.100",
+    "@modern-js/plugin-tanstack": "npm:@bleedingdev/modern-js-plugin-tanstack@3.5.0-ultramodern.100",
     "@modern-js/runtime": "npm:@bleedingdev/modern-js-runtime@3.5.0-ultramodern.100",
     "@typeonce/effect-machine": "0.3.0",
     "effect": "4.0.0-beta.102",
-    "react": "19.2.0",
-    "react-dom": "19.2.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
     "scheduler": "0.27.0",
     "strip-json-comments": "5.0.3"
   },
@@ -32,8 +33,8 @@
     "@modern-js/tsconfig": "npm:@bleedingdev/modern-js-tsconfig@3.5.0-ultramodern.100",
     "@tsconfig/strictest": "2.0.8",
     "@types/node": "24.10.1",
-    "@types/react": "19.2.2",
-    "@types/react-dom": "19.2.2",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
     "typescript": "7.0.2",
     "vitest": "4.1.10"
   }
