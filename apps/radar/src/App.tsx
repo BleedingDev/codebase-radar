@@ -11,6 +11,15 @@ const RadarClient = makeEffectHttpApiClient(RadarApi, { baseUrl: '/api' });
 
 const audienceOptions = Audience.literals;
 
+const analyzerTitle = {
+  security: 'Risky code pattern',
+  reliability: 'Reliability concern',
+  maintainability: 'Maintainability concern',
+  performance: 'Performance concern',
+  architecture: 'Dependency concern',
+  configuration: 'Configuration concern',
+};
+
 export default function App() {
   const [repositoryUrl, setRepositoryUrl] = useState(
     'https://github.com/realworld-apps/angular-realworld-example-app',
@@ -315,6 +324,20 @@ export default function App() {
                 <div className="finding-list">
                   {visibleFindings.map((finding, index) => {
                     const copy = audienceCopy(finding, resultAudience);
+                    const analyzerFinding = finding.tags.includes('oxlint');
+                    const consistencyPreference = finding.tags.includes('style-policy');
+                    const presentedTitle = analyzerFinding
+                      ? consistencyPreference
+                        ? 'Consistency preference'
+                        : analyzerTitle[finding.category]
+                      : finding.title;
+                    const presentedRecommendation = analyzerFinding
+                      ? consistencyPreference
+                        ? 'Apply this preference only while editing nearby code; do not schedule a repository-wide cleanup.'
+                        : finding.category === 'security'
+                          ? 'Inspect representative locations, confirm whether inputs can reach them, then fix the smallest proven risk.'
+                          : 'Inspect representative locations, confirm the pattern matters, then address it within one bounded change.'
+                      : copy.recommendation;
                     return (
                       <article className={`finding ${finding.action.replaceAll(' ', '-')}`} key={finding.id}>
                         <div className="finding-rank">{String(index + 1).padStart(2, '0')}</div>
@@ -324,11 +347,11 @@ export default function App() {
                             <span>{finding.category}</span>
                             <span>{finding.statusComparedToPrevious}</span>
                           </div>
-                          <h4>{finding.title}</h4>
+                          <h4>{presentedTitle}</h4>
                           <p>{copy.summary}</p>
                           <div className="recommendation">
                             <b>NEXT MOVE</b>
-                            <span>{copy.recommendation}</span>
+                            <span>{presentedRecommendation}</span>
                           </div>
                           <details className="finding-details">
                             <summary>Why this is ranked here</summary>
