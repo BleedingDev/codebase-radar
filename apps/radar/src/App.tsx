@@ -121,6 +121,7 @@ export default function App() {
   };
 
   const result = selected?.result;
+  const resultAudience = selected?.audience ?? audience;
   const visibleFindings = result?.findings.slice(0, 5) ?? [];
 
   return (
@@ -308,12 +309,12 @@ export default function App() {
                     <p className="eyebrow">Your priority list</p>
                     <h3>What deserves attention.</h3>
                   </div>
-                  <span>{audienceLabel[audience]}</span>
+                  <span>{audienceLabel[resultAudience]}</span>
                 </div>
 
                 <div className="finding-list">
                   {visibleFindings.map((finding, index) => {
-                    const copy = audienceCopy(finding, audience);
+                    const copy = audienceCopy(finding, resultAudience);
                     return (
                       <article className={`finding ${finding.action.replaceAll(' ', '-')}`} key={finding.id}>
                         <div className="finding-rank">{String(index + 1).padStart(2, '0')}</div>
