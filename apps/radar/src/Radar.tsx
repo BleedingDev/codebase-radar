@@ -35,7 +35,15 @@ const analyzerTitle = {
 const ReviewRoute = Schema.TaggedUnion({
   Home: {},
   NewReview: {},
-  Review: { scanId: Schema.String },
+  Repository: {
+    owner: Schema.String,
+    repository: Schema.String,
+  },
+  RepositoryReview: {
+    owner: Schema.String,
+    repository: Schema.String,
+    scanId: Schema.String,
+  },
 });
 
 const scanIsPending = (scan: ScanRecord) =>
@@ -45,11 +53,13 @@ const ScanWorkflowState = Schema.TaggedUnion({
   Loading: { route: ReviewRoute },
   Ready: {
     route: ReviewRoute,
+    repositories: Schema.Array(ScanRecord),
     scans: Schema.Array(ScanRecord),
     selected: Schema.NullOr(ScanRecord),
     error: Schema.String,
   },
   Submitting: {
+    repositories: Schema.Array(ScanRecord),
     scans: Schema.Array(ScanRecord),
     repositoryUrl: Schema.String,
     displayName: Schema.String,
@@ -57,11 +67,13 @@ const ScanWorkflowState = Schema.TaggedUnion({
   },
   Waiting: {
     route: ReviewRoute,
+    repositories: Schema.Array(ScanRecord),
     scans: Schema.Array(ScanRecord),
     selected: ScanRecord,
   },
   Refreshing: {
     route: ReviewRoute,
+    repositories: Schema.Array(ScanRecord),
     scans: Schema.Array(ScanRecord),
     selected: ScanRecord,
   },
@@ -78,6 +90,7 @@ const ScanWorkflowEvent = Schema.TaggedUnion({
 const ScanWorkflowResult = Schema.TaggedUnion({
   Loaded: {
     route: ReviewRoute,
+    repositories: Schema.Array(ScanRecord),
     scans: Schema.Array(ScanRecord),
     selected: Schema.NullOr(ScanRecord),
   },
@@ -110,37 +123,51 @@ const ScanWorkflow = Machine.make({
   Loading: {
     invoke: ({ state }) =>
       Machine.invokeEffect({
-        id: 'load-reviews',
+        id: 'load-repositories',
         effect: RadarClient.pipe(
-          Effect.flatMap(client =>
-            client.radar.listScans({ query: { limit: 8 } }).pipe(
-              Effect.flatMap(response => {
-                if (state.route._tag !== 'Review') {
-                  return Effect.succeed(
-                    ScanWorkflowResult.cases.Loaded.make({
-                      route: state.route,
-                      scans: response.items,
-                      selected: null,
-                    }),
-                  );
-                }
-                return client.radar.getScan({
-                  params: { scanId: state.route.scanId },
-                }).pipe(
-                  Effect.map(scan =>
-                    ScanWorkflowResult.cases.Loaded.make({
-                      route: state.route,
-                      scans: [
-                        scan,
-                        ...response.items.filter(item => item.id !== scan.id),
-                      ],
-                      selected: scan,
-                    }),
-                  ),
-                );
-              }),
-            ),
-          ),
+          Effect.flatMap(client => {
+            const repositories = client.radar.listRepositories({
+              query: { limit: 8 },
+            });
+            const route = state.route;
+            if (
+              route._tag === 'Repository' ||
+              route._tag === 'RepositoryReview'
+            ) {
+              return Effect.all({
+                repositories,
+                scans: client.radar.listRepositoryScans({
+                  params: {
+                    owner: route.owner,
+                    repository: route.repository,
+                  },
+                }),
+              }).pipe(
+                Effect.map(response =>
+                  ScanWorkflowResult.cases.Loaded.make({
+                    route,
+                    repositories: response.repositories.items,
+                    scans: response.scans.items,
+                    selected: route._tag === 'Repository'
+                      ? (response.scans.items[0] ?? null)
+                      : (response.scans.items.find(
+                          scan => scan.id === route.scanId,
+                        ) ?? null),
+                  }),
+                ),
+              );
+            }
+            return repositories.pipe(
+              Effect.map(response =>
+                ScanWorkflowResult.cases.Loaded.make({
+                  route,
+                  repositories: response.items,
+                  scans: [],
+                  selected: null,
+                }),
+              ),
+            );
+          }),
         ),
         onSuccess: event => event,
         onFailure: () =>
@@ -151,12 +178,14 @@ const ScanWorkflow = Machine.make({
         if (event.selected && scanIsPending(event.selected)) {
           return target.full.Waiting.from({
             route: event.route,
+            repositories: event.repositories,
             scans: event.scans,
             selected: event.selected,
           });
         }
         return target.full.Ready.from({
           route: event.route,
+          repositories: event.repositories,
           scans: event.scans,
           selected: event.selected,
           error: '',
@@ -165,11 +194,14 @@ const ScanWorkflow = Machine.make({
       LoadFailed: ({ event, target }) =>
         target.full.Ready.from({
           route: event.route,
+          repositories: [],
           scans: [],
           selected: null,
-          error: event.route._tag === 'Review'
-            ? 'This review could not be loaded.'
-            : 'Reviews could not be loaded. Refresh and try again.',
+          error: event.route._tag === 'Home' || event.route._tag === 'NewReview'
+            ? 'Repositories could not be loaded. Refresh and try again.'
+            : event.route._tag === 'Repository'
+              ? 'This repository could not be loaded.'
+              : 'This review could not be loaded.',
         }),
     },
   },
@@ -177,6 +209,7 @@ const ScanWorkflow = Machine.make({
     on: {
       Submit: ({ event, state, target }) =>
         target.full.Submitting.from({
+          repositories: state.repositories,
           scans: state.scans,
           repositoryUrl: event.repositoryUrl,
           displayName: event.displayName,
@@ -190,6 +223,7 @@ const ScanWorkflow = Machine.make({
       Refresh: ({ state, target }) =>
         target.full.Refreshing.from({
           route: state.route,
+          repositories: state.repositories,
           scans: state.scans,
           selected: state.selected,
         }),
@@ -213,15 +247,20 @@ const ScanWorkflow = Machine.make({
         const scans = state.scans.map(item =>
             item.id === event.scan.id ? event.scan : item,
           );
+        const repositories = state.repositories.map(item =>
+          item.id === event.scan.id ? event.scan : item,
+        );
         if (scanIsPending(event.scan)) {
           return target.full.Waiting.from({
             route: state.route,
+            repositories,
             scans,
             selected: event.scan,
           });
         }
         return target.full.Ready.from({
           route: state.route,
+          repositories,
           scans,
           selected: event.scan,
           error: '',
@@ -230,6 +269,7 @@ const ScanWorkflow = Machine.make({
       PollFailed: ({ state, target }) =>
         target.full.Waiting.from({
           route: state.route,
+          repositories: state.repositories,
           scans: state.scans,
           selected: state.selected,
         }),
@@ -270,16 +310,27 @@ const ScanWorkflow = Machine.make({
     on: {
       ScanCreated: ({ event, state, target }) =>
         target.full.Waiting.from({
-          route: ReviewRoute.cases.Review.make({ scanId: event.scan.id }),
-          scans: [
+          route: ReviewRoute.cases.RepositoryReview.make({
+            owner: event.scan.owner,
+            repository: event.scan.repository,
+            scanId: event.scan.id,
+          }),
+          repositories: [
             event.scan,
-            ...state.scans.filter(item => item.id !== event.scan.id),
+            ...state.repositories.filter(
+              item =>
+                item.owner.toLowerCase() !== event.scan.owner.toLowerCase() ||
+                item.repository.toLowerCase() !==
+                  event.scan.repository.toLowerCase(),
+            ),
           ],
+          scans: [event.scan],
           selected: event.scan,
         }),
       SubmitFailed: ({ state, target }) =>
         target.full.Ready.from({
           route: ReviewRoute.cases.NewReview.make({}),
+          repositories: state.repositories,
           scans: state.scans,
           selected: null,
           error: 'The review could not be started. Check the link and try again.',
@@ -318,6 +369,12 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
   const refreshing = snapshot
     ? Option.getOrUndefined(ScanWorkflowStates.get(snapshot, 'Refreshing'))
     : undefined;
+  const repositories =
+    ready?.repositories ??
+    submittingState?.repositories ??
+    waiting?.repositories ??
+    refreshing?.repositories ??
+    [];
   const scans =
     ready?.scans ??
     submittingState?.scans ??
@@ -327,9 +384,9 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
   const selected = ready?.selected ?? waiting?.selected ?? refreshing?.selected;
   const submitting = Boolean(submittingState);
   const error = ready?.error ?? '';
-  const createdReview = waiting?.route._tag === 'Review'
+  const createdReview = waiting?.route._tag === 'RepositoryReview'
     ? waiting.route
-    : refreshing?.route._tag === 'Review'
+    : refreshing?.route._tag === 'RepositoryReview'
       ? refreshing.route
       : undefined;
 
@@ -371,8 +428,52 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
   ) {
     return (
       <Navigate
-        to="/reviews/$scanId"
-        params={{ scanId: createdReview.scanId }}
+        to="/$provider/$owner/$repository/reviews/$scanId"
+        params={{
+          provider: 'github.com',
+          owner: createdReview.owner.toLowerCase(),
+          repository: createdReview.repository.toLowerCase(),
+          scanId: createdReview.scanId,
+        }}
+        replace
+      />
+    );
+  }
+
+  if (
+    selected &&
+    route._tag === 'Repository' &&
+    (route.owner !== selected.owner.toLowerCase() ||
+      route.repository !== selected.repository.toLowerCase())
+  ) {
+    return (
+      <Navigate
+        to="/$provider/$owner/$repository"
+        params={{
+          provider: 'github.com',
+          owner: selected.owner.toLowerCase(),
+          repository: selected.repository.toLowerCase(),
+        }}
+        replace
+      />
+    );
+  }
+
+  if (
+    selected &&
+    route._tag === 'RepositoryReview' &&
+    (route.owner !== selected.owner.toLowerCase() ||
+      route.repository !== selected.repository.toLowerCase())
+  ) {
+    return (
+      <Navigate
+        to="/$provider/$owner/$repository/reviews/$scanId"
+        params={{
+          provider: 'github.com',
+          owner: selected.owner.toLowerCase(),
+          repository: selected.repository.toLowerCase(),
+          scanId: selected.id,
+        }}
         replace
       />
     );
@@ -395,7 +496,7 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
       </header>
 
       <main id="top">
-        {route._tag !== 'Review' ? (
+        {route._tag === 'Home' || route._tag === 'NewReview' ? (
           <section className="hero-grid">
             <div className="hero-copy">
               <p className="eyebrow">Your codebase, in priority order</p>
@@ -417,26 +518,37 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
         <section className="workspace">
           <aside className="scan-rail">
             <div className="section-heading">
-              <span>RECENT REVIEWS</span>
-              <span>{String(scans.length).padStart(2, '0')}</span>
+              <span>RECENT REPOSITORIES</span>
+              <span>{String(repositories.length).padStart(2, '0')}</span>
             </div>
-            {scans.length === 0 ? (
-              <div className="empty-rail">Your first review starts here.</div>
+            {repositories.length === 0 ? (
+              <div className="empty-rail">No repositories reviewed yet.</div>
             ) : (
               <div className="scan-list">
-                {scans.map(scan => (
+                {repositories.map(repository => (
                   <Link
-                    className={scan.id === selected?.id ? 'scan-item active' : 'scan-item'}
-                    key={scan.id}
-                    to="/reviews/$scanId"
-                    params={{ scanId: scan.id }}
+                    className={
+                      repository.owner.toLowerCase() ===
+                          selected?.owner.toLowerCase() &&
+                        repository.repository.toLowerCase() ===
+                          selected.repository.toLowerCase()
+                        ? 'scan-item active'
+                        : 'scan-item'
+                    }
+                    key={`${repository.owner}/${repository.repository}`}
+                    to="/$provider/$owner/$repository"
+                    params={{
+                      provider: 'github.com',
+                      owner: repository.owner.toLowerCase(),
+                      repository: repository.repository.toLowerCase(),
+                    }}
                   >
-                    <span className={`status-mark ${scan.status}`} />
+                    <span className={`status-mark ${repository.status}`} />
                     <span>
-                      <strong>{scan.owner}/{scan.repository}</strong>
-                      <small>{scan.stage}</small>
+                      <strong>{repository.owner}/{repository.repository}</strong>
+                      <small>{repository.stage}</small>
                     </span>
-                    <b>{scan.progress}%</b>
+                    <b>{repository.progress}%</b>
                   </Link>
                 ))}
               </div>
@@ -444,14 +556,68 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
           </aside>
 
           <div className="results-panel">
-            {route._tag === 'Review' && (!snapshot || loadingState) ? (
+            {(route._tag === 'Repository' ||
+              route._tag === 'RepositoryReview') && scans.length > 0 ? (
+              <section className="repository-history" aria-labelledby="scan-history-title">
+                <div className="history-heading">
+                  <div>
+                    <p className="eyebrow">Repository history</p>
+                    <h2 id="scan-history-title">
+                      {route.owner}/{route.repository}
+                    </h2>
+                  </div>
+                  <span>{scans.length} {scans.length === 1 ? 'scan' : 'scans'}</span>
+                </div>
+                <div className="history-list">
+                  {scans.map((scan, index) => (
+                    <Link
+                      className={
+                        scan.id === selected?.id
+                          ? 'history-item active'
+                          : 'history-item'
+                      }
+                      key={scan.id}
+                      to="/$provider/$owner/$repository/reviews/$scanId"
+                      params={{
+                        provider: 'github.com',
+                        owner: scan.owner.toLowerCase(),
+                        repository: scan.repository.toLowerCase(),
+                        scanId: scan.id,
+                      }}
+                    >
+                      <span>{index === 0 ? 'LATEST' : `RUN ${scans.length - index}`}</span>
+                      <time dateTime={scan.createdAt}>{scan.createdAt.slice(0, 10)}</time>
+                      <span>{scan.status === 'completed' ? 'READY' : scan.status.toUpperCase()}</span>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+            {route._tag !== 'Home' && route._tag !== 'NewReview' && (!snapshot || loadingState) ? (
               <div className="running-state">
                 <div className="scan-visual" aria-hidden="true">
                   <span className="sweep" />
                 </div>
                 <h2>Loading this review…</h2>
               </div>
-            ) : route._tag === 'Review' && !selected && error ? (
+            ) : (route._tag === 'Repository' ||
+              route._tag === 'RepositoryReview') && !selected ? (
+              <div className="empty-state">
+                <p>
+                  {route._tag === 'Repository'
+                    ? 'REPOSITORY NOT AVAILABLE'
+                    : 'REVIEW NOT AVAILABLE'}
+                </p>
+                <h2>
+                  {error || (route._tag === 'Repository'
+                    ? 'No scans were found for this repository.'
+                    : 'This scan does not belong to this repository.')}
+                </h2>
+                <Link className="scan-button empty-action" to="/">
+                  RETURN HOME
+                </Link>
+              </div>
+            ) : route._tag !== 'Home' && route._tag !== 'NewReview' && !selected && error ? (
               <div className="empty-state">
                 <p>REVIEW NOT AVAILABLE</p>
                 <h2>{error}</h2>
@@ -667,11 +833,35 @@ export function NewReviewPage() {
   return <Radar route={ReviewRoute.cases.NewReview.make({})} />;
 }
 
-export function ReviewPage() {
-  const match = useMatch({ from: '/reviews/$scanId' });
+export function RepositoryPage() {
+  const match = useMatch({ from: '/$provider/$owner/$repository' });
+  if (match.params.provider !== 'github.com') {
+    return <Navigate to="/" replace />;
+  }
   return (
     <Radar
-      route={ReviewRoute.cases.Review.make({ scanId: match.params.scanId })}
+      route={ReviewRoute.cases.Repository.make({
+        owner: match.params.owner,
+        repository: match.params.repository,
+      })}
+    />
+  );
+}
+
+export function RepositoryReviewPage() {
+  const match = useMatch({
+    from: '/$provider/$owner/$repository/reviews/$scanId',
+  });
+  if (match.params.provider !== 'github.com') {
+    return <Navigate to="/" replace />;
+  }
+  return (
+    <Radar
+      route={ReviewRoute.cases.RepositoryReview.make({
+        owner: match.params.owner,
+        repository: match.params.repository,
+        scanId: match.params.scanId,
+      })}
     />
   );
 }

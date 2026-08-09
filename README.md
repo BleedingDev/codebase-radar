@@ -1,65 +1,56 @@
 # Codebase Radar
 
-Codebase Radar turns a public GitHub repository into a short, evidence-backed improvement backlog. It combines fast static analyzers with TraceDecay's structural evidence, keeps confidence and impact separate, and gives humans and coding agents the same ranked facts in different forms.
+**[Open the live app](https://radar-21d6-3000.prg1.zerops.app)** · [Zerops Challenge](https://www.wemakedevs.org/hackathons/zerops)
 
-The current MVP is deliberately narrow: public GitHub repositories containing TypeScript or JavaScript, with first-class framework detection for React, Angular, Vue, Svelte, and Solid.
+Codebase Radar turns a public GitHub repository into a short, evidence-backed list of what to fix first, why it matters, and what is probably noise. It explains the same evidence differently for technical leaders, executives, and security stakeholders, while preserving a machine-readable view for coding agents.
 
-## What it returns
+## Repository-first reviews
 
-- One prioritized backlog with `fix now`, `investigate`, `monitor`, and `do not fix` actions.
-- Separate consequence, blast-radius, confidence, effort, change-exposure, and priority scores.
-- Direct evidence, explicit inference labels, analyzer coverage, and honest partial-result reporting.
-- Technical, executive, and security communication profiles without changing the underlying ranking.
-- Snapshot comparison against the previous scan of the same repository.
-- Read-only MCP tools for scan discovery, backlog retrieval, and agent-ready finding taskpacks.
+Radar treats the repository—not an individual scan—as the durable product object.
 
-Security or financial references are advisory context. They are never presented as proof that a repository is vulnerable or that a business impact has occurred.
+- Recent repositories show each repository once, so repeat scans do not crowd the dashboard.
+- Every repository keeps its complete review history and compares the current snapshot with the previous one.
+- Repository pages and individual review snapshots have stable, shareable URLs.
+- Starting another review adds a snapshot to that repository instead of creating another disconnected recent item.
 
-## Analysis profile
+Each completed review produces one priority list with clear actions: `fix now`, `investigate`, `monitor`, or `do not fix`. Consequence, blast radius, confidence, effort, and change exposure remain separate so a single opaque score cannot hide uncertainty.
 
-| Analyzer | MVP responsibility |
+## Supported today
+
+The challenge MVP scans public TypeScript and JavaScript repositories. It detects React, Angular, Vue, Svelte, and Solid projects, including common meta-frameworks.
+
+| Project | Current coverage |
 | --- | --- |
-| `@tsconfig/strictest` comparator | Finds gaps between the repository's TypeScript configuration and a strict baseline. |
-| Oxlint + Ultracite | Fast TypeScript/JavaScript diagnostics; React receives native enrichment and Vue receives limited script enrichment. |
-| JSCPD | Bounded duplicate-code signals. |
-| zizmor | Offline GitHub Actions static analysis. |
-| OSV-Scanner | Lockfile-based dependency advisories without installing repository dependencies. |
-| TraceDecay | Structural health, complexity, coupling, cycles, hotspots, test risk, and selected blast-radius evidence. |
+| React | TypeScript/JavaScript checks plus React-aware enrichment |
+| Vue | TypeScript/JavaScript checks plus limited Vue script enrichment |
+| Angular, Svelte, Solid | TypeScript/JavaScript checks and framework detection; no template-semantic claims |
+| Other TypeScript/JavaScript | Framework-neutral static and structural analysis |
 
-Angular, Svelte, and Solid still receive universal TypeScript/JavaScript analysis, but the MVP does not claim native template semantics for them. Analyzer failures produce explicit partial coverage instead of failing the entire scan.
+Radar combines strict TypeScript configuration checks, fast linting, duplication signals, dependency advisories, GitHub Actions checks, and TraceDecay structural evidence. Findings are normalized before prioritization so several tools reporting the same underlying problem do not masquerade as several priorities.
 
-## Architecture
+People can optionally connect their own Codex or Claude account for a second opinion on the ordering. Each profile has separate persisted login state, receives only the bounded evidence pack, and cannot modify the scanned repository. The same read-only evidence is available to external coding agents through MCP.
 
-The Zerops deployment has exactly two services:
+## What the MVP does not claim
 
-```text
-Browser / coding agent
-        │
-        ▼
-UltraModern.js radar service
-  React UI
-  Effect HttpApi server + derived frontend client
-  Effect MCP server
-  PostgreSQL-backed scan loop
-  bounded direct analyzer subprocesses
-        │
-        ▼
-PostgreSQL 18
-```
+A scan is deliberately static and read-only. Radar shallow-clones a public GitHub repository, then runs bounded analyzers with time and output limits. It does not install dependencies, run builds or tests, execute repository scripts or hooks, or initialize submodules.
 
-`RadarApi` is the single Effect HTTP contract. The backend implements it through `HttpApiBuilder`; the browser derives its client directly with `makeEffectHttpApiClient(RadarApi)`. There is no generated or duplicated API model.
+That boundary means:
 
-The same application process runs scans at concurrency one. TraceDecay is started as a per-scan child process on an isolated local socket and stopped during scoped cleanup; it is not another deployed service.
+- Radar does not prove runtime behavior, exploitability, incidents, revenue impact, or production performance.
+- Security and financial references are context for investigation, never proof that harm occurred.
+- Angular, Svelte, and Solid template semantics are not analyzed yet.
+- Analyzer failures are reported as partial coverage rather than hidden or treated as a clean bill of health.
+- Private repositories, arbitrary Git hosts, and a complete hostile-tenant sandbox are outside this challenge MVP.
 
-## Repository safety boundary
+## Built and deployed on Zerops
 
-A scan performs a shallow, non-recursive clone of a public GitHub repository. It does not install dependencies, run builds or tests, execute repository scripts or hooks, initialize submodules, or execute repository configuration. Every analyzer runs as a bounded child process with timeout and output limits.
+The live product runs as two Zerops services: one Radar application service and PostgreSQL. The application serves the website and API, runs the bounded scan queue, exposes read-only MCP tools, and isolates each connected agent profile inside the same product deployment. PostgreSQL preserves repositories, review history, comparisons, and encrypted provider state across restarts.
 
-This is a strong MVP boundary, not a complete hostile-tenant sandbox. Private repositories and arbitrary clone hosts are intentionally out of scope.
+[`zerops-import.yaml`](./zerops-import.yaml) creates both services. [`zerops.yaml`](./zerops.yaml) defines the reproducible build, pinned analyzer preparation, runtime environment, and health checks.
 
 ## Local development
 
-Requirements: Node.js 24+, pnpm 11.17.0, Git, and PostgreSQL if persistence is desired.
+Requirements: Node.js 24+, pnpm 11.17.0, Git, and PostgreSQL when persistent history is needed.
 
 ```bash
 pnpm install --frozen-lockfile
@@ -69,49 +60,26 @@ pnpm test
 pnpm dev
 ```
 
-Without `DATABASE_URL`, Radar uses an in-memory store. The JavaScript analyzers are available from the workspace install; Linux-only pinned binaries are prepared by the Zerops build and report partial coverage when unavailable locally.
+Without `DATABASE_URL`, Radar uses an in-memory store. Linux-only analyzers report partial coverage when their pinned binaries are unavailable locally.
 
-Build and preview the exact production artifact:
+Build and run the production artifact:
 
 ```bash
 pnpm run build:production
 PORT=3000 node apps/radar/.output/index.js
 ```
 
-The web application is then available at `http://localhost:3000`. Health and readiness endpoints are `/api/health` and `/api/ready`.
+Health and readiness endpoints are `/api/health` and `/api/ready`.
 
-## MCP
+## Read-only MCP
 
-The Streamable HTTP MCP endpoint is `/api/mcp`. It is implemented with Effect's MCP stack and currently negotiates protocol version `2025-06-18`.
+The Streamable HTTP MCP endpoint is:
 
-Available tools:
-
-- `list_scans`
-- `get_scan`
-- `get_improvement_backlog`
-- `get_prioritization_brief`
-- `get_finding_taskpack`
-
-All tools are declared read-only, non-destructive, idempotent, and closed-world. Requests carrying an invalid `Origin` are rejected. Public-repository access is unauthenticated in this challenge MVP; private-repository authorization is deferred.
-
-### ZCP agent review
-
-The official Zerops `zcp@1` workspace can host Codex or Claude Code beside the two application services. ZCP remains the development workspace and Zerops control surface; it is not another Codebase Radar runtime. After adding the official ZCP service and authenticating the chosen agent, connect Radar's read-only MCP endpoint:
-
-```bash
-codex mcp add radar --url https://radar-21d6-3000.prg1.zerops.app/api/mcp
-claude mcp add --transport http radar https://radar-21d6-3000.prg1.zerops.app/api/mcp
+```text
+https://radar-21d6-3000.prg1.zerops.app/api/mcp
 ```
 
-The agent calls `get_prioritization_brief` to challenge the deterministic shortlist, then `get_finding_taskpack` for the selected work. It must not treat a composite score, finding volume, or an inferred impact claim as proof.
-
-## Deploy to Zerops
-
-[`zerops-import.yaml`](./zerops-import.yaml) creates PostgreSQL 18 and the single Node.js radar service. [`zerops.yaml`](./zerops.yaml) pins the build, analyzer preparation, runtime environment, health check, and readiness check.
-
-Import `zerops-import.yaml` into Zerops, or connect this repository to an existing project using the `radar` setup. The build downloads only pinned analyzer artifacts and verifies checksums before deployment.
-
-Optional LLM reranking is disabled unless `LLM_API_KEY` is configured. Deterministic ranking remains the source of truth, and an unavailable LLM never prevents a scan from completing.
+It exposes scan discovery, prioritized backlogs, bounded prioritization briefs, and finding taskpacks. The tools are read-only and cannot change a repository. Public-repository access is unauthenticated in this challenge MVP; private-repository authorization is deferred.
 
 ## Verification
 
@@ -120,8 +88,6 @@ pnpm check
 pnpm test
 pnpm run build:production
 ```
-
-`pnpm check` includes a source-policy gate for application TypeScript: no type assertions, no `unknown`, and no `any`. External data is decoded through concrete Effect Schemas.
 
 ## License
 

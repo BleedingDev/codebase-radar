@@ -49,6 +49,13 @@ export class RadarStore extends Context.Service<RadarStore, {
   ) => Effect.Effect<ScanRecord, StorageError>;
   readonly getScan: (id: string) => Effect.Effect<Option.Option<ScanRecord>, StorageError>;
   readonly listRecentScans: (limit?: number) => Effect.Effect<ReadonlyArray<ScanRecord>, StorageError>;
+  readonly listRecentRepositories: (
+    limit?: number,
+  ) => Effect.Effect<ReadonlyArray<ScanRecord>, StorageError>;
+  readonly listRepositoryScans: (
+    owner: string,
+    repository: string,
+  ) => Effect.Effect<ReadonlyArray<ScanRecord>, StorageError>;
   readonly getPreviousResult: (
     owner: string,
     repository: string,
@@ -98,8 +105,8 @@ const makeMemoryStore = Effect.gen(function* () {
       const scan = new ScanRecord({
         id,
         githubUrl: input.githubUrl,
-        owner: input.owner,
-        repository: input.repository,
+        owner: input.owner.toLowerCase(),
+        repository: input.repository.toLowerCase(),
         audience: input.audience,
         status: 'queued',
         progress: 2,
@@ -131,8 +138,49 @@ const makeMemoryStore = Effect.gen(function* () {
       Ref.get(state).pipe(
         Effect.map(current =>
           [...current.scans.values()]
-            .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+            .sort(
+              (left, right) =>
+                right.createdAt.localeCompare(left.createdAt) ||
+                right.id.localeCompare(left.id),
+            )
             .slice(0, Math.min(Math.max(limit, 1), 25)),
+        ),
+      ),
+    listRecentRepositories: (limit = 8) =>
+      Ref.get(state).pipe(
+        Effect.map(current => {
+          const newestByRepository = new Map<string, ScanRecord>();
+          const scans = [...current.scans.values()].sort(
+            (left, right) =>
+              right.createdAt.localeCompare(left.createdAt) ||
+              right.id.localeCompare(left.id),
+          );
+          for (const scan of scans) {
+            const repositoryKey = `${scan.owner.toLowerCase()}/${scan.repository.toLowerCase()}`;
+            if (!newestByRepository.has(repositoryKey)) {
+              newestByRepository.set(repositoryKey, scan);
+            }
+          }
+          return [...newestByRepository.values()].slice(
+            0,
+            Math.trunc(Math.min(Math.max(limit, 1), 25)),
+          );
+        }),
+      ),
+    listRepositoryScans: (owner, repository) =>
+      Ref.get(state).pipe(
+        Effect.map(current =>
+          [...current.scans.values()]
+            .filter(
+              scan =>
+                scan.owner.toLowerCase() === owner.toLowerCase() &&
+                scan.repository.toLowerCase() === repository.toLowerCase(),
+            )
+            .sort(
+              (left, right) =>
+                right.createdAt.localeCompare(left.createdAt) ||
+                right.id.localeCompare(left.id),
+            ),
         ),
       ),
     getPreviousResult: (owner, repository, excludingScanId) =>
@@ -143,12 +191,16 @@ const makeMemoryStore = Effect.gen(function* () {
               .filter(
                 scan =>
                   scan.id !== excludingScanId &&
-                  scan.owner === owner &&
-                  scan.repository === repository &&
+                  scan.owner.toLowerCase() === owner.toLowerCase() &&
+                  scan.repository.toLowerCase() === repository.toLowerCase() &&
                   scan.status === 'completed' &&
                   scan.result !== undefined,
               )
-              .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0]
+              .sort(
+                (left, right) =>
+                  right.updatedAt.localeCompare(left.updatedAt) ||
+                  right.id.localeCompare(left.id),
+              )[0]
               ?.result,
           ),
         ),
@@ -156,7 +208,7 @@ const makeMemoryStore = Effect.gen(function* () {
   });
 });
 
-const MemoryStoreLive = Layer.effect(RadarStore, makeMemoryStore);
+export const MemoryStoreLive = Layer.effect(RadarStore, makeMemoryStore);
 
 const storageFailure = <Failure>(cause: Failure) =>
   new StorageError({
@@ -186,8 +238,12 @@ const makePostgresStore = Effect.gen(function* () {
     )
   `.pipe(Effect.mapError(storageFailure));
   yield* sql`
-    create index if not exists scans_repository_completed_idx
-    on scans(owner, repository, updated_at desc)
+    create index if not exists scans_repository_history_idx
+    on scans(lower(owner), lower(repository), created_at desc, id desc)
+  `.pipe(Effect.mapError(storageFailure));
+  yield* sql`
+    create index if not exists scans_repository_completed_ci_idx
+    on scans(lower(owner), lower(repository), updated_at desc, id desc)
     where status = 'completed'
   `.pipe(Effect.mapError(storageFailure));
 
@@ -229,8 +285,8 @@ const makePostgresStore = Effect.gen(function* () {
       const scan = new ScanRecord({
         id,
         githubUrl: input.githubUrl,
-        owner: input.owner,
-        repository: input.repository,
+        owner: input.owner.toLowerCase(),
+        repository: input.repository.toLowerCase(),
         audience: input.audience,
         status: 'queued',
         progress: 2,
@@ -266,20 +322,53 @@ const makePostgresStore = Effect.gen(function* () {
     getScan,
     listRecentScans: Effect.fn('RadarStore.listRecentScans')(function* (limit = 8) {
       const rows = yield* sql<{ readonly record_json: string }>`
-        select record::text record_json from scans order by created_at desc
+        select record::text record_json from scans order by created_at desc, id desc
         limit ${Math.min(Math.max(limit, 1), 25)}
       `.pipe(Effect.mapError(storageFailure));
       return yield* Effect.forEach(rows, row => decodeScan(row.record_json));
     }),
+    listRecentRepositories: Effect.fn('RadarStore.listRecentRepositories')(
+      function* (limit = 8) {
+        const repositoryLimit = Math.trunc(Math.min(Math.max(limit, 1), 25));
+        const rows = yield* sql<{ readonly record_json: string }>`
+          select record_json from (
+            select distinct on (lower(owner), lower(repository))
+              record::text record_json,
+              created_at,
+              id
+            from scans
+            order by
+              lower(owner),
+              lower(repository),
+              created_at desc,
+              id desc
+          ) latest_repositories
+          order by created_at desc, id desc
+          limit ${repositoryLimit}
+        `.pipe(Effect.mapError(storageFailure));
+        return yield* Effect.forEach(rows, row => decodeScan(row.record_json));
+      },
+    ),
+    listRepositoryScans: Effect.fn('RadarStore.listRepositoryScans')(
+      function* (owner, repository) {
+        const rows = yield* sql<{ readonly record_json: string }>`
+          select record::text record_json from scans
+          where lower(owner) = lower(${owner})
+            and lower(repository) = lower(${repository})
+          order by created_at desc, id desc
+        `.pipe(Effect.mapError(storageFailure));
+        return yield* Effect.forEach(rows, row => decodeScan(row.record_json));
+      },
+    ),
     getPreviousResult: Effect.fn('RadarStore.getPreviousResult')(
       function* (owner, repository, excludingScanId) {
         const rows = yield* sql<{ readonly record_json: string }>`
           select record::text record_json from scans
-          where owner = ${owner}
-            and repository = ${repository}
+          where lower(owner) = lower(${owner})
+            and lower(repository) = lower(${repository})
             and id <> ${excludingScanId}
             and status = 'completed'
-          order by updated_at desc
+          order by updated_at desc, id desc
           limit 1
         `.pipe(Effect.mapError(storageFailure));
         if (!rows[0]) return Option.none<ScanResult>();

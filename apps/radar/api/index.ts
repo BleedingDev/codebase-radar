@@ -506,6 +506,22 @@ const RadarGroupLive = HttpApiBuilder.group(RadarApi, 'radar', handlers =>
           Effect.mapError(error => new ApiFailure({ message: error.message })),
         ),
       ),
+    )
+    .handle('listRepositories', ({ query }) =>
+      RadarStore.use(store =>
+        store.listRecentRepositories(query.limit).pipe(
+          Effect.map(items => new ScanListResponse({ items })),
+          Effect.mapError(error => new ApiFailure({ message: error.message })),
+        ),
+      ),
+    )
+    .handle('listRepositoryScans', ({ params }) =>
+      RadarStore.use(store =>
+        store.listRepositoryScans(params.owner, params.repository).pipe(
+          Effect.map(items => new ScanListResponse({ items })),
+          Effect.mapError(error => new ApiFailure({ message: error.message })),
+        ),
+      ),
     ),
 );
 

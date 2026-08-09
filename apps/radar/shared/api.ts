@@ -187,5 +187,26 @@ export const RadarApi = HttpApi.make('RadarApi').add(
         query: { limit: Schema.optional(Schema.FiniteFromString) },
         success: ScanListResponse,
       }),
+    )
+    .add(
+      HttpApiEndpoint.get('listRepositories', '/repositories', {
+        error: ApiFailureHttp,
+        query: { limit: Schema.optional(Schema.FiniteFromString) },
+        success: ScanListResponse,
+      }),
+    )
+    .add(
+      HttpApiEndpoint.get(
+        'listRepositoryScans',
+        '/repositories/:owner/:repository/scans',
+        {
+          error: ApiFailureHttp,
+          params: {
+            owner: Schema.String,
+            repository: Schema.String,
+          },
+          success: ScanListResponse,
+        },
+      ),
     ),
 );

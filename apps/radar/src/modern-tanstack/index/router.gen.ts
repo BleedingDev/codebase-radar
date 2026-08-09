@@ -13,12 +13,13 @@ import {
 
 import loader_0 from "../../routes/layout.loader";
 import component_0 from "../../routes/page";
-import component_1 from "../../routes/reviews/[scanId]/page";
-import component_2 from "../../routes/reviews/new/page";
-import component_3 from "../../routes/layout";
+import component_1 from "../../routes/[provider]/[owner]/[repository]/page";
+import component_2 from "../../routes/[provider]/[owner]/[repository]/reviews/[scanId]/page";
+import component_3 from "../../routes/reviews/new/page";
+import component_4 from "../../routes/layout";
 
 export const rootRoute = createRootRouteWithContext<ModernRouterContext>()({
-  component: component_3,
+  component: component_4,
   loader: modernLoaderToTanstack({ hasSplat: false }, loader_0),
   staticData: createRouteStaticData({
     modernRouteId: "layout",
@@ -35,25 +36,34 @@ const route_page = createRoute({
   }),
 });
 
-const route_reviews__scanId__page = createRoute({
+const route__provider___owner___repository__page = createRoute({
   getParentRoute: () => rootRoute,
   component: component_1,
-  path: "reviews/$scanId",
+  path: "$provider/$owner/$repository",
   staticData: createRouteStaticData({
-    modernRouteId: "reviews/(scanId)/page",
+    modernRouteId: "(provider)/(owner)/(repository)/page",
+  }),
+});
+
+const route__provider___owner___repository__reviews__scanId__page = createRoute({
+  getParentRoute: () => rootRoute,
+  component: component_2,
+  path: "$provider/$owner/$repository/reviews/$scanId",
+  staticData: createRouteStaticData({
+    modernRouteId: "(provider)/(owner)/(repository)/reviews/(scanId)/page",
   }),
 });
 
 const route_reviews_new_page = createRoute({
   getParentRoute: () => rootRoute,
-  component: component_2,
+  component: component_3,
   path: "reviews/new",
   staticData: createRouteStaticData({
     modernRouteId: "reviews/new/page",
   }),
 });
 
-export const routeTree = rootRoute.addChildren([route_page, route_reviews__scanId__page, route_reviews_new_page]);
+export const routeTree = rootRoute.addChildren([route_page, route__provider___owner___repository__page, route__provider___owner___repository__reviews__scanId__page, route_reviews_new_page]);
 
 export const router = createRouter({
   ...modernTanstackRouterFastDefaults,
