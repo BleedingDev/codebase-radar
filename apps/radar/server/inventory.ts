@@ -59,9 +59,12 @@ export const repositoryRelative = (
   root: string,
   absolute: string,
 ) => {
+  const rootName = pathService.basename(root);
   const resolved = pathService.isAbsolute(absolute)
     ? pathService.resolve(absolute)
-    : pathService.resolve(root, absolute);
+    : absolute === rootName || absolute.startsWith(`${rootName}${pathService.sep}`)
+      ? pathService.resolve(pathService.dirname(root), absolute)
+      : pathService.resolve(root, absolute);
   const value = pathService.relative(root, resolved);
   return !value || value === '..' || value.startsWith(`..${pathService.sep}`)
     ? undefined

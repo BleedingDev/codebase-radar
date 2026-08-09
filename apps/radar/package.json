@@ -20,6 +20,7 @@
     "@modern-js/plugin-bff": "npm:@bleedingdev/modern-js-plugin-bff@3.5.0-ultramodern.100",
     "@modern-js/runtime": "npm:@bleedingdev/modern-js-runtime@3.5.0-ultramodern.100",
     "effect": "4.0.0-beta.102",
+    "strip-json-comments": "5.0.3",
     "react": "19.2.0",
     "react-dom": "19.2.0"
   },
@@ -31,6 +32,6 @@
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
     "typescript": "7.0.2",
-    "vitest": "4.0.8"
+    "vitest": "4.1.10"
   }
 }

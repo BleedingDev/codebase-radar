@@ -8,6 +8,7 @@ import {
   Path,
   Schema,
 } from 'effect';
+import stripJsonComments from 'strip-json-comments';
 import {
   AnalyzerCoverage,
   AnalyzerRun,
@@ -187,6 +188,8 @@ const OsvReport = Schema.Struct({
   ),
 });
 
+const policyRulePattern = /(?:array-type|catch-error-name|consistent-type-imports|curly|func-names|import-order|max-classes-per-file|member-ordering|no-array-sort|no-default-export|no-nested-ternary|numeric-separators-style|parameter-properties|prefer-await-to-callbacks|prefer-await-to-then|prefer-code-point|prefer-default-export|prefer-destructuring|prefer-named-capture-group|prefer-string-replace-all|sort-keys)/iu;
+
 const decodeJson = <S extends Schema.Constraint>(schema: S, text: string) =>
   Schema.decodeEffect(Schema.fromJsonString(schema))(text || 'null');
 
@@ -207,7 +210,11 @@ const unavailable = (
       coverage: new AnalyzerCoverage({
         eligibleFiles: inventory.sourceFiles.length,
         analyzedFiles: 0,
-        omittedCapabilities: [`${analyzer} executable unavailable`],
+        omittedCapabilities: [
+          status === 'not_applicable'
+            ? diagnostic
+            : `${analyzer} executable unavailable`,
+        ],
         warnings: status === 'not_applicable' ? [] : [diagnostic],
       }),
       observationCount: 0,
@@ -280,10 +287,7 @@ export const runStrictestComparator = Effect.fn('runStrictestComparator')(
                   Schema.Union([Schema.String, Schema.Array(Schema.String)]),
                 ),
               }),
-              text
-                .replace(/\/\*[\s\S]*?\*\//gu, '')
-                .replace(/(^|[^:])\/\/.*$/gmu, '$1')
-                .replace(/,\s*([}\]])/gu, '$1'),
+              stripJsonComments(text, { trailingCommas: true }),
             ),
           ),
           Effect.tap(parsed =>
@@ -434,7 +438,10 @@ export const runOxlint = Effect.fn('runOxlint')(function* (
       grouped.set(code, [...(grouped.get(code) ?? []), diagnostic]);
     }
     const candidates = [...grouped.entries()]
-      .sort((left, right) => right[1].length - left[1].length)
+      .sort((left, right) => {
+        const policyDelta = Number(policyRulePattern.test(left[0])) - Number(policyRulePattern.test(right[0]));
+        return policyDelta || right[1].length - left[1].length;
+      })
       .slice(0, 18)
       .map(([code, matches]) => {
         const first = matches[0];
@@ -450,9 +457,7 @@ export const runOxlint = Effect.fn('runOxlint')(function* (
               : /promise|async|error|throw/iu.test(code)
                 ? 'reliability'
                 : 'maintainability';
-        const policyOnly = /(?:sort-keys|parameter-properties|consistent-type-imports|func-names|no-default-export|prefer-default-export|import-order|member-ordering)/iu.test(
-          code,
-        );
+        const policyOnly = policyRulePattern.test(code);
         return new FindingCandidate({
           fingerprintSeed: `oxlint:${code}:${path ?? 'repository'}`,
           title: `${matches.length} ${code} ${matches.length === 1 ? 'signal' : 'signals'}`,
