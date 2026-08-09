@@ -31,7 +31,7 @@ zerops:
       base: nodejs@24
       prepareCommands:
         - sudo apt-get update
-        - sudo apt-get install -y bubblewrap
+        - sudo apt-get install -y bubblewrap util-linux
       ports:
         - port: 3000
           protocol: tcp

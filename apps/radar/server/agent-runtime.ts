@@ -207,11 +207,25 @@ const sandboxCommand = (
   const invocation = allocateTerminal
     ? [
         '/usr/bin/script',
-        '-qefc',
+        '--quiet',
+        '--return',
+        '--flush',
+        '--echo',
+        'never',
+        '--command',
         '/opt/radar-agent/node_modules/.bin/claude auth login --claudeai',
         '/dev/null',
       ]
     : [executable, ...providerArgs];
+  const procEntries = profile.provider === 'claude'
+    ? [
+        '--dir',
+        '/proc/self',
+        '--symlink',
+        '/opt/radar-agent/node_modules/@anthropic-ai/claude-code/bin/claude.exe',
+        '/proc/self/exe',
+      ]
+    : [];
   return {
     command: 'bwrap',
     args: [
@@ -240,6 +254,7 @@ const sandboxCommand = (
       '/etc',
       '--dir',
       '/proc',
+      ...procEntries,
       '--dev',
       '/dev',
       '--tmpfs',
