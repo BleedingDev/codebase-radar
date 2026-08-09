@@ -196,6 +196,7 @@ const sandboxCommand = (
   workRoot: string,
   profile: AgentProfile,
   providerArgs: ReadonlyArray<string>,
+  allocateTerminal: boolean,
 ): SandboxCommand => {
   const executable = profile.provider === 'codex'
     ? '/opt/radar-agent/node_modules/.bin/codex'
@@ -203,6 +204,14 @@ const sandboxCommand = (
   const providerHome = profile.provider === 'codex'
     ? '/home/agent/.codex'
     : '/home/agent/.claude';
+  const invocation = allocateTerminal
+    ? [
+        '/usr/bin/script',
+        '-qefc',
+        '/opt/radar-agent/node_modules/.bin/claude auth login --claudeai',
+        '/dev/null',
+      ]
+    : [executable, ...providerArgs];
   return {
     command: 'bwrap',
     args: [
@@ -285,8 +294,7 @@ const sandboxCommand = (
       'CLAUDE_CODE_DISABLE_AUTOUPDATER',
       '1',
       '--',
-      executable,
-      ...providerArgs,
+      ...invocation,
     ],
     env: {
       PATH: '/usr/bin:/bin',
@@ -442,6 +450,7 @@ export const AgentRuntimeLive = Layer.effect(
           workRoot,
           profile,
           providerArgs,
+          profile.provider === 'claude',
         );
         const handle = yield* ChildProcess.make(sandbox.command, sandbox.args, {
             cwd: root,
@@ -535,6 +544,7 @@ export const AgentRuntimeLive = Layer.effect(
             workRoot,
             profile,
             providerArgs,
+            false,
           );
           const result = yield* runCommand({
             command: sandbox.command,
@@ -580,6 +590,7 @@ export const AgentRuntimeLive = Layer.effect(
             updatedAt: 'probe',
           }),
           ['--version'],
+          false,
         );
         const result = yield* runCommand({
           command: command.command,
