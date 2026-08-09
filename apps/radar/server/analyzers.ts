@@ -188,7 +188,7 @@ const OsvReport = Schema.Struct({
   ),
 });
 
-const policyRulePattern = /(?:array-type|catch-error-name|consistent-type-imports|curly|func-names|import-order|max-classes-per-file|member-ordering|no-array-sort|no-default-export|no-nested-ternary|numeric-separators-style|parameter-properties|prefer-await-to-callbacks|prefer-await-to-then|prefer-code-point|prefer-default-export|prefer-destructuring|prefer-named-capture-group|prefer-string-replace-all|sort-keys)/iu;
+const policyRulePattern = /(?:array-type|catch-error-name|consistent-type-imports|curly|func-names|import-order|import-style|max-classes-per-file|member-ordering|no-array-method-this-argument|no-array-sort|no-default-export|no-negated-condition|no-nested-ternary|no-use-before-define|numeric-separators-style|parameter-properties|prefer-await-to-callbacks|prefer-await-to-then|prefer-code-point|prefer-default-export|prefer-destructuring|prefer-named-capture-group|prefer-string-replace-all|sort-keys|text-encoding-identifier-case)/iu;
 
 const decodeJson = <S extends Schema.Constraint>(schema: S, text: string) =>
   Schema.decodeEffect(Schema.fromJsonString(schema))(text || 'null');
@@ -297,7 +297,15 @@ export const runStrictestComparator = Effect.fn('runStrictestComparator')(
                 typeof parsed.extends === 'string'
                   ? [parsed.extends]
                   : parsed.extends ?? [];
-              if (bases.some(base => !base.startsWith('.'))) {
+              const strictestInherited = bases.some(
+                base =>
+                  base === '@tsconfig/strictest' ||
+                  base === '@tsconfig/strictest/tsconfig.json',
+              );
+              if (
+                !strictestInherited &&
+                bases.some(base => !base.startsWith('.'))
+              ) {
                 warnings.push(
                   `${configPath}: package-based extends was not executed or resolved`,
                 );
@@ -323,7 +331,9 @@ export const runStrictestComparator = Effect.fn('runStrictestComparator')(
                   parsed.compilerOptions?.useUnknownInCatchVariables,
               };
               for (const [option, enabled] of Object.entries(configured)) {
-                if (enabled !== true) gaps.add(option);
+                if (enabled === false || (!strictestInherited && enabled !== true)) {
+                  gaps.add(option);
+                }
               }
             }),
           ),

@@ -22,7 +22,7 @@ export const audienceCopy = (
         finding.category === 'security'
           ? finding.summary
           : `${finding.summary} This is engineering exposure, not a verified security incident.`,
-      recommendation: `Ask the engineering owner to ${finding.recommendation.replace(/^./, value => value.toLowerCase())}`,
+      recommendation: `Ask the engineering owner to ${finding.recommendation.replace(/^./u, value => value.toLowerCase())}`,
     };
   }
   return {

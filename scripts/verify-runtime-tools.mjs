@@ -11,7 +11,7 @@ const tools = [
 ];
 
 for (const [command, args, expected] of tools) {
-  const result = spawnSync(command, args, { encoding: 'utf8' });
+  const result = spawnSync(command, args, { encoding: 'utf-8' });
   const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
   if (result.status !== 0 || !output.includes(expected)) {
     throw new Error(`Runtime tool verification failed: ${command} expected ${expected}; got ${output}`);

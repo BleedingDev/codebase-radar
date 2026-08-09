@@ -22,7 +22,7 @@ function inspect(directory) {
       continue;
     }
     if (!extensions.has(extname(entry.name))) continue;
-    const lines = readFileSync(path, 'utf8').split('\n');
+    const lines = readFileSync(path, 'utf-8').split('\n');
     lines.forEach((line, index) => {
       forbidden.lastIndex = 0;
       if (forbidden.test(line)) {
