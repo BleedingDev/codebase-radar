@@ -10,7 +10,6 @@ import './styles.css';
 const RadarClient = makeEffectHttpApiClient(RadarApi, { baseUrl: '/api' });
 
 const audienceOptions = Audience.literals;
-const frameworkProfiles = ['React', 'Angular', 'Vue', 'Svelte', 'Solid'];
 
 export default function App() {
   const [repositoryUrl, setRepositoryUrl] = useState(
@@ -20,6 +19,7 @@ export default function App() {
   const [audience, setAudience] = useState<ScanRecord['audience']>('technical');
   const [scans, setScans] = useState<ReadonlyArray<ScanRecord>>([]);
   const [selected, setSelected] = useState<ScanRecord>();
+  const [showScanner, setShowScanner] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -106,6 +106,7 @@ export default function App() {
               scan,
               ...current.filter(item => item.id !== scan.id),
             ]);
+            setShowScanner(false);
             setSubmitting(false);
           }),
         ),
@@ -131,37 +132,39 @@ export default function App() {
           </span>
           <span>CODEBASE RADAR</span>
         </a>
-        <div className="runtime-chip">
-          <span className="live-dot" /> UltraModern · Effect · TraceDecay
-        </div>
+        {selected ? (
+          <button
+            className="new-review-button"
+            type="button"
+            onClick={() => setShowScanner(current => !current)}
+          >
+            {showScanner ? 'CLOSE' : 'NEW REVIEW'}
+          </button>
+        ) : null}
       </header>
 
       <main id="top">
-        <section className="hero-grid">
+        <section
+          className={selected ? 'hero-grid repeat' : 'hero-grid'}
+          hidden={selected ? !showScanner : false}
+        >
           <div className="hero-copy">
-            <p className="eyebrow">Static code intelligence, ranked for action</p>
+            <p className="eyebrow">Your codebase, in priority order</p>
             <h1>
-              Know what to fix <em>next.</em>
+              Fix the right <em>things.</em>
             </h1>
             <p className="lede">
-              Give Radar a public GitHub repository. Get one short, evidence-backed
-              improvement queue with consequence, confidence, effort, and blast
-              radius kept separate.
+              Paste a public GitHub link. Get the few changes worth doing first—and
+              the noise you can safely leave alone.
             </p>
-            <div className="framework-strip" aria-label="Supported frameworks">
-              {frameworkProfiles.map(framework => (
-                <span key={framework}>{framework}</span>
-              ))}
-            </div>
           </div>
 
           <form className="scan-console" onSubmit={submitScan}>
             <div className="console-head">
-              <span>NEW SNAPSHOT</span>
-              <span className="console-index">01</span>
+              <span>START A REVIEW</span>
             </div>
             <label className="field-label" htmlFor="repository-url">
-              Public GitHub repository
+              GitHub repository
             </label>
             <div className="url-input-wrap">
               <span aria-hidden="true">GH/</span>
@@ -176,7 +179,7 @@ export default function App() {
             </div>
 
             <fieldset>
-              <legend>Communication profile</legend>
+              <legend>Explain this for</legend>
               <div className="audience-grid">
                 {audienceOptions.map(option => (
                   <label
@@ -191,36 +194,32 @@ export default function App() {
                       onChange={() => setAudience(option)}
                     />
                     <span>{audienceLabel[option]}</span>
-                    <small>
-                      {option === 'technical'
-                        ? 'Mechanism + remediation'
-                        : option === 'security'
-                          ? 'Exposure + evidence limits'
-                          : 'Consequence + decision'}
-                    </small>
                   </label>
                 ))}
               </div>
             </fieldset>
 
-            <label className="field-label" htmlFor="display-name">
-              Profile name <span>optional</span>
-            </label>
-            <input
-              className="name-input"
-              id="display-name"
-              value={displayName}
-              onChange={event => setDisplayName(event.currentTarget.value)}
-              placeholder="Ada / Platform team"
-              maxLength={80}
-            />
+            <details className="profile-options">
+              <summary>Personalize this view</summary>
+              <label className="field-label" htmlFor="display-name">
+                Profile name <span>optional</span>
+              </label>
+              <input
+                className="name-input"
+                id="display-name"
+                value={displayName}
+                onChange={event => setDisplayName(event.currentTarget.value)}
+                placeholder="Ada / Platform team"
+                maxLength={80}
+              />
+            </details>
 
             <button className="scan-button" disabled={submitting} type="submit">
-              <span>{submitting ? 'QUEUING SNAPSHOT' : 'SCAN & PRIORITIZE'}</span>
+              <span>{submitting ? 'STARTING REVIEW' : 'SHOW ME WHAT MATTERS'}</span>
               <span aria-hidden="true">↗</span>
             </button>
             <p className="boundary-note">
-              No installs, builds, tests, hooks, submodules, or repository code.
+              Read-only review. We never run your code.
             </p>
             {error ? <p className="error-note">{error}</p> : null}
           </form>
@@ -229,11 +228,11 @@ export default function App() {
         <section className="workspace">
           <aside className="scan-rail">
             <div className="section-heading">
-              <span>SNAPSHOTS</span>
+              <span>RECENT REVIEWS</span>
               <span>{String(scans.length).padStart(2, '0')}</span>
             </div>
             {scans.length === 0 ? (
-              <div className="empty-rail">Your first repository snapshot starts here.</div>
+              <div className="empty-rail">Your first review starts here.</div>
             ) : (
               <div className="scan-list">
                 {scans.map(scan => (
@@ -253,25 +252,15 @@ export default function App() {
                 ))}
               </div>
             )}
-            <div className="rail-foot">
-              <span>MCP</span>
-              <code>/api/mcp</code>
-              <small>Read-only agent taskpacks</small>
-            </div>
           </aside>
 
           <div className="results-panel">
             {!selected ? (
               <div className="empty-state">
                 <span className="radar-orbit" aria-hidden="true"><i /></span>
-                <p>NO SNAPSHOT SELECTED</p>
-                <h2>One queue. Multiple signals. Explicit uncertainty.</h2>
-                <div className="method-grid">
-                  <div><b>01</b><span>Bounded repository inventory</span></div>
-                  <div><b>02</b><span>Independent static analyzers</span></div>
-                  <div><b>03</b><span>TraceDecay structural evidence</span></div>
-                  <div><b>04</b><span>Deterministic priority model</span></div>
-                </div>
+                <p>NO REVIEW YET</p>
+                <h2>Start with one clear list.</h2>
+                <p className="empty-promise">What to do now, what to check, and what to leave alone.</p>
               </div>
             ) : !result ? (
               <div className="running-state">
@@ -288,19 +277,19 @@ export default function App() {
                 <div className="progress-track">
                   <span style={{ width: `${selected.progress}%` }} />
                 </div>
-                <p>{selected.progress}% · the HTTP service stays responsive during bounded child processes.</p>
+                <p>{selected.progress}% complete</p>
                 {selected.error ? <p className="error-note">{selected.error}</p> : null}
               </div>
             ) : (
               <>
                 <div className="result-header">
                   <div>
-                    <p className="eyebrow">Snapshot {result.repository.commitSha.slice(0, 8)}</p>
+                    <p className="eyebrow">Review {result.repository.commitSha.slice(0, 8)}</p>
                     <h2>{result.repository.owner}/{result.repository.name}</h2>
                     <p>{result.summary.headline}</p>
                   </div>
                   <div className="health-dial">
-                    <span>HEALTH</span>
+                    <span>OVERALL</span>
                     <strong>{result.summary.healthScore}</strong>
                     <small>/ 100</small>
                   </div>
@@ -308,16 +297,16 @@ export default function App() {
 
                 <div className="metric-row">
                   <div className="metric critical"><span>FIX NOW</span><b>{result.summary.fixNow}</b></div>
-                  <div><span>INVESTIGATE</span><b>{result.summary.investigate}</b></div>
-                  <div><span>MONITOR</span><b>{result.summary.monitor}</b></div>
-                  <div><span>DO NOT FIX</span><b>{result.summary.doNotFix}</b></div>
-                  <div><span>PRIORITY Δ</span><b>{result.comparison.priorityDelta > 0 ? '+' : ''}{result.comparison.priorityDelta}</b></div>
+                  <div><span>CHECK</span><b>{result.summary.investigate}</b></div>
+                  <div><span>WATCH</span><b>{result.summary.monitor}</b></div>
+                  <div><span>LEAVE ALONE</span><b>{result.summary.doNotFix}</b></div>
+                  <div><span>SINCE LAST</span><b>{result.comparison.previousScanId ? `${result.comparison.priorityDelta > 0 ? '+' : ''}${result.comparison.priorityDelta}` : '—'}</b></div>
                 </div>
 
                 <div className="backlog-head">
                   <div>
-                    <p className="eyebrow">Prioritized improvement backlog</p>
-                    <h3>Signal over volume.</h3>
+                    <p className="eyebrow">Your priority list</p>
+                    <h3>What deserves attention.</h3>
                   </div>
                   <span>{audienceLabel[audience]}</span>
                 </div>
@@ -340,12 +329,18 @@ export default function App() {
                             <b>NEXT MOVE</b>
                             <span>{copy.recommendation}</span>
                           </div>
-                          <details>
-                            <summary>Evidence & limits · {finding.evidence.length}</summary>
+                          <details className="finding-details">
+                            <summary>Why this is ranked here</summary>
+                            <div className="score-list">
+                              <div><span>Consequence</span><b>{finding.scores.consequence}</b></div>
+                              <div><span>Reach</span><b>{finding.scores.blastRadius}</b></div>
+                              <div><span>Confidence</span><b>{finding.scores.confidence}</b></div>
+                              <div><span>Effort</span><b>{finding.scores.effort}</b></div>
+                              <div><span>Change risk</span><b>{finding.scores.changeExposure}</b></div>
+                            </div>
                             <div className="evidence-list">
                               {finding.evidence.map((evidence, evidenceIndex) => (
                                 <p key={`${finding.id}-${evidenceIndex}`}>
-                                  <b>{evidence.analyzer}</b>
                                   <span>{evidence.message}</span>
                                   {evidence.path ? <code>{evidence.path}{evidence.line ? `:${evidence.line}` : ''}</code> : null}
                                 </p>
@@ -353,51 +348,22 @@ export default function App() {
                             </div>
                           </details>
                         </div>
-                        <div className="score-stack">
-                          <strong>{finding.scores.priority}</strong>
-                          <span>PRIORITY</span>
-                          <dl>
-                            <div><dt>Consequence</dt><dd>{finding.scores.consequence}</dd></div>
-                            <div><dt>Blast radius</dt><dd>{finding.scores.blastRadius}</dd></div>
-                            <div><dt>Confidence</dt><dd>{finding.scores.confidence}</dd></div>
-                            <div><dt>Effort</dt><dd>{finding.scores.effort}</dd></div>
-                            <div><dt>Exposure</dt><dd>{finding.scores.changeExposure}</dd></div>
-                          </dl>
-                        </div>
                       </article>
                     );
                   })}
                 </div>
 
-                <section className="coverage-section">
-                  <div className="section-heading">
-                    <span>ANALYZER COVERAGE</span>
-                    <span>{result.analyzerRuns.length} SOURCES</span>
-                  </div>
-                  <div className="coverage-table">
-                    {result.analyzerRuns.map(run => (
-                      <div className="coverage-row" key={run.analyzer}>
-                        <div><span className={`status-mark ${run.status}`} /><b>{run.analyzer}</b></div>
-                        <span>{run.status.replaceAll('_', ' ')}</span>
-                        <span>{run.coverage.analyzedFiles}/{run.coverage.eligibleFiles} files</span>
-                        <span>{run.observationCount} signals</span>
-                        <span>{Math.round(run.durationMs / 100) / 10}s</span>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="coverage-limit">{result.profile.limitations.join(' · ')}</p>
-                </section>
+                <details className="review-details">
+                  <summary>Review details</summary>
+                  <p>{result.analyzerRuns.filter(run => run.status === 'complete').length} of {result.analyzerRuns.length} checks completed.</p>
+                  <p>{result.profile.limitations.join(' ')}</p>
+                </details>
               </>
             )}
           </div>
         </section>
       </main>
 
-      <footer>
-        <span>CODEBASE RADAR / MVP 0.1</span>
-        <span>Evidence is not runtime truth.</span>
-        <a href="https://github.com/BleedingDev/codebase-radar">SOURCE ↗</a>
-      </footer>
     </div>
   );
 }

@@ -1,9 +1,9 @@
 import { Audience, type Finding } from './domain';
 
 export const audienceLabel = {
-  technical: 'CTO / Tech lead',
-  executive: 'CEO / Product owner',
-  security: 'CISO / Risk owner',
+  technical: 'Engineering',
+  executive: 'Leadership',
+  security: 'Security',
 } satisfies Record<typeof Audience.Type, string>;
 
 export const audienceCopy = (
@@ -12,7 +12,7 @@ export const audienceCopy = (
 ) => {
   if (audience === 'technical') {
     return {
-      summary: finding.technicalSummary,
+      summary: finding.summary,
       recommendation: finding.recommendation,
     };
   }

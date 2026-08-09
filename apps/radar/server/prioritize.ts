@@ -325,8 +325,8 @@ export const buildScanResult = Effect.fn('buildScanResult')(function* (input: {
     summary: new ScanSummary({
       headline:
         findings.length > 0
-          ? `${findings.filter(finding => finding.action === 'fix now').length || 'No'} immediate priorities; ${findings.length} evidence-backed backlog items.`
-          : 'No ranked findings were produced; inspect analyzer coverage before treating this result like a clean bill of health.',
+          ? `${findings.filter(finding => finding.action === 'fix now').length || 'No'} urgent; ${findings.length} items worth your attention.`
+          : 'Nothing was ranked. This does not mean the codebase is risk-free.',
       healthScore,
       fixNow: findings.filter(finding => finding.action === 'fix now').length,
       investigate: findings.filter(finding => finding.action === 'investigate').length,

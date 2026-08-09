@@ -51,7 +51,7 @@ const performScan = Effect.fn('performScan')(function* (scan: ScanRecord) {
   yield* store.updateScan(scan.id, {
     status: 'running',
     progress: 7,
-    stage: 'Cloning the public default branch',
+    stage: 'Getting the latest version',
   });
   const clone = yield* runCommand({
     command: 'git',
@@ -106,7 +106,7 @@ const performScan = Effect.fn('performScan')(function* (scan: ScanRecord) {
 
   yield* store.updateScan(scan.id, {
     progress: 16,
-    stage: 'Inventorying framework and static-analysis coverage',
+    stage: 'Reading the codebase',
   });
   const inventory = yield* inventoryRepository(repoRoot);
   if (inventory.sourceFiles.length === 0) {
@@ -119,37 +119,37 @@ const performScan = Effect.fn('performScan')(function* (scan: ScanRecord) {
 
   yield* store.updateScan(scan.id, {
     progress: 24,
-    stage: 'Comparing TypeScript safety configuration',
+    stage: 'Checking type safety',
   });
   outputs.push(yield* runStrictestComparator(repoRoot, inventory));
 
   yield* store.updateScan(scan.id, {
     progress: 34,
-    stage: 'Running the pinned Ultracite + Oxlint profile',
+    stage: 'Checking code quality',
   });
   outputs.push(yield* runOxlint(repoRoot, inventory, runtimeRoot));
 
   yield* store.updateScan(scan.id, {
     progress: 47,
-    stage: 'Measuring cross-framework duplication',
+    stage: 'Looking for repeated code',
   });
   outputs.push(yield* runJscpd(scanRoot, repoRoot, inventory, runtimeRoot));
 
   yield* store.updateScan(scan.id, {
     progress: 57,
-    stage: 'Auditing GitHub Actions without network access',
+    stage: 'Checking automation safety',
   });
   outputs.push(yield* runZizmor(repoRoot, inventory, runtimeRoot));
 
   yield* store.updateScan(scan.id, {
     progress: 65,
-    stage: 'Matching JavaScript lockfiles to OSV advisories',
+    stage: 'Checking known dependency risks',
   });
   outputs.push(yield* runOsv(scanRoot, repoRoot, inventory, runtimeRoot));
 
   yield* store.updateScan(scan.id, {
     progress: 73,
-    stage: 'Indexing structural evidence with TraceDecay',
+    stage: 'Mapping change impact',
   });
   outputs.push(
     yield* runTraceDecay({
@@ -162,7 +162,7 @@ const performScan = Effect.fn('performScan')(function* (scan: ScanRecord) {
 
   yield* store.updateScan(scan.id, {
     progress: 89,
-    stage: 'Normalizing evidence into one priority queue',
+    stage: 'Deciding what matters most',
   });
   const previous = yield* store.getPreviousResult(
     scan.owner,
@@ -185,7 +185,7 @@ const performScan = Effect.fn('performScan')(function* (scan: ScanRecord) {
   yield* store.updateScan(scan.id, {
     status: 'completed',
     progress: 100,
-    stage: 'Prioritized backlog ready',
+    stage: 'Your review is ready',
     result,
   });
 });
