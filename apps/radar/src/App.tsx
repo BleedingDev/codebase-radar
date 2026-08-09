@@ -3,7 +3,11 @@ import { makeEffectHttpApiClient } from '@modern-js/plugin-bff/effect-client';
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { RadarApi } from '../shared/api';
-import { audienceCopy, audienceLabel } from '../shared/audience';
+import {
+  audienceCopy,
+  audienceLabel,
+  decisionHeadline,
+} from '../shared/audience';
 import { Audience, ScanRecord } from '../shared/domain';
 import './styles.css';
 
@@ -132,6 +136,23 @@ export default function App() {
   const result = selected?.result;
   const resultAudience = selected?.audience ?? audience;
   const visibleFindings = result?.findings.slice(0, 5) ?? [];
+  const presentedHeadline = result
+    ? decisionHeadline(
+        result.summary.fixNow,
+        result.summary.investigate,
+        result.summary.monitor,
+      )
+    : '';
+  let presentedChange = 'First';
+  if (result?.comparison.previousScanId) {
+    if (result.comparison.priorityDelta < -4) {
+      presentedChange = 'Improved';
+    } else if (result.comparison.priorityDelta > 4) {
+      presentedChange = 'More work';
+    } else {
+      presentedChange = 'Stable';
+    }
+  }
 
   return (
     <div className="app-shell">
@@ -293,16 +314,9 @@ export default function App() {
             ) : (
               <>
                 <div className="result-header">
-                  <div>
-                    <p className="eyebrow">Review {result.repository.commitSha.slice(0, 8)}</p>
-                    <h2>{result.repository.owner}/{result.repository.name}</h2>
-                    <p>{result.summary.headline}</p>
-                  </div>
-                  <div className="health-dial">
-                    <span>OVERALL</span>
-                    <strong>{result.summary.healthScore}</strong>
-                    <small>/ 100</small>
-                  </div>
+                  <p className="eyebrow">Review {result.repository.commitSha.slice(0, 8)}</p>
+                  <h2>{result.repository.owner}/{result.repository.name}</h2>
+                  <p>{presentedHeadline}</p>
                 </div>
 
                 <div className="metric-row">
@@ -310,7 +324,7 @@ export default function App() {
                   <div><span>CHECK</span><b>{result.summary.investigate}</b></div>
                   <div><span>WATCH</span><b>{result.summary.monitor}</b></div>
                   <div><span>LEAVE ALONE</span><b>{result.summary.doNotFix}</b></div>
-                  <div><span>SINCE LAST</span><b>{result.comparison.previousScanId ? `${result.comparison.priorityDelta > 0 ? '+' : ''}${result.comparison.priorityDelta}` : '—'}</b></div>
+                  <div><span>CHANGE</span><b>{presentedChange}</b></div>
                 </div>
 
                 <div className="backlog-head">

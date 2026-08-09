@@ -183,3 +183,16 @@ export class FindingTaskpack extends Schema.Class<FindingTaskpack>(
   guardrails: Schema.Array(Schema.String),
   suggestedInvestigation: Schema.Array(Schema.String),
 }) {}
+
+export class PrioritizationBrief extends Schema.Class<PrioritizationBrief>(
+  'PrioritizationBrief',
+)({
+  schemaVersion: Schema.Literal('codebase-radar.prioritization-brief/v1'),
+  scanId: Schema.String,
+  repository: RepositorySnapshot,
+  audience: Audience,
+  objective: Schema.String,
+  decisionRules: Schema.Array(Schema.String),
+  candidates: Schema.Array(Finding),
+  requiredOutput: Schema.Array(Schema.String),
+}) {}

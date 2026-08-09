@@ -6,6 +6,23 @@ export const audienceLabel = {
   security: 'Security',
 } satisfies Record<typeof Audience.Type, string>;
 
+export const decisionHeadline = (
+  fixNow: number,
+  investigate: number,
+  monitor: number,
+) => {
+  if (fixNow > 0) {
+    return `${fixNow} ${fixNow === 1 ? 'issue needs' : 'issues need'} attention now.`;
+  }
+  if (investigate > 0) {
+    return `Nothing urgent. Start with ${investigate} ${investigate === 1 ? 'check' : 'checks'}.`;
+  }
+  if (monitor > 0) {
+    return `Nothing urgent. Keep an eye on ${monitor} ${monitor === 1 ? 'item' : 'items'}.`;
+  }
+  return 'Nothing needs attention now.';
+};
+
 export const audienceCopy = (
   finding: Finding,
   audience: typeof Audience.Type,

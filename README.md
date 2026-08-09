@@ -89,9 +89,21 @@ Available tools:
 - `list_scans`
 - `get_scan`
 - `get_improvement_backlog`
+- `get_prioritization_brief`
 - `get_finding_taskpack`
 
-All four tools are declared read-only, non-destructive, idempotent, and closed-world. Requests carrying an invalid `Origin` are rejected. Public-repository access is unauthenticated in this challenge MVP; private-repository authorization is deferred.
+All tools are declared read-only, non-destructive, idempotent, and closed-world. Requests carrying an invalid `Origin` are rejected. Public-repository access is unauthenticated in this challenge MVP; private-repository authorization is deferred.
+
+### ZCP agent review
+
+The official Zerops `zcp@1` workspace can host Codex or Claude Code beside the two application services. ZCP remains the development workspace and Zerops control surface; it is not another Codebase Radar runtime. After adding the official ZCP service and authenticating the chosen agent, connect Radar's read-only MCP endpoint:
+
+```bash
+codex mcp add radar --url https://radar-21d6-3000.prg1.zerops.app/api/mcp
+claude mcp add --transport http radar https://radar-21d6-3000.prg1.zerops.app/api/mcp
+```
+
+The agent calls `get_prioritization_brief` to challenge the deterministic shortlist, then `get_finding_taskpack` for the selected work. It must not treat a composite score, finding volume, or an inferred impact claim as proof.
 
 ## Deploy to Zerops
 

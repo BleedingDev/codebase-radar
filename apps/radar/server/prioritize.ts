@@ -25,6 +25,7 @@ import {
   ScanProfile,
   ScanSummary,
 } from '../shared/domain';
+import { decisionHeadline } from '../shared/audience';
 import { candidateHash, FindingCandidate } from './analyzers';
 
 const RerankResponse = Schema.Struct({
@@ -293,6 +294,14 @@ export const buildScanResult = Effect.fn('buildScanResult')(function* (input: {
         0,
       ),
   );
+  const fixNow = findings.filter(finding => finding.action === 'fix now').length;
+  const investigate = findings.filter(
+    finding => finding.action === 'investigate',
+  ).length;
+  const monitor = findings.filter(finding => finding.action === 'monitor').length;
+  const doNotFix = findings.filter(
+    finding => finding.action === 'do not fix',
+  ).length;
   return new ScanResult({
     schemaVersion: 'codebase-radar.scan-result/v1',
     scanId: input.scanId,
@@ -323,15 +332,12 @@ export const buildScanResult = Effect.fn('buildScanResult')(function* (input: {
       ],
     }),
     summary: new ScanSummary({
-      headline:
-        findings.length > 0
-          ? `${findings.filter(finding => finding.action === 'fix now').length || 'No'} urgent; ${findings.length} items worth your attention.`
-          : 'Nothing was ranked. This does not mean the codebase is risk-free.',
+      headline: decisionHeadline(fixNow, investigate, monitor),
       healthScore,
-      fixNow: findings.filter(finding => finding.action === 'fix now').length,
-      investigate: findings.filter(finding => finding.action === 'investigate').length,
-      monitor: findings.filter(finding => finding.action === 'monitor').length,
-      doNotFix: findings.filter(finding => finding.action === 'do not fix').length,
+      fixNow,
+      investigate,
+      monitor,
+      doNotFix,
     }),
     findings,
     analyzerRuns: input.analyzerRuns,

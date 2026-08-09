@@ -281,12 +281,9 @@ fieldset { padding: 0; margin: 0 0 24px; border: 0; }
 .progress-track { width: min(520px, 100%); height: 7px; margin: 20px 0; background: var(--line); }
 .progress-track span { display: block; height: 100%; background: var(--signal-dark); transition: width 400ms ease; }
 
-.result-header { display: flex; align-items: end; justify-content: space-between; gap: 30px; padding-bottom: 30px; border-bottom: 1px solid var(--ink); }
+.result-header { padding-bottom: 30px; border-bottom: 1px solid var(--ink); }
 .result-header h2 { margin-bottom: 9px; font: 600 clamp(2.25rem, 4vw, 4rem)/1 'Space Grotesk', sans-serif; letter-spacing: -.05em; }
 .result-header p:last-child { margin: 0; color: var(--muted); }
-.health-dial { display: grid; min-width: 130px; min-height: 130px; place-content: center; border: 1px solid var(--ink); border-radius: 50%; text-align: center; }
-.health-dial span, .health-dial small { font: 500 1rem/1 'DM Mono', monospace; }
-.health-dial strong { font: 600 2.625rem/.95 'Space Grotesk', sans-serif; letter-spacing: -.05em; }
 .metric-row { display: grid; grid-template-columns: repeat(5, 1fr); border: 1px solid var(--ink); border-top: 0; }
 .metric-row > div { padding: 17px; border-right: 1px solid var(--ink); }
 .metric-row > div:last-child { border-right: 0; }
@@ -342,10 +339,7 @@ summary { cursor: pointer; font: 500 1rem/1 'DM Mono', monospace; color: var(--m
   .workspace { grid-template-columns: 1fr; }
   .scan-rail { border-right: 0; border-bottom: 1px solid var(--ink); }
   .results-panel { padding: 34px 16px 58px; }
-  .result-header { align-items: start; flex-direction: column; }
-  .result-header > div:first-child { width: 100%; min-width: 0; }
   .result-header h2 { overflow-wrap: anywhere; }
-  .health-dial { align-self: end; min-width: 95px; min-height: 95px; }
   .metric-row { grid-template-columns: repeat(2, 1fr); }
   .metric-row > div { border-bottom: 1px solid var(--ink); }
   .metric-row > div:nth-child(2n) { border-right: 0; }

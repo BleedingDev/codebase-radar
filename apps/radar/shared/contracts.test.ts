@@ -1,5 +1,6 @@
 import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
+import { decisionHeadline } from './audience';
 import { parseGithubRepository } from './contracts';
 
 describe('GitHub repository contract', () => {
@@ -27,4 +28,12 @@ describe('GitHub repository contract', () => {
     ).then(results => {
       expect(results.every(Exit.isFailure)).toBe(true);
     }));
+});
+
+describe('decision headline', () => {
+  it('states the next decision without a composite score', () => {
+    expect(decisionHeadline(2, 4, 8)).toBe('2 issues need attention now.');
+    expect(decisionHeadline(0, 3, 8)).toBe('Nothing urgent. Start with 3 checks.');
+    expect(decisionHeadline(0, 0, 0)).toBe('Nothing needs attention now.');
+  });
 });
