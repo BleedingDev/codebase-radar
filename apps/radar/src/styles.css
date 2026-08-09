@@ -334,6 +334,7 @@ summary { cursor: pointer; font: 500 1rem/1 'DM Mono', monospace; color: var(--m
 }
 
 @media (max-width: 760px) {
+  .topbar { padding: 0 12px; }
   .hero-copy { padding: 56px 22px; }
   h1 { font-size: clamp(3.625rem, 20vw, 5.25rem); }
   .scan-console { width: calc(100% - 32px); margin: 32px 16px 44px; box-shadow: 7px 7px 0 var(--ink); }
@@ -341,8 +342,10 @@ summary { cursor: pointer; font: 500 1rem/1 'DM Mono', monospace; color: var(--m
   .workspace { grid-template-columns: 1fr; }
   .scan-rail { border-right: 0; border-bottom: 1px solid var(--ink); }
   .results-panel { padding: 34px 16px 58px; }
-  .result-header { align-items: start; }
-  .health-dial { min-width: 95px; min-height: 95px; }
+  .result-header { align-items: start; flex-direction: column; }
+  .result-header > div:first-child { width: 100%; min-width: 0; }
+  .result-header h2 { overflow-wrap: anywhere; }
+  .health-dial { align-self: end; min-width: 95px; min-height: 95px; }
   .metric-row { grid-template-columns: repeat(2, 1fr); }
   .metric-row > div { border-bottom: 1px solid var(--ink); }
   .metric-row > div:nth-child(2n) { border-right: 0; }
@@ -353,6 +356,10 @@ summary { cursor: pointer; font: 500 1rem/1 'DM Mono', monospace; color: var(--m
   .score-list { grid-template-columns: repeat(2, 1fr); }
   .score-list div { border-bottom: 1px solid var(--line); }
   .score-list div:nth-child(2n) { border-right: 0; }
+}
+
+@media (max-width: 360px) {
+  .brand-mark { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
