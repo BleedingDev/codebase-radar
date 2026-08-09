@@ -229,7 +229,7 @@ const sandboxCommand = (
       '--ro-bind',
       '/etc',
       '/etc',
-      '--proc',
+      '--dir',
       '/proc',
       '--dev',
       '/dev',
