@@ -1,0 +1,42 @@
+zerops:
+  - setup: radar
+    build:
+      os: ubuntu
+      base: nodejs@24
+      prepareCommands:
+        - npm install --global pnpm@11.17.0
+      buildCommands:
+        - pnpm install --frozen-lockfile --store-dir .pnpm-store
+        - pnpm --filter @codebase-radar/app check
+        - pnpm --filter @codebase-radar/app run deploy
+        - pnpm --filter @codebase-radar/analyzer-runtime deploy --prod .zerops/analyzer-runtime
+        - bash scripts/prepare-runtime-tools.sh .zerops/analyzer-runtime/bin
+        - pnpm run verify:runtime-tools
+      deployFiles:
+        - apps/radar/.output
+        - .zerops/analyzer-runtime
+      cache:
+        - .pnpm-store
+    deploy:
+      readinessCheck:
+        httpGet:
+          port: 3000
+          path: /api/ready
+    run:
+      os: ubuntu
+      base: nodejs@24
+      ports:
+        - port: 3000
+          protocol: TCP
+          httpSupport: true
+      envVariables:
+        NODE_ENV: production
+        PORT: "3000"
+        DATABASE_URL: ${db_connectionString}
+        RADAR_ANALYZER_ROOT: /var/www/.zerops/analyzer-runtime
+        SCAN_CONCURRENCY: "1"
+      start: node apps/radar/.output/index.js
+      healthCheck:
+        httpGet:
+          port: 3000
+          path: /api/health

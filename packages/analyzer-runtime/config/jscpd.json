@@ -1,0 +1,24 @@
+{
+  "minTokens": 50,
+  "minLines": 5,
+  "maxSize": "1mb",
+  "mode": "mild",
+  "format": ["typescript", "tsx", "javascript", "jsx", "vue", "svelte", "markup"],
+  "crossFormats": ["js-ts"],
+  "ignore": [
+    "**/.git/**",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/coverage/**",
+    "**/.next/**",
+    "**/.nuxt/**",
+    "**/.svelte-kit/**",
+    "**/vendor/**",
+    "**/generated/**",
+    "**/*.min.js"
+  ],
+  "reporters": ["json", "silent"],
+  "blame": false,
+  "absolute": false
+}

@@ -1,0 +1,12 @@
+node_modules/
+.pnpm-store/
+.zerops/
+.output/
+.modern-js/
+dist/
+coverage/
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example

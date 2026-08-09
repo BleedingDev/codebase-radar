@@ -1,0 +1,20 @@
+project:
+  name: codebase-radar
+  description: TraceDecay-powered prioritized code-quality radar
+  tags:
+    - zerops-challenge
+
+services:
+  - hostname: db
+    type: postgresql:single@18
+    profile: oltp-staging
+    priority: 2
+
+  - hostname: radar
+    type: nodejs@24
+    buildFromGit: https://github.com/BleedingDev/codebase-radar
+    zeropsSetup: radar
+    enableSubdomainAccess: true
+    minContainers: 1
+    maxContainers: 1
+    priority: 1

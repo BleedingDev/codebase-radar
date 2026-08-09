@@ -1,0 +1,18 @@
+{
+  "name": "codebase-radar",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.17.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "pnpm --filter @codebase-radar/app build",
+    "check": "pnpm --filter @codebase-radar/app check",
+    "deploy": "pnpm --filter @codebase-radar/app run deploy",
+    "dev": "pnpm --filter @codebase-radar/app dev",
+    "start": "node apps/radar/.output/index.js",
+    "test": "pnpm --filter @codebase-radar/app test",
+    "verify:runtime-tools": "node scripts/verify-runtime-tools.mjs"
+  }
+}
