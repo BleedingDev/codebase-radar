@@ -27,7 +27,6 @@ zerops:
       base: nodejs@24
       ports:
         - port: 3000
-          protocol: TCP
           httpSupport: true
       envVariables:
         NODE_ENV: production
