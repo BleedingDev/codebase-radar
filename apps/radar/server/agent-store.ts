@@ -43,6 +43,20 @@ export class AgentCredentialState extends Schema.Class<AgentCredentialState>(
 class EncryptedAgentHome extends Schema.Class<EncryptedAgentHome>(
   'EncryptedAgentHome',
 )({
+  schemaVersion: Schema.Literal('codebase-radar.encrypted-agent-home/v2'),
+  keyVersion: Schema.Literal('v1'),
+  generation: Schema.Number,
+  ciphertext: Schema.String,
+  nonce: Schema.String,
+  tag: Schema.String,
+  wrappedKey: Schema.String,
+  wrapNonce: Schema.String,
+  wrapTag: Schema.String,
+}) {}
+
+class LegacyEncryptedAgentHome extends Schema.Class<LegacyEncryptedAgentHome>(
+  'LegacyEncryptedAgentHome',
+)({
   schemaVersion: Schema.Literal('codebase-radar.encrypted-agent-home/v1'),
   generation: Schema.Number,
   ciphertext: Schema.String,
@@ -52,6 +66,11 @@ class EncryptedAgentHome extends Schema.Class<EncryptedAgentHome>(
   wrapNonce: Schema.String,
   wrapTag: Schema.String,
 }) {}
+
+const StoredAgentHome = Schema.Union([
+  LegacyEncryptedAgentHome,
+  EncryptedAgentHome,
+]);
 
 interface AgentProfileUpdate {
   readonly state: AgentProfile['state'];
@@ -112,6 +131,16 @@ export class AgentStore extends Context.Service<AgentStore, {
     ownerId: string,
     reviewId: string,
   ) => Effect.Effect<Option.Option<AgentPriorityReview>, AgentStoreError>;
+  readonly failReviewIfActive: (
+    ownerId: string,
+    reviewId: string,
+    diagnostic: string,
+    failedAt: string,
+  ) => Effect.Effect<void, AgentStoreError>;
+  readonly failStaleReviews: (
+    cutoff: string,
+    failedAt: string,
+  ) => Effect.Effect<void, AgentStoreError>;
   readonly deleteProfile: (ownerId: string, profileId: string) => Effect.Effect<void, AgentStoreError>;
 }>()('AgentStore') {}
 
@@ -120,6 +149,14 @@ const storeError = <Failure>(cause: Failure) =>
   new AgentStoreError({
     message: cause instanceof Error ? cause.message : String(cause),
   });
+
+export const decodeStoredAgentHome = (value: string) =>
+  Schema.decodeEffect(Schema.fromJsonString(StoredAgentHome), {
+    onExcessProperty: 'error',
+  })(value).pipe(Effect.mapError(storeError));
+
+const legacyHomeDiagnostic =
+  'The saved provider sign-in uses an obsolete encryption key. Sign in again.';
 
 const makeAgentProfile = Effect.fn('makeAgentProfile')(function* (
   crypto: Crypto.Crypto,
@@ -174,6 +211,36 @@ const makeMemoryAgentStore = Effect.gen(function* () {
         ),
       ),
     );
+
+  const failReviewIfActive = Effect.fn('AgentStore.failReviewIfActive')(
+    function* (
+      ownerId: string,
+      reviewId: string,
+      diagnostic: string,
+      failedAt: string,
+    ) {
+      yield* Ref.update(state, current => {
+        const entry = current.reviews.get(reviewId);
+        if (
+          !entry ||
+          entry.ownerId !== ownerId ||
+          (entry.review.status !== 'queued' && entry.review.status !== 'running')
+        ) {
+          return current;
+        }
+        const review = new AgentPriorityReview({
+          ...entry.review,
+          status: 'failed',
+          diagnostic,
+          updatedAt: failedAt,
+        });
+        return {
+          ...current,
+          reviews: new Map(current.reviews).set(reviewId, { ...entry, review }),
+        };
+      });
+    },
+  );
 
   return AgentStore.of({
     ready: Effect.void,
@@ -288,6 +355,25 @@ const makeMemoryAgentStore = Effect.gen(function* () {
           ),
         ),
       ),
+    failReviewIfActive,
+    failStaleReviews: (cutoff, failedAt) =>
+      Ref.get(state).pipe(
+        Effect.flatMap(current =>
+          Effect.forEach(
+            [...current.reviews.values()].filter(
+              entry => entry.review.updatedAt < cutoff,
+            ),
+            entry =>
+              failReviewIfActive(
+                entry.ownerId,
+                entry.review.id,
+                'The priority review was interrupted by a service restart. Retry it.',
+                failedAt,
+              ),
+            { concurrency: 'unbounded', discard: true },
+          ),
+        ),
+      ),
     deleteProfile: Effect.fn('AgentStore.deleteProfile')(function* (ownerId, profileId) {
       const entry = yield* getProfileEntry(ownerId, profileId);
       if (Option.isNone(entry)) return yield* new AgentStoreError({ message: 'Provider profile was not found.' });
@@ -305,8 +391,14 @@ const decodeBase64 = (value: string) =>
     onSuccess: Effect.succeed,
   });
 
-const encryptedHomeAad = (ownerId: string, profileId: string, generation: number) =>
-  new TextEncoder().encode(`codebase-radar:${ownerId}:${profileId}:${generation}`);
+const encryptedHomeAad = (
+  ownerId: string,
+  profileId: string,
+  generation: number,
+  keyVersion: EncryptedAgentHome['keyVersion'],
+) => new TextEncoder().encode(
+  `codebase-radar:${ownerId}:${profileId}:${generation}:${keyVersion}`,
+);
 
 const encryptBytes = Effect.fn('encryptBytes')(function* (
   key: Uint8Array,
@@ -358,7 +450,7 @@ const encryptHome = Effect.fn('encryptHome')(function* (
     crypto.randomBytes(12),
     crypto.randomBytes(12),
   ]).pipe(Effect.mapError(storeError));
-  const aad = encryptedHomeAad(ownerId, profileId, generation);
+  const aad = encryptedHomeAad(ownerId, profileId, generation, 'v1');
   const encrypted = yield* encryptBytes(
     dek,
     nonce,
@@ -367,7 +459,8 @@ const encryptHome = Effect.fn('encryptHome')(function* (
   );
   const wrapped = yield* encryptBytes(kek, wrapNonce, dek, aad);
   return new EncryptedAgentHome({
-    schemaVersion: 'codebase-radar.encrypted-agent-home/v1',
+    schemaVersion: 'codebase-radar.encrypted-agent-home/v2',
+    keyVersion: 'v1',
     generation,
     ciphertext: Encoding.encodeBase64(encrypted.ciphertext),
     nonce: Encoding.encodeBase64(nonce),
@@ -392,7 +485,12 @@ const decryptHome = Effect.fn('decryptHome')(function* (
     decodeBase64(encrypted.wrapNonce),
     decodeBase64(encrypted.wrapTag),
   ]);
-  const aad = encryptedHomeAad(ownerId, profileId, encrypted.generation);
+  const aad = encryptedHomeAad(
+    ownerId,
+    profileId,
+    encrypted.generation,
+    encrypted.keyVersion,
+  );
   const dek = yield* decryptBytes(kek, wrapNonce, wrappedKey, wrapTag, aad);
   const plaintext = yield* decryptBytes(dek, nonce, ciphertext, tag, aad);
   return yield* Schema.decodeEffect(Schema.fromJsonString(AgentCredentialState))(
@@ -403,12 +501,18 @@ const decryptHome = Effect.fn('decryptHome')(function* (
 const makePostgresAgentStore = Effect.gen(function* () {
   const sql = yield* PgClient.PgClient;
   const crypto = yield* Crypto.Crypto;
-  const configuredKey = yield* Config.redacted('RADAR_AGENT_HOME_KEY').pipe(
+  const configuredKey = yield* Config.redacted('RADAR_AGENT_HOME_KEY_V1').pipe(
     Effect.mapError(storeError),
   );
+  const keyMaterial = Redacted.value(configuredKey);
+  if (new TextEncoder().encode(keyMaterial).byteLength < 48) {
+    return yield* new AgentStoreError({
+      message: 'RADAR_AGENT_HOME_KEY_V1 must contain at least 48 bytes of random secret material.',
+    });
+  }
   const kek = yield* crypto.digest(
     'SHA-256',
-    new TextEncoder().encode(Redacted.value(configuredKey)),
+    new TextEncoder().encode(keyMaterial),
   ).pipe(Effect.mapError(storeError));
 
   yield* sql`
@@ -452,11 +556,6 @@ const makePostgresAgentStore = Effect.gen(function* () {
     Schema.decodeEffect(Schema.fromJsonString(AgentPriorityReview))(value).pipe(
       Effect.mapError(storeError),
     );
-  const decodeEncryptedHome = (value: string) =>
-    Schema.decodeEffect(Schema.fromJsonString(EncryptedAgentHome))(value).pipe(
-      Effect.mapError(storeError),
-    );
-
   const getProfile = Effect.fn('AgentStore.getProfile')(function* (
     ownerId: string,
     profileId: string,
@@ -471,6 +570,31 @@ const makePostgresAgentStore = Effect.gen(function* () {
       ? Option.some(yield* decodeProfile(rows[0].profile_json))
       : Option.none<AgentProfile>();
   });
+
+  const failReviewIfActive = Effect.fn('AgentStore.failReviewIfActive')(
+    function* (
+      ownerId: string,
+      reviewId: string,
+      diagnostic: string,
+      failedAt: string,
+    ) {
+      yield* sql`
+        update agent_priority_reviews
+        set status = 'failed',
+            record = jsonb_set(
+              jsonb_set(
+                jsonb_set(record, '{status}', '"failed"'::jsonb),
+                '{diagnostic}', to_jsonb(${diagnostic}::text)
+              ),
+              '{updatedAt}', to_jsonb(${failedAt}::text)
+            ),
+            updated_at = ${failedAt}
+        where owner_id = ${ownerId}
+          and id = ${reviewId}
+          and status in ('queued', 'running')
+      `.pipe(Effect.mapError(storeError));
+    },
+  );
 
   return AgentStore.of({
     ready: sql`select 1`.pipe(Effect.asVoid, Effect.mapError(storeError)),
@@ -532,25 +656,75 @@ const makePostgresAgentStore = Effect.gen(function* () {
       return profile;
     }),
     readHome: Effect.fn('AgentStore.readHome')(function* (ownerId, profileId) {
-      const rows = yield* sql<{
-        readonly encrypted_home_json: string | null;
-        readonly generation: number;
-      }>`
-        select encrypted_home::text encrypted_home_json, generation
-        from agent_profiles
-        where owner_id = ${ownerId} and id = ${profileId}
-        limit 1
-      `.pipe(Effect.mapError(storeError));
-      const row = rows[0];
-      if (!row) return yield* new AgentStoreError({ message: 'Provider profile was not found.' });
-      if (row.encrypted_home_json === null) {
-        return { generation: row.generation, state: Option.none<AgentCredentialState>() };
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const rows = yield* sql<{
+          readonly encrypted_home_json: string | null;
+          readonly generation: number;
+        }>`
+          select encrypted_home::text encrypted_home_json, generation
+          from agent_profiles
+          where owner_id = ${ownerId} and id = ${profileId}
+          limit 1
+        `.pipe(Effect.mapError(storeError));
+        const row = rows[0];
+        if (!row) {
+          return yield* new AgentStoreError({
+            message: 'Provider profile was not found.',
+          });
+        }
+        if (row.encrypted_home_json === null) {
+          return {
+            generation: row.generation,
+            state: Option.none<AgentCredentialState>(),
+          };
+        }
+        const stored = yield* decodeStoredAgentHome(row.encrypted_home_json);
+        if (
+          stored.schemaVersion ===
+          'codebase-radar.encrypted-agent-home/v1'
+        ) {
+          const updatedAt = yield* nowIso;
+          const invalidated = yield* sql<{ readonly generation: number }>`
+            update agent_profiles
+            set encrypted_home = null,
+                profile = jsonb_set(
+                  jsonb_set(
+                    jsonb_set(
+                      profile - 'accountLabel',
+                      '{state}',
+                      '"disconnected"'::jsonb
+                    ),
+                    '{diagnostic}',
+                    to_jsonb(${legacyHomeDiagnostic}::text)
+                  ),
+                  '{updatedAt}',
+                  to_jsonb(${updatedAt}::text)
+                ),
+                updated_at = ${updatedAt}
+            where owner_id = ${ownerId}
+              and id = ${profileId}
+              and generation = ${row.generation}
+              and encrypted_home = ${row.encrypted_home_json}::jsonb
+            returning generation
+          `.pipe(Effect.mapError(storeError));
+          if (invalidated[0]) {
+            return {
+              generation: invalidated[0].generation,
+              state: Option.none<AgentCredentialState>(),
+            };
+          }
+          continue;
+        }
+        return {
+          generation: row.generation,
+          state: Option.some(
+            yield* decryptHome(kek, ownerId, profileId, stored),
+          ),
+        };
       }
-      const encrypted = yield* decodeEncryptedHome(row.encrypted_home_json);
-      return {
-        generation: row.generation,
-        state: Option.some(yield* decryptHome(kek, ownerId, profileId, encrypted)),
-      };
+      return yield* new AgentStoreError({
+        message: 'Provider state changed during this operation.',
+      });
     }),
     writeHome: Effect.fn('AgentStore.writeHome')(function* (ownerId, profileId, expectedGeneration, state) {
       const generation = expectedGeneration + 1;
@@ -611,6 +785,25 @@ const makePostgresAgentStore = Effect.gen(function* () {
       return rows[0]
         ? Option.some(yield* decodeReview(rows[0].record_json))
         : Option.none<AgentPriorityReview>();
+    }),
+    failReviewIfActive,
+    failStaleReviews: Effect.fn('AgentStore.failStaleReviews')(function* (cutoff, failedAt) {
+      const diagnostic =
+        'The priority review was interrupted by a service restart. Retry it.';
+      const rows = yield* sql<{
+        readonly id: string;
+        readonly owner_id: string;
+      }>`
+        select id, owner_id
+        from agent_priority_reviews
+        where status in ('queued', 'running')
+          and updated_at < ${cutoff}
+      `.pipe(Effect.mapError(storeError));
+      yield* Effect.forEach(
+        rows,
+        row => failReviewIfActive(row.owner_id, row.id, diagnostic, failedAt),
+        { concurrency: 3, discard: true },
+      );
     }),
     deleteProfile: Effect.fn('AgentStore.deleteProfile')(function* (ownerId, profileId) {
       const rows = yield* sql<{ readonly id: string }>`

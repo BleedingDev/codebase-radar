@@ -1,3 +1,4 @@
+#yamlPreprocessor=on
 project:
   name: codebase-radar
   description: TraceDecay-powered prioritized code-quality radar
@@ -12,6 +13,8 @@ services:
 
   - hostname: radar
     type: nodejs@24
+    envSecrets:
+      RADAR_AGENT_HOME_KEY_V1: <@generateRandomString(<64>)>
     buildFromGit: https://github.com/BleedingDev/codebase-radar
     zeropsSetup: radar
     enableSubdomainAccess: true

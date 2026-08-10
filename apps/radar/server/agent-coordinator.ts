@@ -1,11 +1,13 @@
 import {
   Cause,
+  Clock,
   Context,
   DateTime,
   Effect,
   Layer,
   Option,
   Queue,
+  Ref,
 } from 'effect';
 import { AgentPriorityReview } from '../shared/domain';
 import { AgentRuntime } from './agent-runtime';
@@ -21,6 +23,8 @@ interface QueuedReview {
   readonly ownerId: string;
   readonly review: AgentPriorityReview;
 }
+
+const staleReviewAgeMs = 40 * 60_000;
 
 export class AgentCoordinator extends Context.Service<AgentCoordinator, {
   readonly enqueue: (ownerId: string, review: AgentPriorityReview) => Effect.Effect<void>;
@@ -79,7 +83,44 @@ export const AgentCoordinatorLive = Layer.effect(
   AgentCoordinator,
   Effect.gen(function* () {
     const store = yield* AgentStore;
-    const queue = yield* Queue.bounded<QueuedReview>(16);
+    const queue = yield* Queue.dropping<QueuedReview>(16);
+    const owned = yield* Ref.make<ReadonlyMap<string, QueuedReview>>(new Map());
+    const failStaleReviews = Clock.currentTimeMillis.pipe(
+      Effect.flatMap(now =>
+        store.failStaleReviews(
+          new Date(now - staleReviewAgeMs).toISOString(),
+          new Date(now).toISOString(),
+        ),
+      ),
+      Effect.ignore,
+    );
+    yield* failStaleReviews;
+    yield* Effect.forever(
+      failStaleReviews.pipe(Effect.delay('1 minute')),
+    ).pipe(Effect.forkScoped);
+    yield* Effect.addFinalizer(() =>
+      Ref.getAndSet(owned, new Map()).pipe(
+        Effect.flatMap(current =>
+          Effect.forEach(
+            current.values(),
+            item =>
+              DateTime.nowAsDate.pipe(
+                Effect.map(date => date.toISOString()),
+                Effect.flatMap(updatedAt =>
+                  store.failReviewIfActive(
+                    item.ownerId,
+                    item.review.id,
+                    'The priority review was interrupted by a service restart. Retry it.',
+                    updatedAt,
+                  ),
+                ),
+                Effect.ignore,
+              ),
+            { concurrency: 'unbounded', discard: true },
+          ),
+        ),
+      ),
+    );
     yield* Effect.forever(
       Queue.take(queue).pipe(
         Effect.flatMap(item =>
@@ -88,18 +129,22 @@ export const AgentCoordinatorLive = Layer.effect(
               DateTime.nowAsDate.pipe(
                 Effect.map(date => date.toISOString()),
                 Effect.flatMap(updatedAt =>
-                  store.updateReview(
+                  store.failReviewIfActive(
                     item.ownerId,
-                    new AgentPriorityReview({
-                      ...item.review,
-                      status: 'failed',
-                      diagnostic: boundedDiagnostic(Cause.pretty(cause), 360),
-                      updatedAt,
-                    }),
+                    item.review.id,
+                    boundedDiagnostic(Cause.pretty(cause), 360),
+                    updatedAt,
                   ),
                 ),
                 Effect.ignore,
               ),
+            ),
+            Effect.ensuring(
+              Ref.update(owned, current => {
+                const updated = new Map(current);
+                updated.delete(item.review.id);
+                return updated;
+              }),
             ),
           ),
         ),
@@ -107,7 +152,38 @@ export const AgentCoordinatorLive = Layer.effect(
     ).pipe(Effect.forkScoped);
     return AgentCoordinator.of({
       enqueue: (ownerId, review) =>
-        Queue.offer(queue, { ownerId, review }).pipe(Effect.asVoid),
+        Effect.uninterruptible(
+          Ref.update(owned, current =>
+            new Map(current).set(review.id, { ownerId, review }),
+          ).pipe(
+            Effect.andThen(Queue.offer(queue, { ownerId, review })),
+            Effect.flatMap(accepted =>
+              accepted
+                ? Effect.void
+                : Ref.update(owned, current => {
+                    const updated = new Map(current);
+                    updated.delete(review.id);
+                    return updated;
+                  }).pipe(
+                    Effect.andThen(
+                      DateTime.nowAsDate.pipe(
+                        Effect.map(date => date.toISOString()),
+                        Effect.flatMap(updatedAt =>
+                          store.failReviewIfActive(
+                            ownerId,
+                            review.id,
+                            'The priority review queue is full. Retry when current reviews finish.',
+                            updatedAt,
+                          ),
+                        ),
+                        Effect.asVoid,
+                        Effect.ignore,
+                      ),
+                    ),
+                  ),
+            ),
+          ),
+        ),
     });
   }),
 );

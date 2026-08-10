@@ -2,41 +2,122 @@ import { NodeHttpClient, NodeServices } from '@effect/platform-node';
 import { Effect, Layer } from 'effect';
 import { describe, expect, it } from 'vitest';
 import { Evidence } from '../shared/domain';
-import { FindingCandidate } from './analyzers';
+import { classifyOxlintRule, FindingCandidate } from './analyzers';
 import { prioritize } from './prioritize';
 
 const TestServices = Layer.mergeAll(NodeServices.layer, NodeHttpClient.layerUndici);
 
 describe('priority policy', () => {
-  it('keeps style-only volume out of the action queue', () =>
-    Effect.runPromise(
-      prioritize([
-        new FindingCandidate({
-          fingerprintSeed: 'style-policy',
-          title: 'Repository formatting preference',
-          category: 'maintainability',
-          summary: 'Consistency preference.',
-          technicalSummary: 'A style rule matched many files.',
-          recommendation: 'Apply during nearby work.',
-          evidence: [
-            new Evidence({
-              analyzer: 'Oxlint + Ultracite',
-              kind: 'direct',
-              message: 'Style rule matched.',
-            }),
-          ],
-          tags: ['style-policy'],
-          consequence: 14,
-          blastRadius: 18,
-          confidence: 86,
-          effort: 78,
-          changeExposure: 16,
-        }),
-      ]).pipe(Effect.provide(TestServices)),
+  it('normalizes production Oxlint rule IDs and excludes policy-only findings', () => {
+    const preferenceRules = [
+      'typescript(no-useless-undefined)',
+      'typescript(func-style)',
+      'react/function-component-definition',
+      'unicorn/escape-case',
+    ];
+    const defectRules = [
+      'eslint(no-eval)',
+      'eslint/no-unreachable',
+    ];
+    expect(preferenceRules.map(classifyOxlintRule)).toEqual(
+      preferenceRules.map(() => ({
+        category: 'maintainability',
+        policyOnly: true,
+      })),
+    );
+    expect(defectRules.every(rule => !classifyOxlintRule(rule).policyOnly)).toBe(
+      true,
+    );
+    expect(classifyOxlintRule('eslint(no-eval)')).toEqual(
+      classifyOxlintRule('eslint/no-eval'),
+    );
+    expect(classifyOxlintRule('eslint(no-unreachable)')).toEqual(
+      classifyOxlintRule('eslint/no-unreachable'),
+    );
+    const candidates = [...defectRules, ...preferenceRules].map(rule => {
+      const disposition = classifyOxlintRule(rule);
+      return new FindingCandidate({
+        fingerprintSeed: rule,
+        title: rule,
+        category: disposition.category,
+        summary: disposition.policyOnly
+          ? 'Consistency preference.'
+          : 'Behavior-bearing lint evidence.',
+        technicalSummary: disposition.policyOnly
+          ? 'A preference-only lint rule matched.'
+          : 'A positively allowlisted rule matched.',
+        recommendation: disposition.policyOnly
+          ? 'Apply during nearby work.'
+          : 'Validate the behavior before changing it.',
+        evidence: [
+          new Evidence({
+            analyzer: 'Oxlint + Ultracite',
+            kind: 'direct',
+            message: rule,
+            ruleId: rule,
+          }),
+        ],
+        tags: [
+          'oxlint',
+          rule,
+          ...(disposition.policyOnly ? ['style-policy'] : []),
+        ],
+        consequence: disposition.policyOnly ? 100 : 45,
+        blastRadius: disposition.policyOnly ? 100 : 35,
+        confidence: disposition.policyOnly ? 100 : 80,
+        effort: disposition.policyOnly ? 0 : 65,
+        changeExposure: disposition.policyOnly ? 100 : 20,
+      });
+    });
+
+    return Effect.runPromise(
+      prioritize(candidates).pipe(Effect.provide(TestServices)),
     ).then(findings => {
-      expect(findings).toHaveLength(1);
-      expect(findings[0]?.action).toBe('do not fix');
-    }));
+      expect(findings.map(finding => finding.title).sort()).toEqual(
+        [...defectRules].sort(),
+      );
+      expect(findings.every(finding =>
+        !finding.tags.includes('style-policy'),
+      )).toBe(true);
+    });
+  });
+
+  it('does not increase urgency when only change exposure rises', () => {
+    const candidateWithExposure = (changeExposure: number) =>
+      new FindingCandidate({
+        fingerprintSeed: 'change-exposure',
+        title: 'Bounded reliability concern',
+        category: 'reliability',
+        summary: 'The evidence is identical across both candidates.',
+        technicalSummary: 'Only delivery change exposure differs.',
+        recommendation: 'Validate the behavior before changing it.',
+        evidence: [
+          new Evidence({
+            analyzer: 'test',
+            kind: 'direct',
+            message: 'Same evidence.',
+          }),
+        ],
+        tags: ['reliability'],
+        consequence: 68,
+        blastRadius: 62,
+        confidence: 75,
+        effort: 55,
+        changeExposure,
+      });
+
+    return Effect.runPromise(
+      Effect.all([
+        prioritize([candidateWithExposure(0)]),
+        prioritize([candidateWithExposure(100)]),
+      ]).pipe(Effect.provide(TestServices)),
+    ).then(([lowExposure, highExposure]) => {
+      expect(highExposure[0]?.scores.priority).toBe(
+        lowExposure[0]?.scores.priority,
+      );
+      expect(highExposure[0]?.action).toBe(lowExposure[0]?.action);
+    });
+  });
 
   it('ranks corroborated consequential evidence above low-value observations', () =>
     Effect.runPromise(

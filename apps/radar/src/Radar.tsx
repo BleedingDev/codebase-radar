@@ -3,6 +3,8 @@ import {
   Link,
   Navigate,
   useMatch,
+  useRouter,
+  useRouterState,
 } from '@modern-js/plugin-tanstack/runtime';
 import { Effect } from '@modern-js/plugin-bff/effect-client';
 import { Machine } from '@typeonce/effect-machine';
@@ -10,7 +12,7 @@ import { AtomMachine } from '@typeonce/effect-machine/reactivity';
 import { Option, Schema } from 'effect';
 import { AsyncResult } from 'effect/unstable/reactivity';
 import { useMemo, useState } from 'react';
-import type { FormEvent } from 'react';
+import type { FormEvent, MouseEvent } from 'react';
 import {
   audienceCopy,
   audienceLabel,
@@ -49,6 +51,9 @@ const ReviewRoute = Schema.TaggedUnion({
 const scanIsPending = (scan: ScanRecord) =>
   scan.status === 'queued' || scan.status === 'running';
 
+const maxPollFailures = 4;
+const initialPollDelayMillis = 1800;
+
 const ScanWorkflowState = Schema.TaggedUnion({
   Loading: { route: ReviewRoute },
   Ready: {
@@ -70,12 +75,14 @@ const ScanWorkflowState = Schema.TaggedUnion({
     repositories: Schema.Array(ScanRecord),
     scans: Schema.Array(ScanRecord),
     selected: ScanRecord,
+    pollFailures: Schema.Number,
   },
   Refreshing: {
     route: ReviewRoute,
     repositories: Schema.Array(ScanRecord),
     scans: Schema.Array(ScanRecord),
     selected: ScanRecord,
+    pollFailures: Schema.Number,
   },
 });
 
@@ -85,6 +92,7 @@ const ScanWorkflowEvent = Schema.TaggedUnion({
     displayName: Schema.String,
     audience: Audience,
   },
+  RetryPolling: {},
 });
 
 const ScanWorkflowResult = Schema.TaggedUnion({
@@ -107,7 +115,10 @@ const ScanWorkflowStates = Machine.defineStates(ScanWorkflowState.cases);
 const ScanWorkflow = Machine.make({
   id: 'ScanWorkflow',
   states: ScanWorkflowStates.states,
-  events: [ScanWorkflowEvent.cases.Submit],
+  events: [
+    ScanWorkflowEvent.cases.Submit,
+    ScanWorkflowEvent.cases.RetryPolling,
+  ],
   internalEvents: [
     ScanWorkflowResult.cases.Loaded,
     ScanWorkflowResult.cases.LoadFailed,
@@ -181,6 +192,7 @@ const ScanWorkflow = Machine.make({
             repositories: event.repositories,
             scans: event.scans,
             selected: event.selected,
+            pollFailures: 0,
           });
         }
         return target.full.Ready.from({
@@ -215,10 +227,35 @@ const ScanWorkflow = Machine.make({
           displayName: event.displayName,
           audience: event.audience,
         }),
+      RetryPolling: ({ state, target }) =>
+        state.selected && scanIsPending(state.selected)
+          ? target.full.Waiting.from({
+              route: state.route,
+              repositories: state.repositories,
+              scans: state.scans,
+              selected: state.selected,
+              pollFailures: 0,
+            })
+          : target.full.Ready.from({
+              route: state.route,
+              repositories: state.repositories,
+              scans: state.scans,
+              selected: state.selected,
+              error: state.error,
+            }),
     },
   },
   Waiting: {
-    invoke: Machine.after('1800 millis', ScanWorkflowResult.cases.Refresh.make({})),
+    invoke: ({ state }) =>
+      Machine.invokeEffect({
+        id: 'wait-to-refresh',
+        effect: Effect.sleep(
+          initialPollDelayMillis * 2 ** state.pollFailures,
+        ).pipe(
+          Effect.map(() => ScanWorkflowResult.cases.Refresh.make({})),
+        ),
+        onSuccess: event => event,
+      }),
     on: {
       Refresh: ({ state, target }) =>
         target.full.Refreshing.from({
@@ -226,6 +263,7 @@ const ScanWorkflow = Machine.make({
           repositories: state.repositories,
           scans: state.scans,
           selected: state.selected,
+          pollFailures: state.pollFailures,
         }),
     },
   },
@@ -256,6 +294,7 @@ const ScanWorkflow = Machine.make({
             repositories,
             scans,
             selected: event.scan,
+            pollFailures: 0,
           });
         }
         return target.full.Ready.from({
@@ -266,13 +305,26 @@ const ScanWorkflow = Machine.make({
           error: '',
         });
       },
-      PollFailed: ({ state, target }) =>
-        target.full.Waiting.from({
+      PollFailed: ({ state, target }) => {
+        const pollFailures = state.pollFailures + 1;
+        if (pollFailures >= maxPollFailures) {
+          return target.full.Ready.from({
+            route: state.route,
+            repositories: state.repositories,
+            scans: state.scans,
+            selected: state.selected,
+            error:
+              'Live progress could not be refreshed after several attempts.',
+          });
+        }
+        return target.full.Waiting.from({
           route: state.route,
           repositories: state.repositories,
           scans: state.scans,
           selected: state.selected,
-        }),
+          pollFailures,
+        });
+      },
     },
   },
   Submitting: {
@@ -326,6 +378,7 @@ const ScanWorkflow = Machine.make({
           ],
           scans: [event.scan],
           selected: event.scan,
+          pollFailures: 0,
         }),
       SubmitFailed: ({ state, target }) =>
         target.full.Ready.from({
@@ -340,6 +393,10 @@ const ScanWorkflow = Machine.make({
 });
 
 function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
+  const router = useRouter();
+  const navigationState = useRouterState({
+    select: state => state.location.state,
+  });
   const [repositoryUrl, setRepositoryUrl] = useState(
     'https://github.com/realworld-apps/angular-realworld-example-app',
   );
@@ -401,6 +458,16 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
     );
   };
 
+  const closeNewReview = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (
+      'newReviewOrigin' in navigationState &&
+      navigationState.newReviewOrigin === true
+    ) {
+      event.preventDefault();
+      router.history.back();
+    }
+  };
+
   const result = selected?.result;
   const resultAudience = selected?.audience ?? audience;
   const visibleFindings = result?.findings.slice(0, 5) ?? [];
@@ -442,17 +509,16 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
 
   if (
     selected &&
-    route._tag === 'Repository' &&
-    (route.owner !== selected.owner.toLowerCase() ||
-      route.repository !== selected.repository.toLowerCase())
+    route._tag === 'Repository'
   ) {
     return (
       <Navigate
-        to="/$provider/$owner/$repository"
+        to="/$provider/$owner/$repository/reviews/$scanId"
         params={{
           provider: 'github.com',
           owner: selected.owner.toLowerCase(),
           repository: selected.repository.toLowerCase(),
+          scanId: selected.id,
         }}
         replace
       />
@@ -489,7 +555,11 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
           <span>CODEBASE RADAR</span>
         </Link>
         {route._tag !== 'NewReview' ? (
-          <Link className="new-review-button" to="/reviews/new">
+          <Link
+            className="new-review-button"
+            to="/reviews/new"
+            state={state => ({ ...state, newReviewOrigin: true })}
+          >
             NEW REVIEW
           </Link>
         ) : null}
@@ -507,7 +577,11 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
                 Paste a public GitHub link. Get the few changes worth doing first—and
                 the noise you can safely leave alone.
               </p>
-              <Link className="scan-button hero-action" to="/reviews/new">
+              <Link
+                className="scan-button hero-action"
+                to="/reviews/new"
+                state={state => ({ ...state, newReviewOrigin: true })}
+              >
                 <span>START A REVIEW</span>
                 <span aria-hidden="true">↗</span>
               </Link>
@@ -649,6 +723,20 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
                 </div>
                 <p>{selected.progress}% complete</p>
                 {selected.error ? <p className="error-note">{selected.error}</p> : null}
+                {error ? (
+                  <>
+                    <p className="error-note">{error}</p>
+                    <button
+                      className="scan-button empty-action"
+                      type="button"
+                      onClick={() =>
+                        send(ScanWorkflowEvent.cases.RetryPolling.make({}))
+                      }
+                    >
+                      RETRY LIVE PROGRESS
+                    </button>
+                  </>
+                ) : null}
               </div>
             ) : (
               <>
@@ -749,13 +837,21 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
             className="dialog-backdrop"
             to="/"
             replace
+            onClick={closeNewReview}
             aria-label="Close new review"
           />
           <dialog className="review-dialog" open aria-labelledby="new-review-title">
             <form className="scan-console" onSubmit={submitScan}>
               <div className="console-head dialog-head">
                 <span id="new-review-title">START A REVIEW</span>
-                <Link to="/" replace aria-label="Close new review">CLOSE</Link>
+                <Link
+                  to="/"
+                  replace
+                  onClick={closeNewReview}
+                  aria-label="Close new review"
+                >
+                  CLOSE
+                </Link>
               </div>
               <label className="field-label" htmlFor="repository-url">
                 GitHub repository

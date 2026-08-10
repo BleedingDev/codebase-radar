@@ -188,7 +188,39 @@ const OsvReport = Schema.Struct({
   ),
 });
 
-const policyRulePattern = /(?:array-type|catch-error-name|consistent-type-imports|curly|func-names|import-order|import-style|max-classes-per-file|member-ordering|no-array-method-this-argument|no-array-sort|no-default-export|no-negated-condition|no-nested-ternary|no-use-before-define|numeric-separators-style|parameter-properties|prefer-await-to-callbacks|prefer-await-to-then|prefer-code-point|prefer-default-export|prefer-destructuring|prefer-named-capture-group|prefer-string-replace-all|sort-keys|text-encoding-identifier-case)/iu;
+const defectBearingOxlintRules = new Map<
+  string,
+  typeof FindingCategory.Type
+>([
+  ['exhaustive-deps', 'reliability'],
+  ['jsx-no-target-blank', 'security'],
+  ['no-async-promise-executor', 'reliability'],
+  ['no-danger', 'security'],
+  ['no-dupe-case', 'reliability'],
+  ['no-dupe-keys', 'reliability'],
+  ['no-eval', 'security'],
+  ['no-implied-eval', 'security'],
+  ['no-new-func', 'security'],
+  ['no-promise-executor-return', 'reliability'],
+  ['no-script-url', 'security'],
+  ['no-side-effects-in-computed-properties', 'reliability'],
+  ['no-unreachable', 'reliability'],
+  ['no-unsafe-finally', 'reliability'],
+  ['no-v-html', 'security'],
+  ['rules-of-hooks', 'reliability'],
+  ['use-isnan', 'reliability'],
+  ['valid-typeof', 'reliability'],
+]);
+
+export const classifyOxlintRule = (code: string) => {
+  const parenthesizedRule = code.match(/\(([^()]+)\)$/u)?.[1];
+  const ruleName = parenthesizedRule ?? code.split('/').at(-1) ?? code;
+  const category = defectBearingOxlintRules.get(ruleName);
+  return {
+    category: category ?? 'maintainability',
+    policyOnly: category === undefined,
+  };
+};
 
 const decodeJson = <S extends Schema.Constraint>(schema: S, text: string) =>
   Schema.decodeEffect(Schema.fromJsonString(schema))(text || 'null');
@@ -449,7 +481,9 @@ export const runOxlint = Effect.fn('runOxlint')(function* (
     }
     const candidates = [...grouped.entries()]
       .sort((left, right) => {
-        const policyDelta = Number(policyRulePattern.test(left[0])) - Number(policyRulePattern.test(right[0]));
+        const policyDelta =
+          Number(classifyOxlintRule(left[0]).policyOnly) -
+          Number(classifyOxlintRule(right[0]).policyOnly);
         return policyDelta || right[1].length - left[1].length;
       })
       .slice(0, 18)
@@ -458,16 +492,7 @@ export const runOxlint = Effect.fn('runOxlint')(function* (
         const path = first?.filename
           ? repositoryRelative(pathService, repoRoot, first.filename)
           : undefined;
-        const category: typeof FindingCategory.Type = /security|eval|unsafe|dangerously|secret|regex/iu.test(code)
-          ? 'security'
-          : /perf|performance/iu.test(code)
-            ? 'performance'
-            : /cycle|import|barrel|dependency/iu.test(code)
-              ? 'architecture'
-              : /promise|async|error|throw/iu.test(code)
-                ? 'reliability'
-                : 'maintainability';
-        const policyOnly = policyRulePattern.test(code);
+        const { category, policyOnly } = classifyOxlintRule(code);
         const title = policyOnly
           ? 'consistency preference'
           : category === 'security'

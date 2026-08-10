@@ -8,6 +8,7 @@ import {
   Option,
   Path,
   Queue,
+  Ref,
   Schema,
 } from 'effect';
 import { ScanRecord } from '../shared/domain';
@@ -167,7 +168,7 @@ const performScan = Effect.fn('performScan')(function* (scan: ScanRecord) {
   const previous = yield* store.getPreviousResult(
     scan.owner,
     scan.repository,
-    scan.id,
+    { createdAt: scan.createdAt, id: scan.id },
   );
   const result = yield* buildScanResult({
     scanId: scan.id,
@@ -190,36 +191,249 @@ const performScan = Effect.fn('performScan')(function* (scan: ScanRecord) {
   });
 });
 
+export class ScanCapacityUnavailable extends Schema.TaggedErrorClass<ScanCapacityUnavailable>()(
+  'ScanCapacityUnavailable',
+  { message: Schema.String },
+) {}
+
+export class RepositoryScanAlreadyActive extends Schema.TaggedErrorClass<RepositoryScanAlreadyActive>()(
+  'RepositoryScanAlreadyActive',
+  { message: Schema.String },
+) {}
+
+export class ScanAdmissionInvalid extends Schema.TaggedErrorClass<ScanAdmissionInvalid>()(
+  'ScanAdmissionInvalid',
+  { message: Schema.String },
+) {}
+
+export interface ScanAdmission {
+  readonly enqueue: (scan: ScanRecord) => Effect.Effect<void, ScanAdmissionInvalid>;
+  readonly release: Effect.Effect<void>;
+}
+
+export const persistAndAttachScan = <E, R>(
+  persist: Effect.Effect<ScanRecord, E, R>,
+  attach: (scan: ScanRecord) => Effect.Effect<void, ScanAdmissionInvalid>,
+): Effect.Effect<ScanRecord, E | ScanAdmissionInvalid, R> =>
+  Effect.uninterruptible(persist.pipe(Effect.tap(attach)));
+
 export class ScanCoordinator extends Context.Service<ScanCoordinator, {
-  readonly enqueue: (scan: ScanRecord) => Effect.Effect<void>;
+  readonly reserve: (
+    owner: string,
+    repository: string,
+  ) => Effect.Effect<
+    ScanAdmission,
+    ScanCapacityUnavailable | RepositoryScanAlreadyActive
+  >;
 }>()('ScanCoordinator') {}
+
+interface AdmissionEntry {
+  readonly repositoryKey: string;
+  readonly scan?: ScanRecord;
+}
+
+interface AdmissionState {
+  readonly nextId: number;
+  readonly entries: ReadonlyMap<number, AdmissionEntry>;
+}
+
+interface QueuedScan {
+  readonly admissionId: number;
+  readonly scan: ScanRecord;
+}
+
+type ReservationResult =
+  | { readonly _tag: 'Accepted'; readonly admissionId: number }
+  | {
+      readonly _tag: 'Rejected';
+      readonly error: ScanCapacityUnavailable | RepositoryScanAlreadyActive;
+    };
+
+type EnqueueResult =
+  | { readonly _tag: 'Accepted' }
+  | { readonly _tag: 'Rejected'; readonly error: ScanAdmissionInvalid };
+
+const maximumActiveScans = 32;
+const repositoryKey = (owner: string, repository: string) =>
+  `${owner.toLowerCase()}/${repository.toLowerCase()}`;
 
 export const ScanCoordinatorLive = Layer.effect(
   ScanCoordinator,
   Effect.gen(function* () {
     const store = yield* RadarStore;
-    const queue = yield* Queue.bounded<ScanRecord>(32);
+    const queue = yield* Queue.bounded<QueuedScan>(maximumActiveScans);
+    const admissions = yield* Ref.make<AdmissionState>({
+      nextId: 1,
+      entries: new Map(),
+    });
+    const finishAdmission = (admissionId: number) =>
+      Ref.update(admissions, current => {
+        const entries = new Map(current.entries);
+        entries.delete(admissionId);
+        return { ...current, entries };
+      });
+    const releaseReservation = (admissionId: number) =>
+      Ref.update(admissions, current => {
+        const entry = current.entries.get(admissionId);
+        if (entry?.scan !== undefined) return current;
+        const entries = new Map(current.entries);
+        entries.delete(admissionId);
+        return { ...current, entries };
+      });
+    // Scope finalizers run last-in-first-out: the worker is interrupted before this
+    // finalizer terminalizes only the queued work admitted by this process. Safely
+    // reclaiming work after a hard crash requires durable leases and fenced writes.
+    yield* Effect.addFinalizer(() =>
+      Ref.getAndSet(admissions, { nextId: 1, entries: new Map() }).pipe(
+        Effect.flatMap(current =>
+          Effect.forEach(
+            current.entries.values(),
+            entry =>
+              entry.scan === undefined
+                ? Effect.void
+                : store
+                    .failScanIfActive(entry.scan.id, {
+                      stage: 'Scan stopped before completion',
+                      error: 'The scan worker stopped before completion. Submit a new scan.',
+                    })
+                    .pipe(Effect.ignore),
+            { concurrency: 'unbounded', discard: true },
+          ),
+        ),
+      ),
+    );
     yield* Effect.forever(
       Queue.take(queue).pipe(
-        Effect.flatMap(scan =>
+        Effect.flatMap(({ admissionId, scan }) =>
           performScan(scan).pipe(
             Effect.scoped,
             Effect.catchCause(cause =>
               store
-                .updateScan(scan.id, {
-                  status: 'failed',
-                  progress: 100,
+                .failScanIfActive(scan.id, {
                   stage: 'Scan failed safely',
                   error: boundedDiagnostic(Cause.pretty(cause), 800),
                 })
                 .pipe(Effect.ignore),
             ),
+            Effect.ensuring(finishAdmission(admissionId)),
           ),
         ),
       ),
     ).pipe(Effect.forkScoped);
     return ScanCoordinator.of({
-      enqueue: scan => Queue.offer(queue, scan).pipe(Effect.asVoid),
+      reserve: (owner, repository) => {
+        const key = repositoryKey(owner, repository);
+        return Ref.modify(admissions, (current): readonly [ReservationResult, AdmissionState] => {
+          if (current.entries.size >= maximumActiveScans) {
+            return [
+              {
+                _tag: 'Rejected',
+                error: new ScanCapacityUnavailable({
+                  message: 'All scan slots are currently in use.',
+                }),
+              },
+              current,
+            ];
+          }
+          if (
+            [...current.entries.values()].some(
+              entry => entry.repositoryKey === key,
+            )
+          ) {
+            return [
+              {
+                _tag: 'Rejected',
+                error: new RepositoryScanAlreadyActive({
+                  message: `A scan for ${owner}/${repository} is already active.`,
+                }),
+              },
+              current,
+            ];
+          }
+          const admissionId = current.nextId;
+          const entries = new Map(current.entries).set(admissionId, {
+            repositoryKey: key,
+          });
+          return [
+            { _tag: 'Accepted', admissionId },
+            { nextId: admissionId + 1, entries },
+          ];
+        }).pipe(
+          Effect.flatMap(result =>
+            result._tag === 'Rejected'
+              ? Effect.fail(result.error)
+              : Effect.succeed(result.admissionId),
+          ),
+          Effect.map(admissionId =>
+            ({
+              enqueue: scan =>
+                Effect.uninterruptible(
+                  Ref.modify(
+                    admissions,
+                    (current): readonly [EnqueueResult, AdmissionState] => {
+                      const entry = current.entries.get(admissionId);
+                      if (entry === undefined) {
+                        return [
+                          {
+                            _tag: 'Rejected',
+                            error: new ScanAdmissionInvalid({
+                              message: 'This scan admission is no longer active.',
+                            }),
+                          },
+                          current,
+                        ];
+                      }
+                      if (entry.scan !== undefined) {
+                        return [
+                          {
+                            _tag: 'Rejected',
+                            error: new ScanAdmissionInvalid({
+                              message: 'This scan admission has already been used.',
+                            }),
+                          },
+                          current,
+                        ];
+                      }
+                      if (repositoryKey(scan.owner, scan.repository) !== key) {
+                        return [
+                          {
+                            _tag: 'Rejected',
+                            error: new ScanAdmissionInvalid({
+                              message: 'The persisted scan does not match its admission.',
+                            }),
+                          },
+                          current,
+                        ];
+                      }
+                      const entries = new Map(current.entries).set(admissionId, {
+                        ...entry,
+                        scan,
+                      });
+                      return [{ _tag: 'Accepted' }, { ...current, entries }];
+                    },
+                  ).pipe(
+                    Effect.flatMap(result =>
+                      result._tag === 'Rejected'
+                        ? Effect.fail(result.error)
+                        : Queue.offer(queue, { admissionId, scan }).pipe(
+                            Effect.filterOrFail(
+                              accepted => accepted,
+                              () =>
+                                new ScanAdmissionInvalid({
+                                  message: 'The scan queue is no longer available.',
+                                }),
+                            ),
+                            Effect.asVoid,
+                            Effect.onError(() => finishAdmission(admissionId)),
+                          ),
+                    ),
+                  ),
+                ),
+              release: releaseReservation(admissionId),
+            }) satisfies ScanAdmission,
+          ),
+        );
+      },
     });
   }),
 );

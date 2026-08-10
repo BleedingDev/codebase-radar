@@ -9,7 +9,7 @@
     "deploy": "modern deploy",
     "dev": "modern dev",
     "start": "modern start",
-    "test": "vitest run shared/contracts.test.ts server/prioritize.test.ts server/agent-priority.test.ts server/agent-store.test.ts server/store.test.ts"
+    "test": "vitest run shared/contracts.test.ts server/prioritize.test.ts server/agent-priority.test.ts server/agent-runtime.test.ts server/agent-store.test.ts server/store.test.ts"
   },
   "engines": {
     "node": ">=24"

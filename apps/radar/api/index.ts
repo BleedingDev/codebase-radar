@@ -1,5 +1,5 @@
 import { NodeHttpClient, NodeServices } from '@effect/platform-node';
-import { Config } from 'effect';
+import { Config, Context, FileSystem, Path } from 'effect';
 import {
   defineEffectBff,
   Effect,
@@ -45,8 +45,13 @@ import {
 } from '../server/agent-coordinator';
 import { AgentRuntime, AgentRuntimeLive } from '../server/agent-runtime';
 import { AgentStore, AgentStoreLive } from '../server/agent-store';
-import { ScanCoordinator, ScanCoordinatorLive } from '../server/scan-runner';
+import {
+  persistAndAttachScan,
+  ScanCoordinator,
+  ScanCoordinatorLive,
+} from '../server/scan-runner';
 import { prioritizationBrief } from '../server/prioritization-brief';
+import { analyzerRoot } from '../server/analyzers';
 import { RadarStore, RadarStoreLive } from '../server/store';
 
 class ToolFailure extends Schema.TaggedErrorClass<ToolFailure>()('ToolFailure', {
@@ -281,6 +286,55 @@ const requiredAgentProfile = Effect.fn('requiredAgentProfile')(function* (
   );
 });
 
+class RuntimeReadiness extends Context.Service<RuntimeReadiness, {
+  readonly check: Effect.Effect<void, ApiFailure>;
+}>()('RuntimeReadiness') {}
+
+const RuntimeReadinessLive = Layer.effect(
+  RuntimeReadiness,
+  Effect.gen(function* () {
+    const radarStore = yield* RadarStore;
+    const agentStore = yield* AgentStore;
+    const agentRuntime = yield* AgentRuntime;
+    const fs = yield* FileSystem.FileSystem;
+    const pathService = yield* Path.Path;
+    const root = yield* analyzerRoot();
+    const essentials = [
+      'node_modules/.bin/oxlint',
+      'node_modules/.bin/jscpd',
+      'bin/tracedecay',
+      'bin/zizmor',
+      'bin/osv-scanner',
+      'config/jscpd.json',
+    ];
+    const check = Effect.gen(function* () {
+      yield* Effect.all([
+        radarStore.ready,
+        agentStore.ready,
+        agentRuntime.ready,
+      ]);
+      for (const relative of essentials) {
+        const available = yield* fs.exists(pathService.resolve(root, relative));
+        if (!available) {
+          return yield* new ApiFailure({
+            message: `Analyzer runtime is missing ${relative}.`,
+          });
+        }
+      }
+    }).pipe(
+      Effect.mapError(error =>
+        error instanceof ApiFailure
+          ? error
+          : new ApiFailure({
+              message: error instanceof Error ? error.message : String(error),
+            }),
+      ),
+    );
+    const cached = yield* Effect.cachedWithTTL(check, '30 seconds');
+    return RuntimeReadiness.of({ check: cached });
+  }),
+);
+
 const RadarGroupLive = HttpApiBuilder.group(RadarApi, 'radar', handlers =>
   handlers
     .handle('health', () =>
@@ -295,13 +349,8 @@ const RadarGroupLive = HttpApiBuilder.group(RadarApi, 'radar', handlers =>
     .handle('ready', () =>
       Effect.gen(function* () {
         const radarStore = yield* RadarStore;
-        const agentStore = yield* AgentStore;
-        yield* Effect.all([
-          radarStore.ready,
-          agentStore.ready,
-        ]).pipe(
-          Effect.mapError(error => new ApiFailure({ message: error.message })),
-        );
+        const readiness = yield* RuntimeReadiness;
+        yield* readiness.check;
         return new ReadyResponse({
           status: 'ready',
           storage: radarStore.storage,
@@ -469,17 +518,47 @@ const RadarGroupLive = HttpApiBuilder.group(RadarApi, 'radar', handlers =>
         const repository = yield* parseGithubRepository(payload.githubUrl).pipe(
           Effect.mapError(error => new InvalidInput({ message: error.message })),
         );
-        const scan = yield* store
-          .createScan({
-            githubUrl: repository.url,
-            owner: repository.owner,
-            repository: repository.repository,
-            audience: payload.audience,
-          })
-          .pipe(
-            Effect.mapError(error => new ApiFailure({ message: error.message })),
-          );
-        yield* coordinator.enqueue(scan);
+        const scan = yield* Effect.acquireUseRelease(
+          coordinator.reserve(repository.owner, repository.repository).pipe(
+            Effect.catchTags({
+              RepositoryScanAlreadyActive: error =>
+                Effect.fail(new InvalidInput({ message: error.message })),
+              ScanCapacityUnavailable: error =>
+                Effect.fail(new ApiFailure({ message: error.message })),
+            }),
+          ),
+          admission =>
+            persistAndAttachScan(
+              store
+                .createScan({
+                  githubUrl: repository.url,
+                  owner: repository.owner,
+                  repository: repository.repository,
+                  audience: payload.audience,
+                })
+                .pipe(
+                  Effect.mapError(
+                    error => new ApiFailure({ message: error.message }),
+                  ),
+                ),
+              created =>
+                admission.enqueue(created).pipe(
+                  Effect.onError(() =>
+                    store
+                      .failScanIfActive(created.id, {
+                        stage: 'Scan could not be queued',
+                        error: 'The scan could not be attached to a worker. Submit a new scan.',
+                      })
+                      .pipe(Effect.ignore),
+                  ),
+                ),
+            ).pipe(
+              Effect.mapError(
+                error => new ApiFailure({ message: error.message }),
+              ),
+            ),
+          admission => admission.release,
+        );
         return scan;
       }),
     )
@@ -532,7 +611,7 @@ const StoresLive = Layer.merge(RadarStoreLive, AgentStoreLive).pipe(
 const RuntimeLive = Layer.merge(ScanCoordinatorLive, AgentRuntimeLive).pipe(
   Layer.provideMerge(StoresLive),
 );
-const ServicesLive = AgentCoordinatorLive.pipe(
+const ServicesLive = Layer.merge(AgentCoordinatorLive, RuntimeReadinessLive).pipe(
   Layer.provideMerge(RuntimeLive),
 );
 const McpOriginGuardLive = HttpRouter.middleware(

@@ -47,6 +47,13 @@ export class RadarStore extends Context.Service<RadarStore, {
     id: string,
     update: ScanUpdate,
   ) => Effect.Effect<ScanRecord, StorageError>;
+  readonly failScanIfActive: (
+    id: string,
+    failure: {
+      readonly stage: string;
+      readonly error: string;
+    },
+  ) => Effect.Effect<void, StorageError>;
   readonly getScan: (id: string) => Effect.Effect<Option.Option<ScanRecord>, StorageError>;
   readonly listRecentScans: (limit?: number) => Effect.Effect<ReadonlyArray<ScanRecord>, StorageError>;
   readonly listRecentRepositories: (
@@ -59,7 +66,10 @@ export class RadarStore extends Context.Service<RadarStore, {
   readonly getPreviousResult: (
     owner: string,
     repository: string,
-    excludingScanId: string,
+    before: {
+      readonly createdAt: string;
+      readonly id: string;
+    },
   ) => Effect.Effect<Option.Option<ScanResult>, StorageError>;
 }>()('RadarStore') {}
 
@@ -133,6 +143,33 @@ const makeMemoryStore = Effect.gen(function* () {
       }));
       return next;
     }),
+    failScanIfActive: Effect.fn('RadarStore.failScanIfActive')(function* (
+      id,
+      failure,
+    ) {
+      const updatedAt = yield* nowIso;
+      yield* Ref.update(state, current => {
+        const scan = current.scans.get(id);
+        if (
+          scan === undefined ||
+          (scan.status !== 'queued' && scan.status !== 'running')
+        ) {
+          return current;
+        }
+        const failed = new ScanRecord({
+          ...scan,
+          status: 'failed',
+          progress: 100,
+          stage: failure.stage,
+          error: failure.error,
+          updatedAt,
+        });
+        return {
+          ...current,
+          scans: new Map(current.scans).set(id, failed),
+        };
+      });
+    }),
     getScan,
     listRecentScans: (limit = 8) =>
       Ref.get(state).pipe(
@@ -183,22 +220,23 @@ const makeMemoryStore = Effect.gen(function* () {
             ),
         ),
       ),
-    getPreviousResult: (owner, repository, excludingScanId) =>
+    getPreviousResult: (owner, repository, before) =>
       Ref.get(state).pipe(
         Effect.map(current =>
           Option.fromUndefinedOr(
             [...current.scans.values()]
               .filter(
                 scan =>
-                  scan.id !== excludingScanId &&
                   scan.owner.toLowerCase() === owner.toLowerCase() &&
                   scan.repository.toLowerCase() === repository.toLowerCase() &&
                   scan.status === 'completed' &&
-                  scan.result !== undefined,
+                  scan.result !== undefined &&
+                  (scan.createdAt < before.createdAt ||
+                    (scan.createdAt === before.createdAt && scan.id < before.id)),
               )
               .sort(
                 (left, right) =>
-                  right.updatedAt.localeCompare(left.updatedAt) ||
+                  right.createdAt.localeCompare(left.createdAt) ||
                   right.id.localeCompare(left.id),
               )[0]
               ?.result,
@@ -242,8 +280,8 @@ const makePostgresStore = Effect.gen(function* () {
     on scans(lower(owner), lower(repository), created_at desc, id desc)
   `.pipe(Effect.mapError(storageFailure));
   yield* sql`
-    create index if not exists scans_repository_completed_ci_idx
-    on scans(lower(owner), lower(repository), updated_at desc, id desc)
+    create index if not exists scans_repository_completed_history_ci_idx
+    on scans(lower(owner), lower(repository), created_at desc, id desc)
     where status = 'completed'
   `.pipe(Effect.mapError(storageFailure));
 
@@ -319,6 +357,26 @@ const makePostgresStore = Effect.gen(function* () {
       `.pipe(Effect.mapError(storageFailure));
       return next;
     }),
+    failScanIfActive: Effect.fn('RadarStore.failScanIfActive')(function* (
+      id,
+      failure,
+    ) {
+      const updatedAt = yield* nowIso;
+      yield* sql`
+        update scans set
+          status = 'failed',
+          record = record || ${sql.json({
+            status: 'failed',
+            progress: 100,
+            stage: failure.stage,
+            error: failure.error,
+            updatedAt,
+          })},
+          updated_at = ${updatedAt}
+        where id = ${id}
+          and status in ('queued', 'running')
+      `.pipe(Effect.mapError(storageFailure));
+    }),
     getScan,
     listRecentScans: Effect.fn('RadarStore.listRecentScans')(function* (limit = 8) {
       const rows = yield* sql<{ readonly record_json: string }>`
@@ -361,14 +419,17 @@ const makePostgresStore = Effect.gen(function* () {
       },
     ),
     getPreviousResult: Effect.fn('RadarStore.getPreviousResult')(
-      function* (owner, repository, excludingScanId) {
+      function* (owner, repository, before) {
         const rows = yield* sql<{ readonly record_json: string }>`
           select record::text record_json from scans
           where lower(owner) = lower(${owner})
             and lower(repository) = lower(${repository})
-            and id <> ${excludingScanId}
             and status = 'completed'
-          order by updated_at desc, id desc
+            and (
+              created_at < ${before.createdAt}
+              or (created_at = ${before.createdAt} and id < ${before.id})
+            )
+          order by created_at desc, id desc
           limit 1
         `.pipe(Effect.mapError(storageFailure));
         if (!rows[0]) return Option.none<ScanResult>();

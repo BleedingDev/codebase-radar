@@ -25,7 +25,7 @@ zerops:
       readinessCheck:
         httpGet:
           port: 3000
-          path: /api/health
+          path: /api/ready
     run:
       os: ubuntu
       base: nodejs@24
@@ -42,7 +42,6 @@ zerops:
         DATABASE_URL: ${db_connectionString}
         RADAR_ANALYZER_ROOT: /var/www/.zerops/analyzer-runtime
         RADAR_AGENT_ROOT: /var/www/.zerops/agent-runtime
-        RADAR_AGENT_HOME_KEY: ${db_password}
         SCAN_CONCURRENCY: "1"
       start: node apps/radar/.output/index.js
       healthCheck:

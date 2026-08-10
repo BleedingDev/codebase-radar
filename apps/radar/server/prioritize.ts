@@ -93,7 +93,7 @@ const llmAdjustments = Effect.fn('llmAdjustments')(function* (
         {
           role: 'system',
           content:
-            'Rerank static code-quality findings. Evidence and five input scores are immutable. Return JSON {"adjustments":[{"fingerprint":string,"adjustment":integer -8..8,"rationale":string}]}. Never invent runtime, security, business, or financial facts. Prefer concrete, corroborated, tractable work and penalize style noise.',
+            'Rerank static code-quality findings. Evidence and urgency inputs are immutable. Return JSON {"adjustments":[{"fingerprint":string,"adjustment":integer -8..8,"rationale":string}]}. Never invent runtime, security, business, or financial facts. Prefer concrete, corroborated, tractable work and penalize style noise.',
         },
         {
           role: 'user',
@@ -102,7 +102,13 @@ const llmAdjustments = Effect.fn('llmAdjustments')(function* (
               fingerprint: finding.fingerprint,
               title: finding.title,
               category: finding.category,
-              scores: finding.scores,
+              urgencyInputs: {
+                consequence: finding.scores.consequence,
+                blastRadius: finding.scores.blastRadius,
+                confidence: finding.scores.confidence,
+                effort: finding.scores.effort,
+                priority: finding.scores.priority,
+              },
               evidenceKinds: finding.evidence.map(evidence => evidence.kind),
               tags: finding.tags,
             })),
@@ -147,6 +153,7 @@ export const prioritize = Effect.fn('prioritize')(function* (
 ) {
   const groups = new Map<string, FindingCandidate>();
   for (const candidate of candidates) {
+    if (candidate.tags.includes('style-policy')) continue;
     const fingerprint = yield* candidateHash(candidate.fingerprintSeed.toLowerCase());
     const current = groups.get(fingerprint);
     groups.set(
@@ -177,10 +184,9 @@ export const prioritize = Effect.fn('prioritize')(function* (
   }
   const baseFindings = [...groups.entries()].map(([fingerprint, candidate]) => {
     const priority = clamp(
-      candidate.consequence * 0.3 +
-        candidate.blastRadius * 0.2 +
-        candidate.confidence * 0.2 +
-        candidate.changeExposure * 0.2 +
+      candidate.consequence * 0.4 +
+        candidate.blastRadius * 0.25 +
+        candidate.confidence * 0.25 +
         (100 - candidate.effort) * 0.1,
     );
     return new Finding({

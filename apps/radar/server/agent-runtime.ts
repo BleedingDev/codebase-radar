@@ -3,6 +3,7 @@ import {
   Config,
   Context,
   Crypto,
+  Deferred,
   Effect,
   Encoding,
   Exit,
@@ -38,18 +39,86 @@ export class AgentRuntimeError extends Schema.TaggedErrorClass<AgentRuntimeError
 interface ActiveLogin {
   readonly ownerId: string;
   readonly profile: AgentProfile;
+  readonly reservationKey: string;
   readonly challenge: AgentLoginChallenge;
   readonly generation: number;
   readonly homeRoot: string;
   readonly scope: Scope.Closeable;
   readonly handle: ChildProcessSpawner.ChildProcessHandle;
   readonly output: Ref.Ref<string>;
+  readonly terminal: Deferred.Deferred<AgentLoginTerminal>;
+  readonly finalized: Deferred.Deferred<void>;
 }
 
 interface FinishedLogin {
   readonly ownerId: string;
   readonly challenge: AgentLoginChallenge;
 }
+
+const loginLifetimeMs = 16 * 60_000;
+
+export type AgentLoginTerminal =
+  | { readonly _tag: 'Finished'; readonly exitCode: number }
+  | { readonly _tag: 'Expired' }
+  | { readonly _tag: 'Cancelled' };
+
+export const superviseAgentLoginLifetime = <Failure, Requirements>(
+  terminal: Deferred.Deferred<AgentLoginTerminal>,
+  waitForExit: Effect.Effect<number>,
+  waitForExpiry: Effect.Effect<void>,
+  onTerminal: (
+    terminal: AgentLoginTerminal,
+  ) => Effect.Effect<void, Failure, Requirements>,
+  finalize: Effect.Effect<void>,
+): Effect.Effect<void, Failure, Requirements> =>
+  Effect.scoped(
+    Effect.gen(function* () {
+      yield* waitForExit.pipe(
+        Effect.flatMap(exitCode =>
+          Deferred.succeed(terminal, { _tag: 'Finished', exitCode })),
+        Effect.forkScoped,
+      );
+      yield* waitForExpiry.pipe(
+        Effect.flatMap(() => Deferred.succeed(terminal, { _tag: 'Expired' })),
+        Effect.forkScoped,
+      );
+      return yield* Deferred.await(terminal);
+    }),
+  ).pipe(
+    Effect.flatMap(onTerminal),
+    Effect.ensuring(finalize),
+  );
+
+const loginReservationKey = (ownerId: string, profileId: string) =>
+  JSON.stringify([ownerId, profileId]);
+
+export const reserveAgentLoginSlot = Effect.fn('reserveAgentLoginSlot')(function* (
+  reservations: Ref.Ref<ReadonlySet<string>>,
+  key: string,
+  capacity: number,
+) {
+  const refusal = yield* Ref.modify(reservations, current => {
+    if (current.has(key)) {
+      return ['A sign-in is already active for this provider profile.', current];
+    }
+    if (current.size >= capacity) {
+      return ['The sign-in service is at capacity. Retry shortly.', current];
+    }
+    return [undefined, new Set(current).add(key)];
+  });
+  if (refusal !== undefined) {
+    return yield* new AgentRuntimeError({ message: refusal });
+  }
+});
+
+export const releaseAgentLoginSlot = (
+  reservations: Ref.Ref<ReadonlySet<string>>,
+  key: string,
+) => Ref.update(reservations, current => {
+  const updated = new Set(current);
+  updated.delete(key);
+  return updated;
+});
 
 interface SandboxCommand {
   readonly command: string;
@@ -360,8 +429,17 @@ export const AgentRuntimeLive = Layer.effect(
     const configuredRoot = yield* Config.option(Config.string('RADAR_AGENT_ROOT'));
     const agentRoot = Option.getOrElse(configuredRoot, () =>
       pathService.resolve(process.cwd(), 'packages/agent-runtime'));
+    const maxActiveLogins = yield* Config.int(
+      'RADAR_AGENT_LOGIN_CONCURRENCY',
+    ).pipe(Config.withDefault(4));
+    if (maxActiveLogins < 1 || maxActiveLogins > 16) {
+      return yield* new AgentRuntimeError({
+        message: 'RADAR_AGENT_LOGIN_CONCURRENCY must be between 1 and 16.',
+      });
+    }
     const active = yield* Ref.make<ReadonlyMap<string, ActiveLogin>>(new Map());
     const finished = yield* Ref.make<ReadonlyMap<string, FinishedLogin>>(new Map());
+    const reservations = yield* Ref.make<ReadonlySet<string>>(new Set());
 
     const saveFinished = (ownerId: string, challenge: AgentLoginChallenge) =>
       Ref.update(finished, current => {
@@ -371,15 +449,9 @@ export const AgentRuntimeLive = Layer.effect(
       });
 
     const finishLogin = Effect.fn('finishAgentLogin')(function* (
-      challengeId: string,
+      login: ActiveLogin,
       exitCode: number,
     ) {
-      const current = yield* Ref.modify(active, sessions => {
-        const login = sessions.get(challengeId);
-        return [Option.fromUndefinedOr(login), new Map([...sessions].filter(([id]) => id !== challengeId))];
-      });
-      if (Option.isNone(current)) return;
-      const login = current.value;
       const output = yield* Ref.get(login.output);
       if (exitCode === 0) {
         const captured = yield* Effect.exit(
@@ -437,95 +509,214 @@ export const AgentRuntimeLive = Layer.effect(
           }),
         );
       }
-      yield* Scope.close(login.scope, Exit.void).pipe(Effect.ignore);
     });
+
+    const expireLogin = Effect.fn('expireAgentLogin')(function* (
+      login: ActiveLogin,
+    ) {
+      const diagnostic = 'The provider sign-in session expired. Start a new sign-in.';
+      yield* store.updateProfile(login.ownerId, login.profile.id, {
+        state: 'failed',
+        diagnostic,
+      }).pipe(Effect.ignore);
+      yield* saveFinished(
+        login.ownerId,
+        new AgentLoginChallenge({
+          ...login.challenge,
+          status: 'failed',
+          diagnostic,
+        }),
+      );
+    });
+
+    const cancelActiveLogin = (login: ActiveLogin) =>
+      store.updateProfile(login.ownerId, login.profile.id, {
+        state: 'disconnected',
+      }).pipe(Effect.ignore);
+
+    const handleLoginTerminal = Effect.fn('handleAgentLoginTerminal')(
+      function* (login: ActiveLogin, terminal: AgentLoginTerminal) {
+        switch (terminal._tag) {
+          case 'Finished':
+            yield* finishLogin(login, terminal.exitCode);
+            return;
+          case 'Expired':
+            yield* expireLogin(login);
+            return;
+          case 'Cancelled':
+            yield* cancelActiveLogin(login);
+            return;
+        }
+      },
+    );
+
+    const finalizeLogin = (login: ActiveLogin) =>
+      Scope.close(login.scope, Exit.void).pipe(
+        Effect.ignore,
+        Effect.ensuring(Deferred.succeed(login.finalized, undefined)),
+      );
 
     const startLogin = Effect.fn('startAgentLogin')(function* (
       ownerId: string,
       profile: AgentProfile,
     ) {
-      const home = yield* store.readHome(ownerId, profile.id).pipe(
-        Effect.mapError(runtimeError),
-      );
-      const scope = yield* Scope.make();
-      const resources = yield* Effect.gen(function* () {
-        const root = yield* fs.makeTempDirectoryScoped({ prefix: 'radar-agent-login-' });
-        const homeRoot = pathService.resolve(root, 'home');
-        const workRoot = pathService.resolve(root, 'work');
-        yield* fs.makeDirectory(homeRoot, { recursive: true });
-        yield* fs.makeDirectory(workRoot, { recursive: true });
-        yield* restoreHome(fs, pathService, profile, homeRoot, home.state);
-        const providerArgs = profile.provider === 'codex'
-          ? ['login', '--device-auth']
-          : ['auth', 'login', '--claudeai'];
-        const sandbox = sandboxCommand(
-          agentRoot,
-          process.execPath,
-          homeRoot,
-          workRoot,
-          profile,
-          providerArgs,
-          profile.provider === 'claude',
-        );
-        const handle = yield* ChildProcess.make(sandbox.command, sandbox.args, {
-            cwd: root,
-            env: sandbox.env,
-            extendEnv: false,
-            shell: false,
-            detached: true,
-            stdin: { stream: 'pipe', endOnDone: false },
-            stdout: 'pipe',
-            stderr: 'pipe',
-            forceKillAfter: '2 seconds',
-          }).pipe(
-            Effect.provideService(
-              ChildProcessSpawner.ChildProcessSpawner,
-              childSpawner,
+      const reservationKey = loginReservationKey(ownerId, profile.id);
+      return yield* Effect.uninterruptibleMask(restore =>
+        Effect.gen(function* () {
+          yield* reserveAgentLoginSlot(
+            reservations,
+            reservationKey,
+            maxActiveLogins,
+          );
+          const scope = yield* Scope.fork(applicationScope);
+          yield* Scope.addFinalizer(
+            scope,
+            releaseAgentLoginSlot(reservations, reservationKey),
+          );
+          const started = yield* restore(
+            Effect.gen(function* () {
+              const home = yield* store.readHome(ownerId, profile.id).pipe(
+                Effect.mapError(runtimeError),
+              );
+              const resources = yield* Effect.gen(function* () {
+                const root = yield* fs.makeTempDirectoryScoped({
+                  prefix: 'radar-agent-login-',
+                });
+                const homeRoot = pathService.resolve(root, 'home');
+                const workRoot = pathService.resolve(root, 'work');
+                yield* fs.makeDirectory(homeRoot, { recursive: true });
+                yield* fs.makeDirectory(workRoot, { recursive: true });
+                yield* restoreHome(
+                  fs,
+                  pathService,
+                  profile,
+                  homeRoot,
+                  home.state,
+                );
+                const providerArgs = profile.provider === 'codex'
+                  ? ['login', '--device-auth']
+                  : ['auth', 'login', '--claudeai'];
+                const sandbox = sandboxCommand(
+                  agentRoot,
+                  process.execPath,
+                  homeRoot,
+                  workRoot,
+                  profile,
+                  providerArgs,
+                  profile.provider === 'claude',
+                );
+                const handle = yield* ChildProcess.make(
+                  sandbox.command,
+                  sandbox.args,
+                  {
+                    cwd: root,
+                    env: sandbox.env,
+                    extendEnv: false,
+                    shell: false,
+                    detached: true,
+                    stdin: { stream: 'pipe', endOnDone: false },
+                    stdout: 'pipe',
+                    stderr: 'pipe',
+                    forceKillAfter: '2 seconds',
+                  },
+                ).pipe(
+                  Effect.provideService(
+                    ChildProcessSpawner.ChildProcessSpawner,
+                    childSpawner,
+                  ),
+                );
+                return { homeRoot, handle };
+              }).pipe(
+                Effect.provideService(Scope.Scope, scope),
+                Effect.mapError(runtimeError),
+              );
+              const id = yield* crypto.randomUUIDv7.pipe(
+                Effect.mapError(runtimeError),
+              );
+              const now = yield* Clock.currentTimeMillis;
+              const challenge = new AgentLoginChallenge({
+                id,
+                profileId: profile.id,
+                provider: profile.provider,
+                status: 'starting',
+                expiresAt: new Date(now + loginLifetimeMs).toISOString(),
+              });
+              const output = yield* Ref.make('');
+              const terminal = yield* Deferred.make<AgentLoginTerminal>();
+              const finalized = yield* Deferred.make<void>();
+              yield* resources.handle.all.pipe(
+                Stream.decodeText(),
+                Stream.runForEach(chunk =>
+                  Ref.update(
+                    output,
+                    value => `${value}${chunk}`.slice(-64_000),
+                  )),
+                Effect.forkIn(scope),
+              );
+              yield* store.updateProfile(ownerId, profile.id, {
+                state: 'connecting',
+              }).pipe(Effect.mapError(runtimeError));
+              yield* Effect.sleep('250 millis');
+              const login: ActiveLogin = {
+                ownerId,
+                profile,
+                reservationKey,
+                challenge,
+                generation: home.generation,
+                homeRoot: resources.homeRoot,
+                scope,
+                handle: resources.handle,
+                output,
+                terminal,
+                finalized,
+              };
+              yield* Effect.uninterruptible(
+                Ref.update(
+                  active,
+                  current => new Map(current).set(id, login),
+                ).pipe(
+                  Effect.andThen(
+                    Scope.addFinalizer(
+                      scope,
+                      Ref.update(active, current => {
+                        const updated = new Map(current);
+                        updated.delete(id);
+                        return updated;
+                      }),
+                    ),
+                  ),
+                  Effect.andThen(
+                    superviseAgentLoginLifetime(
+                      terminal,
+                      resources.handle.exitCode.pipe(
+                        Effect.map(Number),
+                        Effect.catch(() => Effect.succeed(1)),
+                      ),
+                      Effect.sleep(loginLifetimeMs),
+                      terminalEvent =>
+                        handleLoginTerminal(login, terminalEvent),
+                      finalizeLogin(login),
+                    ).pipe(Effect.forkIn(applicationScope)),
+                  ),
+                ),
+              );
+              return challengeFromOutput(challenge, yield* Ref.get(output));
+            }),
+          ).pipe(
+            Effect.onError(() =>
+              Scope.close(scope, Exit.void).pipe(
+                Effect.andThen(
+                  store.updateProfile(ownerId, profile.id, {
+                    state: 'failed',
+                    diagnostic: 'The provider sign-in could not be started.',
+                  }).pipe(Effect.ignore),
+                ),
+              ),
             ),
           );
-        return { homeRoot, handle };
-      }).pipe(
-        Effect.provideService(Scope.Scope, scope),
-        Effect.mapError(runtimeError),
-        Effect.onError(() => Scope.close(scope, Exit.void)),
+          return started;
+        }),
       );
-      const id = yield* crypto.randomUUIDv7.pipe(Effect.mapError(runtimeError));
-      const now = yield* Clock.currentTimeMillis;
-      const challenge = new AgentLoginChallenge({
-        id,
-        profileId: profile.id,
-        provider: profile.provider,
-        status: 'starting',
-        expiresAt: new Date(now + 16 * 60_000).toISOString(),
-      });
-      const output = yield* Ref.make('');
-      yield* resources.handle.all.pipe(
-        Stream.decodeText(),
-        Stream.runForEach(chunk =>
-          Ref.update(output, value => `${value}${chunk}`.slice(-64_000))),
-        Effect.forkIn(scope),
-      );
-      const login: ActiveLogin = {
-        ownerId,
-        profile,
-        challenge,
-        generation: home.generation,
-        homeRoot: resources.homeRoot,
-        scope,
-        handle: resources.handle,
-        output,
-      };
-      yield* Ref.update(active, current => new Map(current).set(id, login));
-      yield* resources.handle.exitCode.pipe(
-        Effect.flatMap(code => finishLogin(id, Number(code))),
-        Effect.catch(() => finishLogin(id, 1)),
-        Effect.forkIn(applicationScope),
-      );
-      yield* store.updateProfile(ownerId, profile.id, { state: 'connecting' }).pipe(
-        Effect.mapError(runtimeError),
-      );
-      yield* Effect.sleep('250 millis');
-      return challengeFromOutput(challenge, yield* Ref.get(output));
     });
 
     const withRestoredHome = Effect.fn('withRestoredAgentHome')(function* (
@@ -666,12 +857,13 @@ export const AgentRuntimeLive = Layer.effect(
         if (!login || login.ownerId !== ownerId) {
           return yield* new AgentRuntimeError({ message: 'Sign-in session was not found.' });
         }
-        yield* Ref.update(active, sessions =>
-          new Map([...sessions].filter(([id]) => id !== challengeId)));
-        yield* Scope.close(login.scope, Exit.void).pipe(Effect.ignore);
-        yield* store.updateProfile(ownerId, login.profile.id, { state: 'disconnected' }).pipe(
-          Effect.mapError(runtimeError),
-        );
+        const claimed = yield* Deferred.succeed(login.terminal, {
+          _tag: 'Cancelled',
+        });
+        if (!claimed) {
+          return yield* new AgentRuntimeError({ message: 'Sign-in session was not found.' });
+        }
+        yield* Deferred.await(login.finalized);
       }),
       refreshStatus: Effect.fn('AgentRuntime.refreshStatus')(function* (ownerId, profile) {
         const providerArgs = profile.provider === 'codex'
