@@ -6,6 +6,7 @@ settings:
   injectWorkspacePackages: true
 
 overrides:
+  '@effect/platform-node-shared': 4.0.0-beta.102
   react-router: 8.3.0
 
 importers:
@@ -24,17 +25,17 @@ importers:
         specifier: 4.0.0-beta.102
         version: 4.0.0-beta.102(effect@4.0.0-beta.102)
       '@modern-js/plugin-bff':
-        specifier: npm:@bleedingdev/modern-js-plugin-bff@3.5.0-ultramodern.100
-        version: '@bleedingdev/modern-js-plugin-bff@3.5.0-ultramodern.100(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@rspack/core@2.1.8(@swc/helpers@0.5.23))(@typescript/native-preview@7.0.0-dev.20260707.2)(clean-css@5.3.3)(core-js@3.50.0)(csso@5.0.5)(effect@4.0.0-beta.102)(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(supports-color@8.1.1)(tsconfig-paths@4.2.0)(typescript@7.0.2)(webpack@5.109.2(@swc/core@1.15.43(@swc/helpers@0.5.23))(clean-css@5.3.3)(cssnano@8.0.2(postcss@8.5.26))(csso@5.0.5)(esbuild@0.28.1)(html-minifier-terser@7.2.0)(postcss@8.5.26))(zod@4.4.3)'
+        specifier: npm:@bleedingdev/modern-js-plugin-bff@3.5.0-ultramodern.102
+        version: '@bleedingdev/modern-js-plugin-bff@3.5.0-ultramodern.102(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@rspack/core@2.1.8(@swc/helpers@0.5.23))(@typescript/native-preview@7.0.0-dev.20260707.2)(clean-css@5.3.3)(core-js@3.50.0)(csso@5.0.5)(effect@4.0.0-beta.102)(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(supports-color@8.1.1)(tsconfig-paths@4.2.0)(typescript@7.0.2)(webpack@5.109.2(@swc/core@1.15.43(@swc/helpers@0.5.23))(clean-css@5.3.3)(cssnano@8.0.2(postcss@8.5.26))(csso@5.0.5)(esbuild@0.28.1)(html-minifier-terser@7.2.0)(postcss@8.5.26))(zod@4.4.3)'
       '@modern-js/plugin-tanstack':
-        specifier: npm:@bleedingdev/modern-js-plugin-tanstack@3.5.0-ultramodern.100
-        version: '@bleedingdev/modern-js-plugin-tanstack@3.5.0-ultramodern.100(d473a3d3e185222ebed31a3c3dc0e883)'
+        specifier: npm:@bleedingdev/modern-js-plugin-tanstack@3.5.0-ultramodern.102
+        version: '@bleedingdev/modern-js-plugin-tanstack@3.5.0-ultramodern.102(3a741f9debc16b9be3fb690ab09a4ab1)'
       '@modern-js/runtime':
-        specifier: npm:@bleedingdev/modern-js-runtime@3.5.0-ultramodern.100
-        version: '@bleedingdev/modern-js-runtime@3.5.0-ultramodern.100(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)'
+        specifier: npm:@bleedingdev/modern-js-runtime@3.5.0-ultramodern.102
+        version: '@bleedingdev/modern-js-runtime@3.5.0-ultramodern.102(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)'
       '@typeonce/effect-machine':
-        specifier: 0.3.0
-        version: 0.3.0(effect@4.0.0-beta.102)
+        specifier: 0.4.0
+        version: 0.4.0(effect@4.0.0-beta.102)
       effect:
         specifier: 4.0.0-beta.102
         version: 4.0.0-beta.102
@@ -52,11 +53,11 @@ importers:
         version: 5.0.3
     devDependencies:
       '@modern-js/app-tools':
-        specifier: npm:@bleedingdev/modern-js-app-tools@3.5.0-ultramodern.100
-        version: '@bleedingdev/modern-js-app-tools@3.5.0-ultramodern.100(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@rspack/core@2.1.8(@swc/helpers@0.5.23))(@typescript/native-preview@7.0.0-dev.20260707.2)(clean-css@5.3.3)(core-js@3.50.0)(csso@5.0.5)(debug@4.4.3(supports-color@8.1.1))(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(rollup@4.62.4)(supports-color@8.1.1)(tsconfig-paths@4.2.0)(typescript@7.0.2)(webpack@5.109.2(@swc/core@1.15.43(@swc/helpers@0.5.23))(clean-css@5.3.3)(cssnano@8.0.2(postcss@8.5.26))(csso@5.0.5)(esbuild@0.28.1)(html-minifier-terser@7.2.0)(postcss@8.5.26))'
+        specifier: npm:@bleedingdev/modern-js-app-tools@3.5.0-ultramodern.102
+        version: '@bleedingdev/modern-js-app-tools@3.5.0-ultramodern.102(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@rspack/core@2.1.8(@swc/helpers@0.5.23))(@typescript/native-preview@7.0.0-dev.20260707.2)(clean-css@5.3.3)(core-js@3.50.0)(csso@5.0.5)(debug@4.4.3(supports-color@8.1.1))(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(rollup@4.62.4)(supports-color@8.1.1)(tsconfig-paths@4.2.0)(typescript@7.0.2)(webpack@5.109.2(@swc/core@1.15.43(@swc/helpers@0.5.23))(clean-css@5.3.3)(cssnano@8.0.2(postcss@8.5.26))(csso@5.0.5)(esbuild@0.28.1)(html-minifier-terser@7.2.0)(postcss@8.5.26))'
       '@modern-js/tsconfig':
-        specifier: npm:@bleedingdev/modern-js-tsconfig@3.5.0-ultramodern.100
-        version: '@bleedingdev/modern-js-tsconfig@3.5.0-ultramodern.100'
+        specifier: npm:@bleedingdev/modern-js-tsconfig@3.5.0-ultramodern.102
+        version: '@bleedingdev/modern-js-tsconfig@3.5.0-ultramodern.102'
       '@tsconfig/strictest':
         specifier: 2.0.8
         version: 2.0.8
@@ -225,8 +226,8 @@ packages:
     resolution: {integrity: sha512-eY+Yn3dCqTGmyiq2QRU66lA5FL8lqqqvecHt0fF3uHONIa7ToYsaCiWV8lOKqAs0Rb2SjixiKFROngnulPtt2g==}
     engines: {node: ^22.18.0 || >=24.11.0}
 
-  '@bleedingdev/modern-js-app-tools@3.5.0-ultramodern.100':
-    resolution: {integrity: sha512-71W4gD7DwhCcgoYNKQtSvpI0FjagJd32k3pFyka6WlwNKqWtfFHKEkuMPtNZr3gBEGGSYSgRzuoHXllf1fCZqA==}
+  '@bleedingdev/modern-js-app-tools@3.5.0-ultramodern.102':
+    resolution: {integrity: sha512-yJrorYmQdbnOpA6mwHiVbk/kJPGMA7FXZOhIHbgOZMarD1NpHOY8SYogszccUtZ4R7YcnScUo/eZSX0BsVLgJw==}
     engines: {node: '>=20'}
     hasBin: true
     peerDependencies:
@@ -238,8 +239,8 @@ packages:
       tsconfig-paths:
         optional: true
 
-  '@bleedingdev/modern-js-bff-core@3.5.0-ultramodern.100':
-    resolution: {integrity: sha512-Q5Yoe145DZNeqjQcI1Ynnr6RUnm/EEEhIYF8BUqaGMqYJrWUKSQw+ikclpQsZwWaDzA5hCJPfHXobnnpmH1hTw==}
+  '@bleedingdev/modern-js-bff-core@3.5.0-ultramodern.102':
+    resolution: {integrity: sha512-sdYAkkf/VKR5eu9rzYGx9ouUwahsF+eaPwkB5vvgsUEwllbZw3r+1LddQHAXLrlKQ1SK11Wp4JX0WGdVwaKzTg==}
     peerDependencies:
       tsconfig-paths: ^4.2.0
       zod: ^4.4.3
@@ -247,17 +248,17 @@ packages:
       zod:
         optional: true
 
-  '@bleedingdev/modern-js-builder@3.5.0-ultramodern.100':
-    resolution: {integrity: sha512-lmBCbVgKRDMMrqHQWGBqZtL5iwktgQxc4+kE4uepymkdvYhr5FHePKa/jq8dmCZwjOImg/T4DRYkNznIbDthFA==}
+  '@bleedingdev/modern-js-builder@3.5.0-ultramodern.102':
+    resolution: {integrity: sha512-8uWZ1D9pRijtCInatv103yscoH0MpRYoC8s/RmYiQUfS6l0HMjidiyalTYEcyecRu7rC0vhXweR0+aLLgYbI5w==}
 
-  '@bleedingdev/modern-js-create-request@3.5.0-ultramodern.100':
-    resolution: {integrity: sha512-FnYfJAOpXDTfbcAXtiQI/++LfhILamrBSx7IQu40TjXZu2v8N91rh8HqV0hpxCEvPlUVIIUIqpmVA284EAc70A==}
+  '@bleedingdev/modern-js-create-request@3.5.0-ultramodern.102':
+    resolution: {integrity: sha512-5EFSJ8DHKSarRnpucmsZFUOZRRz8meAc2meB7gguyb6f1QGSIbBujIjYXD24qw+klAL+2vzvDL98rexHlkjh1A==}
 
-  '@bleedingdev/modern-js-i18n-utils@3.5.0-ultramodern.100':
-    resolution: {integrity: sha512-pnPwRmfhkLvJ90aM8p7ixXqeGdc1dg+RQZoeE/O35xLrrTuggwVMnITQMtm8+t2f9tyVnpPqF4xj14DbzFIbMA==}
+  '@bleedingdev/modern-js-i18n-utils@3.5.0-ultramodern.102':
+    resolution: {integrity: sha512-4atOG5sEpmTH7hck2b6Iid7WbGEPhmz3FI2d6qgn9BdrvTf6Z6OVYIb+5LbLdk4rd1jhnAtpr5F2ygjVGDpmfA==}
 
-  '@bleedingdev/modern-js-plugin-bff@3.5.0-ultramodern.100':
-    resolution: {integrity: sha512-/0C4m4OBXSR8iLANsYSE/LJIHKszZDjUBv+ant3FNsvd1PAK/M7t1IlmH/j/7wRlJ5L/BeeCGQk9UAP+ecHhow==}
+  '@bleedingdev/modern-js-plugin-bff@3.5.0-ultramodern.102':
+    resolution: {integrity: sha512-8zhk1BXIqrvScH335xEokEgzYz1ukoqY6LNwcu5ukXHVAMW2In8jvAXjX57SMx19lHK5UeZ6pAVV4uW1NsOtYA==}
     peerDependencies:
       '@effect/opentelemetry': 4.0.0-beta.102
       effect: 4.0.0-beta.102
@@ -267,37 +268,37 @@ packages:
       effect:
         optional: true
 
-  '@bleedingdev/modern-js-plugin-data-loader@3.5.0-ultramodern.100':
-    resolution: {integrity: sha512-XiHrGILc2ZSIkwUIJcv0WZ3prXR+SA1ZTk8vXLoPNwiO/ZRR5B0HR4Vxx/UeLPOAlHb0mVZPoh7gM+Q+dEer9g==}
+  '@bleedingdev/modern-js-plugin-data-loader@3.5.0-ultramodern.102':
+    resolution: {integrity: sha512-PxhjB3pJ2LEbIslwVv2yzbV2OTwFkvn2tdupD2lJzMc0Xm9NVGmNcKKrZz9uLEXklbYLkue7hO9lqlm5Vn3KRw==}
     engines: {node: '>=20'}
     peerDependencies:
       react: ^19.2.7
 
-  '@bleedingdev/modern-js-plugin-tanstack@3.5.0-ultramodern.100':
-    resolution: {integrity: sha512-BVtuCfATFWWJTKmqM6+BTuJ6a6HZtJqHDpJb2gjaklU38LmtuviK2GGkrArj5sULiTcyJMD1Scf8lThOBB0pQA==}
+  '@bleedingdev/modern-js-plugin-tanstack@3.5.0-ultramodern.102':
+    resolution: {integrity: sha512-qNCLmUxELkK2olqZ7IsNoOltmqSpUXH8HpF4dQISBWSBHsywBBhWKbsWMWrJL0TJDsZ+a/MWuaW/5cQNP04sLw==}
     engines: {node: '>=20'}
     peerDependencies:
-      '@modern-js/app-tools': 3.5.0-ultramodern.100
-      '@modern-js/runtime': 3.5.0-ultramodern.100
+      '@modern-js/app-tools': 3.5.0-ultramodern.102
+      '@modern-js/runtime': 3.5.0-ultramodern.102
       react: ^19.2.7
       react-dom: ^19.2.7
 
-  '@bleedingdev/modern-js-plugin@3.5.0-ultramodern.100':
-    resolution: {integrity: sha512-6XUUQHmK0au0rw6R+fFt+rhS+CZgAawhueFqowDJcEYruRtH2ijcXxfwfBkb70etTUm+Nh/o/hgQsXxdWMjHtg==}
+  '@bleedingdev/modern-js-plugin@3.5.0-ultramodern.102':
+    resolution: {integrity: sha512-knULxOkbBUPJM8RsBJpzWeYr9JI3O3HepQtaVaZVqJ4dYbiHrO8yfi3GqSR3BnJMJz+vjWSiCO7Kj6IFSgCJDg==}
 
-  '@bleedingdev/modern-js-prod-server@3.5.0-ultramodern.100':
-    resolution: {integrity: sha512-rjiWA104rkxNmSZsQBCMWVEq/8LBNosDjryn8+nPe+nUGkdsmo7UI1kBEgemA9qdcXERyqT5UMvPNTWvLBmOfQ==}
+  '@bleedingdev/modern-js-prod-server@3.5.0-ultramodern.102':
+    resolution: {integrity: sha512-LFjVIN+8Cxwm3i2g6ICe+2htN9xGrOq1KKjCXkfKOyasT6VCIH/BmMFPIPscvIpWIpR1f4/WlBxfihmGQ2LWfw==}
     engines: {node: '>=20'}
 
-  '@bleedingdev/modern-js-render@3.5.0-ultramodern.100':
-    resolution: {integrity: sha512-oQFRyTo5B/hqSXNiXRw5+Fi5nKNOJurEwkx3N3Qm3iumlI/DRR/aCPc7F9g74kN6+So8az7mOGJijtrE78hCqw==}
+  '@bleedingdev/modern-js-render@3.5.0-ultramodern.102':
+    resolution: {integrity: sha512-D18fkL9CjCAUZEmwnB2G2QGawITsI6zzZSye7df7zan1IHinS07pUaGhz1AaM5Hkw3AQHFc8UFgQgITQbaU04w==}
     peerDependencies:
       react: ^19.2.7
       react-dom: ^19.2.7
       react-server-dom-rspack: 0.0.2
 
-  '@bleedingdev/modern-js-runtime-utils@3.5.0-ultramodern.100':
-    resolution: {integrity: sha512-MPHbCpcpt3FB5sQTfiFSEXLxaD1ZYRwsgmJJEnSP3GPmIsBXtiWEUBMECeNdeogSTtC6xiWniXQlH7HcvgxzzQ==}
+  '@bleedingdev/modern-js-runtime-utils@3.5.0-ultramodern.102':
+    resolution: {integrity: sha512-t+PG4rBqvXMRGuaLH2qaR8Df/Qiqo2gjkAEZEQ4MvrUVm0ysibn00YQMbLDlT6J7xLwJRNIBEVOPmTN1Q9qGkw==}
     peerDependencies:
       react: ^19.2.7
       react-dom: ^19.2.7
@@ -307,31 +308,31 @@ packages:
       react-dom:
         optional: true
 
-  '@bleedingdev/modern-js-runtime@3.5.0-ultramodern.100':
-    resolution: {integrity: sha512-DOQCpvDfIYLHnsFxzS6D6EFLMtFDdKf6Qeo9uizF5AB5FyiNqAcKE8fqZqajB/njjkQ1aaNgO9sEB97XWgQqnQ==}
+  '@bleedingdev/modern-js-runtime@3.5.0-ultramodern.102':
+    resolution: {integrity: sha512-0ytys4zXGkUOVZHQ9xQzHGE5fKt/8gFKuBZwbfi+3BxvRjyiivHVCBRj6wWKIyxXO/x7+vq9fd/PpP/qdh+vog==}
     engines: {node: '>=20'}
     peerDependencies:
       react: ^19.2.7
       react-dom: ^19.2.7
 
-  '@bleedingdev/modern-js-server-core@3.5.0-ultramodern.100':
-    resolution: {integrity: sha512-oUyNvI/CzlrkxIsE81bH8HPbzPrCjuwJeecrmDn1ZZD+uHaP4vGx5Z6JXyazYqKqns6y22i3WJHXIX2UtJ+k6g==}
+  '@bleedingdev/modern-js-server-core@3.5.0-ultramodern.102':
+    resolution: {integrity: sha512-ycjwfXHpVL51Bxfkg5hqlX69ewgGg0SJl0/wqKxZ1+ed6MJ9o2UlW01XeQ2FScjAZif5p3wdhRONLD3UmUSqrg==}
     engines: {node: '>=20'}
 
-  '@bleedingdev/modern-js-server-runtime-extensions@3.5.0-ultramodern.100':
-    resolution: {integrity: sha512-6u19T99yDFtRaT/HpI02iK0YLB1hfXb1A4KK5UfK/MS90T+Oo4QOiZ0BPUJ1ohvR+YOtzq8DTToNMEiXxSz5Rg==}
+  '@bleedingdev/modern-js-server-runtime-extensions@3.5.0-ultramodern.102':
+    resolution: {integrity: sha512-BpHUI+WwdZ6DO+Z9xzJmNIx3Vi87Q+qs6cZssgbCUVFGTfExtd5c1bkQsVy+1auY5IUVf58yfrfE8lOggJ2nng==}
     engines: {node: '>=20'}
 
-  '@bleedingdev/modern-js-server-utils@3.5.0-ultramodern.100':
-    resolution: {integrity: sha512-A0fes5bLC4vywC/RZ/zIam7M3CgEcibAcqNx+AharyKYRAj4c7DbPBgVh1VOQMGATcM1Pk/q/zpS/oa4HEJT1g==}
+  '@bleedingdev/modern-js-server-utils@3.5.0-ultramodern.102':
+    resolution: {integrity: sha512-v4pfyKvbwfFj/t3dHEfUAPiyWfL3HDRyORbj0+GqZMIUUDTA9WGjcVXWaVB0fAmV6MtFVUwECsaUovq/Hx1qZA==}
     peerDependencies:
       '@typescript/native-preview': '>=7.0.0-dev.20260628.1'
     peerDependenciesMeta:
       '@typescript/native-preview':
         optional: true
 
-  '@bleedingdev/modern-js-server@3.5.0-ultramodern.100':
-    resolution: {integrity: sha512-q2u1QazDsxMhwSxlU3gvascU5PNx962dH/O9T0p0JYtT9kGMUMe/GMc7aATbnl4qo0lqZv2wC8nU2x2J4rKwzg==}
+  '@bleedingdev/modern-js-server@3.5.0-ultramodern.102':
+    resolution: {integrity: sha512-slFsQjAFc20e6kDmA4ONZ3Tgu8lBwTASOqOS0z/66CZZK2YItD/wX+XyLIv9WDkSURYsqEgQxJNzNC29jvfz4Q==}
     peerDependencies:
       devcert: ^1.2.3
       tsconfig-paths: '>=4.2.0'
@@ -341,14 +342,14 @@ packages:
       tsconfig-paths:
         optional: true
 
-  '@bleedingdev/modern-js-tsconfig@3.5.0-ultramodern.100':
-    resolution: {integrity: sha512-QLcB71RxYjm0s4wB3ikma5vXSX2oHLOUhYL0sDSqLxYs0sSKhJDANMt78rllnm3mA1bGkK6xMv3KeH0zjneJSQ==}
+  '@bleedingdev/modern-js-tsconfig@3.5.0-ultramodern.102':
+    resolution: {integrity: sha512-IcekX7DfTeGfJK5QOjRIVnvGsvDFj+lHtvxf7nZ+vk1JCfnbZRsm6JLkoc7Z531Grl7PIEtzSqkoYsx3lldKGQ==}
 
-  '@bleedingdev/modern-js-types@3.5.0-ultramodern.100':
-    resolution: {integrity: sha512-1sVek74CVamgi4DzPyIw7J16tPocD2BHy3mHUWfhiExeAzC2Z3kEN54jOLynn/3qc4/8TPj854w6gLaDE2XeRw==}
+  '@bleedingdev/modern-js-types@3.5.0-ultramodern.102':
+    resolution: {integrity: sha512-yQ8BtPq0zJ5diwWoRU8OEhZcu/mQ6gwXkWxKtWo70lje8dcPcNPusw9imKsotDvEwW+yDpfgitH34ODjjgLkPQ==}
 
-  '@bleedingdev/modern-js-utils@3.5.0-ultramodern.100':
-    resolution: {integrity: sha512-t3e1IdMn6WOCMbBmt13GqUW5LW8cfoP55+StHVbYpWt3+uPpnyLSGfRWQlwWUO8IwOe8m0mcbD5R/hMAPCXDGg==}
+  '@bleedingdev/modern-js-utils@3.5.0-ultramodern.102':
+    resolution: {integrity: sha512-lt4RNj3xo0uP8fCsEv1BzMpnnmvS0zuNcMLivbAXfUKnydEMAuwmnVgiTAIcASDpzmh7HiLAubdoyXP0RhV+Mg==}
     peerDependencies:
       react: ^19.2.7
       react-dom: ^19.2.7
@@ -417,11 +418,11 @@ packages:
       react: ^19.2.4
       scheduler: '*'
 
-  '@effect/platform-node-shared@4.0.0-beta.106':
-    resolution: {integrity: sha512-TRTzLmhCwVM8G7dXz16lI3wE2vZFSs1jNs/+3WhnuOZgOUeJz9vzBK/KKlGRbbi0QbtEqmW4rAy1y9Fj4MZfsw==}
+  '@effect/platform-node-shared@4.0.0-beta.102':
+    resolution: {integrity: sha512-gVd793I72MrkX4dXo7eYtRKfNj0RW4eMRfVEKEJI16h2+mBDCzQ+gqMrog2hSTHQnaIbvbYShNQ4TVGuRCYZeQ==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
-      effect: ^4.0.0-beta.106
+      effect: ^4.0.0-beta.102
 
   '@effect/platform-node@4.0.0-beta.102':
     resolution: {integrity: sha512-wYVAU9jAePT+gouMr/EVz1CaW6yDLjPAgXYeEFLz7wugT5iZhFRag6mqajV/wwN3bzWP2fzZHokLuPmqD/rqeA==}
@@ -1930,11 +1931,11 @@ packages:
   '@tybys/wasm-util@0.10.3':
     resolution: {integrity: sha512-F3fo1MYrRJYL3zER0OUOmkutjr1Vp23m7OsSgp7nq4SP6OqX6C/56XFIPAl5bt3zaBRjmW7SGz3u/6LwFpYcOg==}
 
-  '@typeonce/effect-machine@0.3.0':
-    resolution: {integrity: sha512-kGy69chRxAsS6thL7yuNAwt44yL6Ky/xESuzaBePeWD590nA1YNpmTQvvODR2B7F+/79AySr+b2JTaFPFUcvRg==}
+  '@typeonce/effect-machine@0.4.0':
+    resolution: {integrity: sha512-aCsVAQkGnmQXGhp1T2mmVmJtEr3/rkun0ztiVrTbhQND4B+lSW2WSpwBmVHMAUrpArxzMZblU5lCa3nbWXUYaw==}
     engines: {node: '>=20'}
     peerDependencies:
-      effect: 4.0.0-beta.102
+      effect: 4.0.0-beta.107
 
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
@@ -5180,22 +5181,22 @@ snapshots:
       '@babel/helper-string-parser': 8.0.0
       '@babel/helper-validator-identifier': 8.0.4
 
-  '@bleedingdev/modern-js-app-tools@3.5.0-ultramodern.100(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@rspack/core@2.1.8(@swc/helpers@0.5.23))(@typescript/native-preview@7.0.0-dev.20260707.2)(clean-css@5.3.3)(core-js@3.50.0)(csso@5.0.5)(debug@4.4.3(supports-color@8.1.1))(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(rollup@4.62.4)(supports-color@8.1.1)(tsconfig-paths@4.2.0)(typescript@7.0.2)(webpack@5.109.2(@swc/core@1.15.43(@swc/helpers@0.5.23))(clean-css@5.3.3)(cssnano@8.0.2(postcss@8.5.26))(csso@5.0.5)(esbuild@0.28.1)(html-minifier-terser@7.2.0)(postcss@8.5.26))':
+  '@bleedingdev/modern-js-app-tools@3.5.0-ultramodern.102(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@rspack/core@2.1.8(@swc/helpers@0.5.23))(@typescript/native-preview@7.0.0-dev.20260707.2)(clean-css@5.3.3)(core-js@3.50.0)(csso@5.0.5)(debug@4.4.3(supports-color@8.1.1))(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(rollup@4.62.4)(supports-color@8.1.1)(tsconfig-paths@4.2.0)(typescript@7.0.2)(webpack@5.109.2(@swc/core@1.15.43(@swc/helpers@0.5.23))(clean-css@5.3.3)(cssnano@8.0.2(postcss@8.5.26))(csso@5.0.5)(esbuild@0.28.1)(html-minifier-terser@7.2.0)(postcss@8.5.26))':
     dependencies:
       '@babel/parser': 8.0.4
       '@babel/traverse': 8.0.4
       '@babel/types': 8.0.4
       '@loadable/component': 5.16.7(react@19.2.7)
-      '@modern-js/builder': '@bleedingdev/modern-js-builder@3.5.0-ultramodern.100(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@rspack/core@2.1.8(@swc/helpers@0.5.23))(clean-css@5.3.3)(csso@5.0.5)(esbuild@0.28.1)(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(supports-color@8.1.1)(typescript@7.0.2)(webpack@5.109.2(@swc/core@1.15.43(@swc/helpers@0.5.23))(clean-css@5.3.3)(cssnano@8.0.2(postcss@8.5.26))(csso@5.0.5)(esbuild@0.28.1)(html-minifier-terser@7.2.0)(postcss@8.5.26))'
-      '@modern-js/i18n-utils': '@bleedingdev/modern-js-i18n-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/plugin': '@bleedingdev/modern-js-plugin@3.5.0-ultramodern.100(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/plugin-data-loader': '@bleedingdev/modern-js-plugin-data-loader@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/prod-server': '@bleedingdev/modern-js-prod-server@3.5.0-ultramodern.100(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/server': '@bleedingdev/modern-js-server@3.5.0-ultramodern.100(@typescript/native-preview@7.0.0-dev.20260707.2)(core-js@3.50.0)(debug@4.4.3(supports-color@8.1.1))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@8.1.1)(tsconfig-paths@4.2.0)'
-      '@modern-js/server-core': '@bleedingdev/modern-js-server-core@3.5.0-ultramodern.100(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/server-utils': '@bleedingdev/modern-js-server-utils@3.5.0-ultramodern.100(@typescript/native-preview@7.0.0-dev.20260707.2)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/types': '@bleedingdev/modern-js-types@3.5.0-ultramodern.100'
-      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/builder': '@bleedingdev/modern-js-builder@3.5.0-ultramodern.102(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@rspack/core@2.1.8(@swc/helpers@0.5.23))(clean-css@5.3.3)(csso@5.0.5)(esbuild@0.28.1)(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(supports-color@8.1.1)(typescript@7.0.2)(webpack@5.109.2(@swc/core@1.15.43(@swc/helpers@0.5.23))(clean-css@5.3.3)(cssnano@8.0.2(postcss@8.5.26))(csso@5.0.5)(esbuild@0.28.1)(html-minifier-terser@7.2.0)(postcss@8.5.26))'
+      '@modern-js/i18n-utils': '@bleedingdev/modern-js-i18n-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/plugin': '@bleedingdev/modern-js-plugin@3.5.0-ultramodern.102(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/plugin-data-loader': '@bleedingdev/modern-js-plugin-data-loader@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/prod-server': '@bleedingdev/modern-js-prod-server@3.5.0-ultramodern.102(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/server': '@bleedingdev/modern-js-server@3.5.0-ultramodern.102(@typescript/native-preview@7.0.0-dev.20260707.2)(core-js@3.50.0)(debug@4.4.3(supports-color@8.1.1))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@8.1.1)(tsconfig-paths@4.2.0)'
+      '@modern-js/server-core': '@bleedingdev/modern-js-server-core@3.5.0-ultramodern.102(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/server-utils': '@bleedingdev/modern-js-server-utils@3.5.0-ultramodern.102(@typescript/native-preview@7.0.0-dev.20260707.2)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/types': '@bleedingdev/modern-js-types@3.5.0-ultramodern.102'
+      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
       '@rsbuild/core': 2.1.5(core-js@3.50.0)
       '@swc/core': 1.15.43(@swc/helpers@0.5.23)
       '@swc/helpers': 0.5.23
@@ -5235,9 +5236,9 @@ snapshots:
       - utf-8-validate
       - webpack
 
-  '@bleedingdev/modern-js-bff-core@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(tsconfig-paths@4.2.0)(zod@4.4.3)':
+  '@bleedingdev/modern-js-bff-core@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(tsconfig-paths@4.2.0)(zod@4.4.3)':
     dependencies:
-      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
       '@swc/helpers': 0.5.23
       koa-compose: 4.1.0
       reflect-metadata: 0.2.2
@@ -5249,9 +5250,9 @@ snapshots:
       - react
       - react-dom
 
-  '@bleedingdev/modern-js-builder@3.5.0-ultramodern.100(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@rspack/core@2.1.8(@swc/helpers@0.5.23))(clean-css@5.3.3)(csso@5.0.5)(esbuild@0.28.1)(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(supports-color@8.1.1)(typescript@7.0.2)(webpack@5.109.2(@swc/core@1.15.43(@swc/helpers@0.5.23))(clean-css@5.3.3)(cssnano@8.0.2(postcss@8.5.26))(csso@5.0.5)(esbuild@0.28.1)(html-minifier-terser@7.2.0)(postcss@8.5.26))':
+  '@bleedingdev/modern-js-builder@3.5.0-ultramodern.102(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@rspack/core@2.1.8(@swc/helpers@0.5.23))(clean-css@5.3.3)(csso@5.0.5)(esbuild@0.28.1)(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(supports-color@8.1.1)(typescript@7.0.2)(webpack@5.109.2(@swc/core@1.15.43(@swc/helpers@0.5.23))(clean-css@5.3.3)(cssnano@8.0.2(postcss@8.5.26))(csso@5.0.5)(esbuild@0.28.1)(html-minifier-terser@7.2.0)(postcss@8.5.26))':
     dependencies:
-      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
       '@rsbuild/core': 2.1.5(core-js@3.50.0)
       '@rsbuild/plugin-assets-retry': 2.0.1(@rsbuild/core@2.1.5(core-js@3.50.0))
       '@rsbuild/plugin-check-syntax': 2.0.0(@rsbuild/core@2.1.5(core-js@3.50.0))
@@ -5305,10 +5306,10 @@ snapshots:
       - utf-8-validate
       - webpack
 
-  '@bleedingdev/modern-js-create-request@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@bleedingdev/modern-js-create-request@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@modern-js/runtime-utils': '@bleedingdev/modern-js-runtime-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/runtime-utils': '@bleedingdev/modern-js-runtime-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
       '@swc/helpers': 0.5.23
       encoding: 0.1.13
       path-to-regexp: 8.4.2
@@ -5317,22 +5318,22 @@ snapshots:
       - react
       - react-dom
 
-  '@bleedingdev/modern-js-i18n-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@bleedingdev/modern-js-i18n-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
       '@swc/helpers': 0.5.23
     transitivePeerDependencies:
       - react
       - react-dom
 
-  '@bleedingdev/modern-js-plugin-bff@3.5.0-ultramodern.100(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@rspack/core@2.1.8(@swc/helpers@0.5.23))(@typescript/native-preview@7.0.0-dev.20260707.2)(clean-css@5.3.3)(core-js@3.50.0)(csso@5.0.5)(effect@4.0.0-beta.102)(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(supports-color@8.1.1)(tsconfig-paths@4.2.0)(typescript@7.0.2)(webpack@5.109.2(@swc/core@1.15.43(@swc/helpers@0.5.23))(clean-css@5.3.3)(cssnano@8.0.2(postcss@8.5.26))(csso@5.0.5)(esbuild@0.28.1)(html-minifier-terser@7.2.0)(postcss@8.5.26))(zod@4.4.3)':
+  '@bleedingdev/modern-js-plugin-bff@3.5.0-ultramodern.102(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@rspack/core@2.1.8(@swc/helpers@0.5.23))(@typescript/native-preview@7.0.0-dev.20260707.2)(clean-css@5.3.3)(core-js@3.50.0)(csso@5.0.5)(effect@4.0.0-beta.102)(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(supports-color@8.1.1)(tsconfig-paths@4.2.0)(typescript@7.0.2)(webpack@5.109.2(@swc/core@1.15.43(@swc/helpers@0.5.23))(clean-css@5.3.3)(cssnano@8.0.2(postcss@8.5.26))(csso@5.0.5)(esbuild@0.28.1)(html-minifier-terser@7.2.0)(postcss@8.5.26))(zod@4.4.3)':
     dependencies:
-      '@modern-js/bff-core': '@bleedingdev/modern-js-bff-core@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(tsconfig-paths@4.2.0)(zod@4.4.3)'
-      '@modern-js/builder': '@bleedingdev/modern-js-builder@3.5.0-ultramodern.100(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@rspack/core@2.1.8(@swc/helpers@0.5.23))(clean-css@5.3.3)(csso@5.0.5)(esbuild@0.28.1)(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(supports-color@8.1.1)(typescript@7.0.2)(webpack@5.109.2(@swc/core@1.15.43(@swc/helpers@0.5.23))(clean-css@5.3.3)(cssnano@8.0.2(postcss@8.5.26))(csso@5.0.5)(esbuild@0.28.1)(html-minifier-terser@7.2.0)(postcss@8.5.26))'
-      '@modern-js/create-request': '@bleedingdev/modern-js-create-request@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/server-core': '@bleedingdev/modern-js-server-core@3.5.0-ultramodern.100(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/server-utils': '@bleedingdev/modern-js-server-utils@3.5.0-ultramodern.100(@typescript/native-preview@7.0.0-dev.20260707.2)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/bff-core': '@bleedingdev/modern-js-bff-core@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(tsconfig-paths@4.2.0)(zod@4.4.3)'
+      '@modern-js/builder': '@bleedingdev/modern-js-builder@3.5.0-ultramodern.102(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@rspack/core@2.1.8(@swc/helpers@0.5.23))(clean-css@5.3.3)(csso@5.0.5)(esbuild@0.28.1)(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(supports-color@8.1.1)(typescript@7.0.2)(webpack@5.109.2(@swc/core@1.15.43(@swc/helpers@0.5.23))(clean-css@5.3.3)(cssnano@8.0.2(postcss@8.5.26))(csso@5.0.5)(esbuild@0.28.1)(html-minifier-terser@7.2.0)(postcss@8.5.26))'
+      '@modern-js/create-request': '@bleedingdev/modern-js-create-request@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/server-core': '@bleedingdev/modern-js-server-core@3.5.0-ultramodern.102(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/server-utils': '@bleedingdev/modern-js-server-utils@3.5.0-ultramodern.102(@typescript/native-preview@7.0.0-dev.20260707.2)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
       '@module-federation/runtime': 2.8.0
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/api-logs': 0.220.0
@@ -5373,24 +5374,24 @@ snapshots:
       - webpack
       - zod
 
-  '@bleedingdev/modern-js-plugin-data-loader@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@bleedingdev/modern-js-plugin-data-loader@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@modern-js/runtime-utils': '@bleedingdev/modern-js-runtime-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/runtime-utils': '@bleedingdev/modern-js-runtime-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
       '@swc/helpers': 0.5.23
       path-to-regexp: 8.4.2
       react: 19.2.7
     transitivePeerDependencies:
       - react-dom
 
-  '@bleedingdev/modern-js-plugin-tanstack@3.5.0-ultramodern.100(d473a3d3e185222ebed31a3c3dc0e883)':
+  '@bleedingdev/modern-js-plugin-tanstack@3.5.0-ultramodern.102(3a741f9debc16b9be3fb690ab09a4ab1)':
     dependencies:
-      '@modern-js/app-tools': '@bleedingdev/modern-js-app-tools@3.5.0-ultramodern.100(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@rspack/core@2.1.8(@swc/helpers@0.5.23))(@typescript/native-preview@7.0.0-dev.20260707.2)(clean-css@5.3.3)(core-js@3.50.0)(csso@5.0.5)(debug@4.4.3(supports-color@8.1.1))(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(rollup@4.62.4)(supports-color@8.1.1)(tsconfig-paths@4.2.0)(typescript@7.0.2)(webpack@5.109.2(@swc/core@1.15.43(@swc/helpers@0.5.23))(clean-css@5.3.3)(cssnano@8.0.2(postcss@8.5.26))(csso@5.0.5)(esbuild@0.28.1)(html-minifier-terser@7.2.0)(postcss@8.5.26))'
-      '@modern-js/plugin': '@bleedingdev/modern-js-plugin@3.5.0-ultramodern.100(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/runtime': '@bleedingdev/modern-js-runtime@3.5.0-ultramodern.100(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)'
-      '@modern-js/runtime-utils': '@bleedingdev/modern-js-runtime-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/types': '@bleedingdev/modern-js-types@3.5.0-ultramodern.100'
-      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/app-tools': '@bleedingdev/modern-js-app-tools@3.5.0-ultramodern.102(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@rspack/core@2.1.8(@swc/helpers@0.5.23))(@typescript/native-preview@7.0.0-dev.20260707.2)(clean-css@5.3.3)(core-js@3.50.0)(csso@5.0.5)(debug@4.4.3(supports-color@8.1.1))(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(rollup@4.62.4)(supports-color@8.1.1)(tsconfig-paths@4.2.0)(typescript@7.0.2)(webpack@5.109.2(@swc/core@1.15.43(@swc/helpers@0.5.23))(clean-css@5.3.3)(cssnano@8.0.2(postcss@8.5.26))(csso@5.0.5)(esbuild@0.28.1)(html-minifier-terser@7.2.0)(postcss@8.5.26))'
+      '@modern-js/plugin': '@bleedingdev/modern-js-plugin@3.5.0-ultramodern.102(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/runtime': '@bleedingdev/modern-js-runtime@3.5.0-ultramodern.102(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)'
+      '@modern-js/runtime-utils': '@bleedingdev/modern-js-runtime-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/types': '@bleedingdev/modern-js-types@3.5.0-ultramodern.102'
+      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
       '@swc/helpers': 0.5.23
       '@tanstack/react-router': 1.170.17(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@tanstack/router-core': 1.171.14
@@ -5402,11 +5403,11 @@ snapshots:
       - '@rspack/core'
       - core-js
 
-  '@bleedingdev/modern-js-plugin@3.5.0-ultramodern.100(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@bleedingdev/modern-js-plugin@3.5.0-ultramodern.102(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@modern-js/runtime-utils': '@bleedingdev/modern-js-runtime-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/types': '@bleedingdev/modern-js-types@3.5.0-ultramodern.100'
-      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/runtime-utils': '@bleedingdev/modern-js-runtime-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/types': '@bleedingdev/modern-js-types@3.5.0-ultramodern.102'
+      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
       '@rsbuild/core': 2.1.5(core-js@3.50.0)
       '@swc/helpers': 0.5.23
       jiti: 2.7.0
@@ -5416,12 +5417,12 @@ snapshots:
       - react
       - react-dom
 
-  '@bleedingdev/modern-js-prod-server@3.5.0-ultramodern.100(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@bleedingdev/modern-js-prod-server@3.5.0-ultramodern.102(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@modern-js/runtime-utils': '@bleedingdev/modern-js-runtime-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/server-core': '@bleedingdev/modern-js-server-core@3.5.0-ultramodern.100(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/server-runtime-extensions': '@bleedingdev/modern-js-server-runtime-extensions@3.5.0-ultramodern.100(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/runtime-utils': '@bleedingdev/modern-js-runtime-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/server-core': '@bleedingdev/modern-js-server-core@3.5.0-ultramodern.102(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/server-runtime-extensions': '@bleedingdev/modern-js-server-runtime-extensions@3.5.0-ultramodern.102(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
       '@swc/helpers': 0.5.23
     transitivePeerDependencies:
       - '@module-federation/runtime-tools'
@@ -5429,19 +5430,19 @@ snapshots:
       - react
       - react-dom
 
-  '@bleedingdev/modern-js-render@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
+  '@bleedingdev/modern-js-render@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@modern-js/types': '@bleedingdev/modern-js-types@3.5.0-ultramodern.100'
-      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/types': '@bleedingdev/modern-js-types@3.5.0-ultramodern.102'
+      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
       '@swc/helpers': 0.5.23
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
       react-server-dom-rspack: 0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
 
-  '@bleedingdev/modern-js-runtime-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@bleedingdev/modern-js-runtime-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@modern-js/types': '@bleedingdev/modern-js-types@3.5.0-ultramodern.100'
-      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/types': '@bleedingdev/modern-js-types@3.5.0-ultramodern.102'
+      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
       '@swc/helpers': 0.5.23
       lru-cache: 11.5.2
       react-router: 8.3.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -5450,16 +5451,16 @@ snapshots:
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
 
-  '@bleedingdev/modern-js-runtime@3.5.0-ultramodern.100(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
+  '@bleedingdev/modern-js-runtime@3.5.0-ultramodern.102(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@loadable/component': 5.16.7(react@19.2.7)
       '@loadable/server': 5.16.7(@loadable/component@5.16.7(react@19.2.7))(react@19.2.7)
-      '@modern-js/plugin': '@bleedingdev/modern-js-plugin@3.5.0-ultramodern.100(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/plugin-data-loader': '@bleedingdev/modern-js-plugin-data-loader@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/render': '@bleedingdev/modern-js-render@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)'
-      '@modern-js/runtime-utils': '@bleedingdev/modern-js-runtime-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/types': '@bleedingdev/modern-js-types@3.5.0-ultramodern.100'
-      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/plugin': '@bleedingdev/modern-js-plugin@3.5.0-ultramodern.102(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/plugin-data-loader': '@bleedingdev/modern-js-plugin-data-loader@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/render': '@bleedingdev/modern-js-render@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react-server-dom-rspack@0.0.2(@rspack/core@2.1.8(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)'
+      '@modern-js/runtime-utils': '@bleedingdev/modern-js-runtime-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/types': '@bleedingdev/modern-js-types@3.5.0-ultramodern.102'
+      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
       '@swc/core': 1.15.43(@swc/helpers@0.5.23)
       '@swc/helpers': 0.5.23
       '@swc/plugin-loadable-components': 11.15.0
@@ -5481,11 +5482,11 @@ snapshots:
       - core-js
       - react-server-dom-rspack
 
-  '@bleedingdev/modern-js-server-core@3.5.0-ultramodern.100(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@bleedingdev/modern-js-server-core@3.5.0-ultramodern.102(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@modern-js/plugin': '@bleedingdev/modern-js-plugin@3.5.0-ultramodern.100(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/runtime-utils': '@bleedingdev/modern-js-runtime-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/plugin': '@bleedingdev/modern-js-plugin@3.5.0-ultramodern.102(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/runtime-utils': '@bleedingdev/modern-js-runtime-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
       '@swc/helpers': 0.5.23
       '@web-std/fetch': 4.2.1
       '@web-std/file': 3.0.3
@@ -5500,12 +5501,12 @@ snapshots:
       - react
       - react-dom
 
-  '@bleedingdev/modern-js-server-runtime-extensions@3.5.0-ultramodern.100(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@bleedingdev/modern-js-server-runtime-extensions@3.5.0-ultramodern.102(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@modern-js/create-request': '@bleedingdev/modern-js-create-request@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/runtime-utils': '@bleedingdev/modern-js-runtime-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/server-core': '@bleedingdev/modern-js-server-core@3.5.0-ultramodern.100(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/create-request': '@bleedingdev/modern-js-create-request@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/runtime-utils': '@bleedingdev/modern-js-runtime-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/server-core': '@bleedingdev/modern-js-server-core@3.5.0-ultramodern.102(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
       '@swc/helpers': 0.5.23
     transitivePeerDependencies:
       - '@module-federation/runtime-tools'
@@ -5513,9 +5514,9 @@ snapshots:
       - react
       - react-dom
 
-  '@bleedingdev/modern-js-server-utils@3.5.0-ultramodern.100(@typescript/native-preview@7.0.0-dev.20260707.2)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@bleedingdev/modern-js-server-utils@3.5.0-ultramodern.102(@typescript/native-preview@7.0.0-dev.20260707.2)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
       '@swc/helpers': 0.5.23
     optionalDependencies:
       '@typescript/native-preview': 7.0.0-dev.20260707.2
@@ -5523,13 +5524,13 @@ snapshots:
       - react
       - react-dom
 
-  '@bleedingdev/modern-js-server@3.5.0-ultramodern.100(@typescript/native-preview@7.0.0-dev.20260707.2)(core-js@3.50.0)(debug@4.4.3(supports-color@8.1.1))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@8.1.1)(tsconfig-paths@4.2.0)':
+  '@bleedingdev/modern-js-server@3.5.0-ultramodern.102(@typescript/native-preview@7.0.0-dev.20260707.2)(core-js@3.50.0)(debug@4.4.3(supports-color@8.1.1))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@8.1.1)(tsconfig-paths@4.2.0)':
     dependencies:
-      '@modern-js/runtime-utils': '@bleedingdev/modern-js-runtime-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/server-core': '@bleedingdev/modern-js-server-core@3.5.0-ultramodern.100(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/server-utils': '@bleedingdev/modern-js-server-utils@3.5.0-ultramodern.100(@typescript/native-preview@7.0.0-dev.20260707.2)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
-      '@modern-js/types': '@bleedingdev/modern-js-types@3.5.0-ultramodern.100'
-      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/runtime-utils': '@bleedingdev/modern-js-runtime-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/server-core': '@bleedingdev/modern-js-server-core@3.5.0-ultramodern.102(core-js@3.50.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/server-utils': '@bleedingdev/modern-js-server-utils@3.5.0-ultramodern.102(@typescript/native-preview@7.0.0-dev.20260707.2)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
+      '@modern-js/types': '@bleedingdev/modern-js-types@3.5.0-ultramodern.102'
+      '@modern-js/utils': '@bleedingdev/modern-js-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)'
       '@swc/helpers': 0.5.23
       axios: 1.19.0(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)
       connect-history-api-fallback: 2.0.0
@@ -5550,13 +5551,13 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@bleedingdev/modern-js-tsconfig@3.5.0-ultramodern.100': {}
+  '@bleedingdev/modern-js-tsconfig@3.5.0-ultramodern.102': {}
 
-  '@bleedingdev/modern-js-types@3.5.0-ultramodern.100':
+  '@bleedingdev/modern-js-types@3.5.0-ultramodern.102':
     dependencies:
       '@jest/types': 30.4.1
 
-  '@bleedingdev/modern-js-utils@3.5.0-ultramodern.100(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@bleedingdev/modern-js-utils@3.5.0-ultramodern.102(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@swc/helpers': 0.5.23
       caniuse-lite: 1.0.30001809
@@ -5615,7 +5616,7 @@ snapshots:
       react: 19.2.7
       scheduler: 0.27.0
 
-  '@effect/platform-node-shared@4.0.0-beta.106(effect@4.0.0-beta.102)':
+  '@effect/platform-node-shared@4.0.0-beta.102(effect@4.0.0-beta.102)':
     dependencies:
       '@types/ws': 8.18.1
       effect: 4.0.0-beta.102
@@ -5626,7 +5627,7 @@ snapshots:
 
   '@effect/platform-node@4.0.0-beta.102(effect@4.0.0-beta.102)(ioredis@5.11.1(supports-color@8.1.1))':
     dependencies:
-      '@effect/platform-node-shared': 4.0.0-beta.106(effect@4.0.0-beta.102)
+      '@effect/platform-node-shared': 4.0.0-beta.102(effect@4.0.0-beta.102)
       effect: 4.0.0-beta.102
       ioredis: 5.11.1(supports-color@8.1.1)
       mime: 4.1.0
@@ -6914,7 +6915,7 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
-  '@typeonce/effect-machine@0.3.0(effect@4.0.0-beta.102)':
+  '@typeonce/effect-machine@0.4.0(effect@4.0.0-beta.102)':
     dependencies:
       effect: 4.0.0-beta.102
 

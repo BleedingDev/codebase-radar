@@ -4,7 +4,17 @@ packages:
 
 injectWorkspacePackages: true
 
+strictPeerDependencies: true
+
+peerDependencyRules:
+  allowedVersions:
+    '@typeonce/effect-machine@0.4.0>effect': 4.0.0-beta.102
+    'react-side-effect@2.1.2>react': 19.2.7
+    'tree-sitter-javascript@0.23.1>tree-sitter': 0.25.1
+    'tree-sitter-typescript@0.23.2>tree-sitter': 0.25.1
+
 overrides:
+  '@effect/platform-node-shared': 4.0.0-beta.102
   react-router: 8.3.0
 
 allowBuilds:
@@ -21,6 +31,27 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - ultracite@7.10.2
   - calldiff@0.4.1
+  - '@typeonce/effect-machine@0.4.0'
+  - '@bleedingdev/modern-js-app-tools@3.5.0-ultramodern.102'
+  - '@bleedingdev/modern-js-bff-core@3.5.0-ultramodern.102'
+  - '@bleedingdev/modern-js-builder@3.5.0-ultramodern.102'
+  - '@bleedingdev/modern-js-create-request@3.5.0-ultramodern.102'
+  - '@bleedingdev/modern-js-i18n-utils@3.5.0-ultramodern.102'
+  - '@bleedingdev/modern-js-plugin-bff@3.5.0-ultramodern.102'
+  - '@bleedingdev/modern-js-plugin-data-loader@3.5.0-ultramodern.102'
+  - '@bleedingdev/modern-js-plugin-tanstack@3.5.0-ultramodern.102'
+  - '@bleedingdev/modern-js-plugin@3.5.0-ultramodern.102'
+  - '@bleedingdev/modern-js-prod-server@3.5.0-ultramodern.102'
+  - '@bleedingdev/modern-js-render@3.5.0-ultramodern.102'
+  - '@bleedingdev/modern-js-runtime-utils@3.5.0-ultramodern.102'
+  - '@bleedingdev/modern-js-runtime@3.5.0-ultramodern.102'
+  - '@bleedingdev/modern-js-server-core@3.5.0-ultramodern.102'
+  - '@bleedingdev/modern-js-server-runtime-extensions@3.5.0-ultramodern.102'
+  - '@bleedingdev/modern-js-server-utils@3.5.0-ultramodern.102'
+  - '@bleedingdev/modern-js-server@3.5.0-ultramodern.102'
+  - '@bleedingdev/modern-js-tsconfig@3.5.0-ultramodern.102'
+  - '@bleedingdev/modern-js-types@3.5.0-ultramodern.102'
+  - '@bleedingdev/modern-js-utils@3.5.0-ultramodern.102'
 
 onlyBuiltDependencies:
   - oxlint

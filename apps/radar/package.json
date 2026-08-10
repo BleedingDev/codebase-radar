@@ -9,7 +9,7 @@
     "deploy": "modern deploy",
     "dev": "modern dev",
     "start": "modern start",
-    "test": "vitest run shared/contracts.test.ts server/analysis-policy.test.ts server/calldiff.test.ts server/prioritize.test.ts server/agent-priority.test.ts server/agent-runtime.test.ts server/agent-store.test.ts server/store.test.ts"
+    "test": "vitest run shared/contracts.test.ts server/analysis-policy.test.ts server/calldiff.test.ts server/effect-machine.test.ts server/prioritize.test.ts server/agent-priority.test.ts server/agent-runtime.test.ts server/agent-store.test.ts server/store.test.ts"
   },
   "engines": {
     "node": ">=24"
@@ -18,10 +18,10 @@
     "@effect/atom-react": "4.0.0-beta.102",
     "@effect/platform-node": "4.0.0-beta.102",
     "@effect/sql-pg": "4.0.0-beta.102",
-    "@modern-js/plugin-bff": "npm:@bleedingdev/modern-js-plugin-bff@3.5.0-ultramodern.100",
-    "@modern-js/plugin-tanstack": "npm:@bleedingdev/modern-js-plugin-tanstack@3.5.0-ultramodern.100",
-    "@modern-js/runtime": "npm:@bleedingdev/modern-js-runtime@3.5.0-ultramodern.100",
-    "@typeonce/effect-machine": "0.3.0",
+    "@modern-js/plugin-bff": "npm:@bleedingdev/modern-js-plugin-bff@3.5.0-ultramodern.102",
+    "@modern-js/plugin-tanstack": "npm:@bleedingdev/modern-js-plugin-tanstack@3.5.0-ultramodern.102",
+    "@modern-js/runtime": "npm:@bleedingdev/modern-js-runtime@3.5.0-ultramodern.102",
+    "@typeonce/effect-machine": "0.4.0",
     "effect": "4.0.0-beta.102",
     "react": "19.2.7",
     "react-dom": "19.2.7",
@@ -29,8 +29,8 @@
     "strip-json-comments": "5.0.3"
   },
   "devDependencies": {
-    "@modern-js/app-tools": "npm:@bleedingdev/modern-js-app-tools@3.5.0-ultramodern.100",
-    "@modern-js/tsconfig": "npm:@bleedingdev/modern-js-tsconfig@3.5.0-ultramodern.100",
+    "@modern-js/app-tools": "npm:@bleedingdev/modern-js-app-tools@3.5.0-ultramodern.102",
+    "@modern-js/tsconfig": "npm:@bleedingdev/modern-js-tsconfig@3.5.0-ultramodern.102",
     "@tsconfig/strictest": "2.0.8",
     "@types/node": "24.10.1",
     "@types/react": "19.2.18",
