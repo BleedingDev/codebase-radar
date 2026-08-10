@@ -1,7 +1,7 @@
 {
-  "minTokens": 50,
-  "minLines": 5,
-  "maxSize": "1mb",
+  "minTokens": 30,
+  "minLines": 3,
+  "maxSize": "2mb",
   "mode": "mild",
   "format": ["typescript", "tsx", "javascript", "jsx", "vue", "svelte", "markup"],
   "crossFormats": ["js-ts"],

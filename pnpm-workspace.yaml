@@ -14,9 +14,13 @@ allowBuilds:
   core-js: false
   esbuild: true
   msgpackr-extract: true
+  tree-sitter: true
+  tree-sitter-javascript: true
+  tree-sitter-typescript: true
 
 minimumReleaseAgeExclude:
   - ultracite@7.10.2
+  - calldiff@0.4.1
 
 onlyBuiltDependencies:
   - oxlint

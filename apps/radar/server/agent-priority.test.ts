@@ -6,12 +6,16 @@ import {
   Finding,
   FindingScores,
   RepositorySnapshot,
+  ScanRecord,
   ScanComparison,
   ScanProfile,
   ScanResult,
   ScanSummary,
 } from '../shared/domain';
-import { isValidPriorityOutput } from './prioritization-brief';
+import {
+  isValidPriorityOutput,
+  prioritizationBrief,
+} from './prioritization-brief';
 
 const firstFinding = new Finding({
   id: 'finding-one',
@@ -80,6 +84,33 @@ const scan = new ScanResult({
 });
 
 describe('provider priority output', () => {
+  it('gives the provider every scored finding', () => {
+    const findings = Array.from(
+      { length: 25 },
+      (_, index) =>
+        new Finding({
+          ...firstFinding,
+          id: `finding-${index}`,
+          fingerprint: `fingerprint-${index}`,
+        }),
+    );
+    const record = new ScanRecord({
+      id: 'scan-one',
+      githubUrl: 'https://github.com/owner/repository',
+      owner: 'owner',
+      repository: 'repository',
+      audience: 'technical',
+      status: 'completed',
+      progress: 100,
+      stage: 'ready',
+      createdAt: scan.createdAt,
+      updatedAt: scan.completedAt,
+      result: new ScanResult({ ...scan, findings }),
+    });
+
+    expect(prioritizationBrief(record)?.candidates).toHaveLength(25);
+  });
+
   it('accepts one bounded list containing only scan finding identifiers', () => {
     const output = new AgentPriorityOutput({
       summary: 'Start with the first item.',

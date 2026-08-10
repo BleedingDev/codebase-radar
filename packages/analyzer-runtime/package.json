@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "files": ["config", "THIRD_PARTY_NOTICES.md"],
+  "files": ["calldiff-analyzer.mjs", "config", "THIRD_PARTY_NOTICES.md"],
   "dependencies": {
     "@tsconfig/strictest": "2.0.8",
+    "calldiff": "0.4.1",
     "jscpd": "5.0.14",
     "oxlint": "1.77.0",
     "typescript": "7.0.2",

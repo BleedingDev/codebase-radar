@@ -107,7 +107,13 @@ export const inventoryRepository = Effect.fn('inventoryRepository')(
             if (!ignoredDirectories.has(name)) yield* visit(absolute);
             return;
           }
-          if (info.type !== 'File' || info.size > BigInt(2 * 1024 * 1024)) return;
+          if (info.type !== 'File') return;
+          if (info.size > BigInt(2 * 1024 * 1024)) {
+            if (sourceExtensions.has(pathService.extname(repositoryPath).toLowerCase())) {
+              truncated = true;
+            }
+            return;
+          }
           files.push(repositoryPath);
           if (sourceExtensions.has(pathService.extname(repositoryPath).toLowerCase())) {
             sourceFiles.push(repositoryPath);

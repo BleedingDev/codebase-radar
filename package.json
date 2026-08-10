@@ -11,6 +11,7 @@
     "build:production": "pnpm --filter @codebase-radar/app run deploy",
     "check": "pnpm --filter @codebase-radar/app check",
     "dev": "pnpm --filter @codebase-radar/app dev",
+    "dogfood": "pnpm check && pnpm test && pnpm build",
     "start": "node apps/radar/.output/index.js",
     "test": "pnpm --filter @codebase-radar/app test",
     "verify:runtime-tools": "node scripts/verify-runtime-tools.mjs"

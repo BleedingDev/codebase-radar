@@ -290,7 +290,7 @@ export const runStrictestComparator = Effect.fn('runStrictestComparator')(
     const warnings: Array<string> = [];
     let analyzed = 0;
     yield* Effect.forEach(
-      inventory.tsconfigs.slice(0, 40),
+      inventory.tsconfigs,
       configPath =>
         fs.readFileString(pathService.resolve(repoRoot, configPath)).pipe(
           Effect.flatMap(text =>
@@ -486,7 +486,6 @@ export const runOxlint = Effect.fn('runOxlint')(function* (
           Number(classifyOxlintRule(right[0]).policyOnly);
         return policyDelta || right[1].length - left[1].length;
       })
-      .slice(0, 18)
       .map(([code, matches]) => {
         const first = matches[0];
         const path = first?.filename
@@ -521,7 +520,7 @@ export const runOxlint = Effect.fn('runOxlint')(function* (
               : 'A repeated quality pattern is increasing review friction or defect risk.',
           technicalSummary: `${matches.length} diagnostics from the pinned Ultracite/Oxlint policy. First location: ${path ?? 'repository scope'}.`,
           recommendation,
-          evidence: matches.slice(0, 3).map(
+          evidence: matches.map(
             match =>
               new Evidence({
                 analyzer: 'Oxlint + Ultracite',
@@ -645,10 +644,8 @@ export const runJscpd = Effect.fn('runJscpd')(function* (
     const diagnostic = result.stderr
       .replace(/^Using config from .*$/gmu, '')
       .trim();
-    const candidates = duplicates
-      .filter(duplicate => (duplicate.lines ?? 0) >= 8)
+    const candidates = [...duplicates]
       .sort((left, right) => (right.lines ?? 0) - (left.lines ?? 0))
-      .slice(0, 8)
       .map(duplicate => {
         const firstPath = duplicate.firstFile?.name
           ? repositoryRelative(pathService, repoRoot, duplicate.firstFile.name)
@@ -699,7 +696,7 @@ export const runJscpd = Effect.fn('runJscpd')(function* (
       run: new AnalyzerRun({
         analyzer: 'JSCPD',
         analyzerVersion: '5.0.14',
-        profileVersion: 'radar-duplicates/v1',
+        profileVersion: 'radar-duplicates-max/v2',
         status: result.timedOut
           ? 'timed_out'
           : result.truncated
@@ -770,7 +767,7 @@ export const runZizmor = Effect.fn('runZizmor')(function* (
       timeoutMs: 18_000,
     });
     const findings = yield* decodeJson(ZizmorReport, result.stdout || '[]');
-    const candidates = findings.slice(0, 12).map(finding => {
+    const candidates = findings.map(finding => {
       const severity = finding.determinations?.severity ?? 'medium';
       const severityScore =
         { informational: 25, low: 40, medium: 65, high: 84 }[severity] ?? 55;
@@ -877,9 +874,10 @@ export const runOsv = Effect.fn('runOsv')(function* (
     yield* fs.writeFileString(config, '# Radar-owned empty configuration\n', {
       mode: 0o600,
     });
-    const lockfileArgs = inventory.lockfiles
-      .slice(0, 12)
-      .flatMap(path => ['-L', pathService.resolve(repoRoot, path)]);
+    const lockfileArgs = inventory.lockfiles.flatMap(path => [
+      '-L',
+      pathService.resolve(repoRoot, path),
+    ]);
     const result = yield* runCommand({
       command,
       args: [
@@ -947,7 +945,6 @@ export const runOsv = Effect.fn('runOsv')(function* (
                 }),
                 ...(primary?.references ?? [])
                   .filter(reference => reference.url?.startsWith('https://'))
-                  .slice(0, 2)
                   .map(
                     reference =>
                       new ExternalReference({
@@ -985,7 +982,7 @@ export const runOsv = Effect.fn('runOsv')(function* (
         durationMs: result.durationMs,
         coverage: new AnalyzerCoverage({
           eligibleFiles: inventory.lockfiles.length,
-          analyzedFiles: Math.min(12, inventory.lockfiles.length),
+          analyzedFiles: inventory.lockfiles.length,
           omittedCapabilities: [
             'runtime reachability',
             'exploitability',

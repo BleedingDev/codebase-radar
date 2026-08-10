@@ -8,7 +8,7 @@ import { prioritize } from './prioritize';
 const TestServices = Layer.mergeAll(NodeServices.layer, NodeHttpClient.layerUndici);
 
 describe('priority policy', () => {
-  it('normalizes production Oxlint rule IDs and excludes policy-only findings', () => {
+  it('normalizes production Oxlint rule IDs and keeps policy-only findings below defect evidence', () => {
     const preferenceRules = [
       'typescript(no-useless-undefined)',
       'typescript(func-style)',
@@ -74,11 +74,15 @@ describe('priority policy', () => {
       prioritize(candidates).pipe(Effect.provide(TestServices)),
     ).then(findings => {
       expect(findings.map(finding => finding.title).sort()).toEqual(
-        [...defectRules].sort(),
+        [...defectRules, ...preferenceRules].sort(),
       );
-      expect(findings.every(finding =>
+      expect(findings.slice(0, defectRules.length).every(finding =>
         !finding.tags.includes('style-policy'),
       )).toBe(true);
+      expect(findings.filter(finding => finding.tags.includes('style-policy')))
+        .toEqual(expect.arrayContaining([
+          expect.objectContaining({ action: 'do not fix' }),
+        ]));
     });
   });
 

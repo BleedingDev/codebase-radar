@@ -6,7 +6,7 @@ import {
 import { Machine } from '@typeonce/effect-machine';
 import { AtomMachine } from '@typeonce/effect-machine/reactivity';
 import { AsyncResult } from 'effect/unstable/reactivity';
-import { Effect, Option, Schema } from 'effect';
+import { Effect, Schema } from 'effect';
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
@@ -444,37 +444,25 @@ function AgentPriorityContent({ scan, result }: AgentPriorityProps) {
   }
 
   const snapshot = machineResult.value;
-  const ready = Option.getOrUndefined(States.get(snapshot, 'Ready'));
-  const waiting = Option.getOrUndefined(States.get(snapshot, 'LoginWaiting'));
-  const polling = Option.getOrUndefined(States.get(snapshot, 'LoginPolling'));
-  const submitting = Option.getOrUndefined(States.get(snapshot, 'LoginSubmitting'));
-  const reviewWaiting = Option.getOrUndefined(States.get(snapshot, 'ReviewWaiting'));
-  const reviewPolling = Option.getOrUndefined(States.get(snapshot, 'ReviewPolling'));
-  const complete = Option.getOrUndefined(States.get(snapshot, 'Complete'));
-  const failed = Option.getOrUndefined(States.get(snapshot, 'Failed'));
-  const loading = States.matches(snapshot, 'Loading');
-  const connecting = States.matches(snapshot, 'Connecting');
-  const priorityStarting = States.matches(snapshot, 'PriorityStarting');
   const profiles =
-    ready?.profiles ??
-    waiting?.profiles ??
-    polling?.profiles ??
-    submitting?.profiles ??
-    reviewWaiting?.profiles ??
-    reviewPolling?.profiles ??
-    complete?.profiles ??
-    failed?.profiles ??
-    [];
-  const challenge = waiting?.challenge ?? polling?.challenge ?? submitting?.challenge;
-  const review = reviewWaiting?.review ?? reviewPolling?.review ?? complete?.review;
+    'profiles' in snapshot.value &&
+    snapshot.path !== 'Connecting' &&
+    snapshot.path !== 'PriorityStarting'
+      ? snapshot.value.profiles
+      : [];
+  const challenge =
+    'challenge' in snapshot.value ? snapshot.value.challenge : undefined;
+  const review = 'review' in snapshot.value ? snapshot.value.review : undefined;
+  const complete = snapshot.path === 'Complete' ? snapshot.value : undefined;
+  const failed = snapshot.path === 'Failed' ? snapshot.value : undefined;
   const busy =
-    loading ||
-    connecting ||
-    Boolean(polling) ||
-    Boolean(submitting) ||
-    priorityStarting ||
-    Boolean(reviewWaiting) ||
-    Boolean(reviewPolling);
+    snapshot.path === 'Loading' ||
+    snapshot.path === 'Connecting' ||
+    snapshot.path === 'LoginPolling' ||
+    snapshot.path === 'LoginSubmitting' ||
+    snapshot.path === 'PriorityStarting' ||
+    snapshot.path === 'ReviewWaiting' ||
+    snapshot.path === 'ReviewPolling';
   const codex = profiles.find(profile => profile.provider === 'codex');
   const claude = profiles.find(profile => profile.provider === 'claude');
 

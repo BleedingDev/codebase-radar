@@ -88,7 +88,7 @@ const GetScan = Tool.make('get_scan', {
 
 const GetImprovementBacklog = Tool.make('get_improvement_backlog', {
   description:
-    'Return the single ranked evidence-backed backlog for a completed scan. Audience affects communication, never ranking or evidence.',
+    'Return every scored Finding in the single ranked evidence-backed backlog for a completed scan, including its analyzer mechanism. Audience affects communication, never ranking or evidence.',
   parameters: Schema.Struct({
     scanId: Schema.String,
     audience: Schema.optional(Audience),
@@ -120,7 +120,7 @@ const GetFindingTaskpack = Tool.make('get_finding_taskpack', {
 
 const GetPrioritizationBrief = Tool.make('get_prioritization_brief', {
   description:
-    'Give Codex or Claude Code a bounded evidence pack for reviewing the next decisions. Designed to work alongside the official Zerops ZCP workspace.',
+    'Give Codex or Claude Code the complete scored Finding catalog for reviewing the next decisions. Designed to work alongside the official Zerops ZCP workspace.',
   parameters: Schema.Struct({ scanId: Schema.String }),
   success: PrioritizationBrief,
   failure: ToolFailure,
@@ -300,6 +300,8 @@ const RuntimeReadinessLive = Layer.effect(
     const pathService = yield* Path.Path;
     const root = yield* analyzerRoot();
     const essentials = [
+      'calldiff-analyzer.mjs',
+      'node_modules/.bin/calldiff',
       'node_modules/.bin/oxlint',
       'node_modules/.bin/jscpd',
       'bin/tracedecay',

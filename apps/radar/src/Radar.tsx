@@ -9,7 +9,7 @@ import {
 import { Effect } from '@modern-js/plugin-bff/effect-client';
 import { Machine } from '@typeonce/effect-machine';
 import { AtomMachine } from '@typeonce/effect-machine/reactivity';
-import { Option, Schema } from 'effect';
+import { Schema } from 'effect';
 import { AsyncResult } from 'effect/unstable/reactivity';
 import { useMemo, useState } from 'react';
 import type { FormEvent, MouseEvent } from 'react';
@@ -410,21 +410,11 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
   const snapshot = AsyncResult.isSuccess(machineResult)
     ? machineResult.value
     : undefined;
-  const loadingState = snapshot
-    ? Option.getOrUndefined(ScanWorkflowStates.get(snapshot, 'Loading'))
-    : undefined;
-  const ready = snapshot
-    ? Option.getOrUndefined(ScanWorkflowStates.get(snapshot, 'Ready'))
-    : undefined;
-  const submittingState = snapshot
-    ? Option.getOrUndefined(ScanWorkflowStates.get(snapshot, 'Submitting'))
-    : undefined;
-  const waiting = snapshot
-    ? Option.getOrUndefined(ScanWorkflowStates.get(snapshot, 'Waiting'))
-    : undefined;
-  const refreshing = snapshot
-    ? Option.getOrUndefined(ScanWorkflowStates.get(snapshot, 'Refreshing'))
-    : undefined;
+  const loadingState = snapshot?.path === 'Loading' ? snapshot.value : undefined;
+  const ready = snapshot?.path === 'Ready' ? snapshot.value : undefined;
+  const submittingState = snapshot?.path === 'Submitting' ? snapshot.value : undefined;
+  const waiting = snapshot?.path === 'Waiting' ? snapshot.value : undefined;
+  const refreshing = snapshot?.path === 'Refreshing' ? snapshot.value : undefined;
   const repositories =
     ready?.repositories ??
     submittingState?.repositories ??
@@ -469,7 +459,7 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
 
   const result = selected?.result;
   const resultAudience = selected?.audience ?? audience;
-  const visibleFindings = result?.findings.slice(0, 5) ?? [];
+  const visibleFindings = result?.findings ?? [];
   const presentedHeadline = result
     ? decisionHeadline(
         result.summary.fixNow,
@@ -488,56 +478,32 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
     }
   }
 
-  if (
-    route._tag === 'NewReview' &&
-    createdReview
-  ) {
-    return (
-      <Navigate
-        to="/$provider/$owner/$repository/reviews/$scanId"
-        params={{
-          provider: 'github.com',
-          owner: createdReview.owner.toLowerCase(),
-          repository: createdReview.repository.toLowerCase(),
-          scanId: createdReview.scanId,
-        }}
-        replace
-      />
-    );
-  }
-
-  if (
-    selected &&
-    route._tag === 'Repository'
-  ) {
-    return (
-      <Navigate
-        to="/$provider/$owner/$repository/reviews/$scanId"
-        params={{
-          provider: 'github.com',
-          owner: selected.owner.toLowerCase(),
-          repository: selected.repository.toLowerCase(),
+  const redirectReview = route._tag === 'NewReview' && createdReview
+    ? {
+        owner: createdReview.owner,
+        repository: createdReview.repository,
+        scanId: createdReview.scanId,
+      }
+    : selected &&
+        (route._tag === 'Repository' ||
+          (route._tag === 'RepositoryReview' &&
+            (route.owner !== selected.owner.toLowerCase() ||
+              route.repository !== selected.repository.toLowerCase())))
+      ? {
+          owner: selected.owner,
+          repository: selected.repository,
           scanId: selected.id,
-        }}
-        replace
-      />
-    );
-  }
-
-  if (
-    selected &&
-    route._tag === 'RepositoryReview' &&
-    (route.owner !== selected.owner.toLowerCase() ||
-      route.repository !== selected.repository.toLowerCase())
-  ) {
+        }
+      : undefined;
+  if (redirectReview) {
     return (
       <Navigate
         to="/$provider/$owner/$repository/reviews/$scanId"
         params={{
           provider: 'github.com',
-          owner: selected.owner.toLowerCase(),
-          repository: selected.repository.toLowerCase(),
-          scanId: selected.id,
+          owner: redirectReview.owner.toLowerCase(),
+          repository: redirectReview.repository.toLowerCase(),
+          scanId: redirectReview.scanId,
         }}
         replace
       />
@@ -758,7 +724,7 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
                 <div className="backlog-head">
                   <div>
                     <p className="eyebrow">Your priority list</p>
-                    <h3>What deserves attention.</h3>
+                    <h3>All {result.findings.length} findings, scored.</h3>
                   </div>
                   <span>{audienceLabel[resultAudience]}</span>
                 </div>
@@ -786,6 +752,8 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
                         <div className="finding-body">
                           <div className="finding-topline">
                             <span className="action-chip">{finding.action}</span>
+                            <span>{finding.mechanism ?? 'unattributed'}</span>
+                            <span>score {finding.scores.priority}</span>
                             <span>{finding.category}</span>
                             <span>{finding.statusComparedToPrevious}</span>
                           </div>
@@ -822,6 +790,9 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
                 <details className="review-details">
                   <summary>Review details</summary>
                   <p>{result.analyzerRuns.filter(run => run.status === 'complete').length} of {result.analyzerRuns.length} checks completed.</p>
+                  {result.analyzerRuns.map(run => (
+                    <p key={run.analyzer}>{run.analyzer}: {run.observationCount} observations, {run.status.replaceAll('_', ' ')}.</p>
+                  ))}
                   <p>{result.profile.limitations.join(' ')}</p>
                 </details>
               </>

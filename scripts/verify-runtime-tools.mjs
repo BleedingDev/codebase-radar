@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 
 const root = resolve('.zerops/analyzer-runtime');
 const tools = [
+  [resolve(root, 'node_modules/.bin/calldiff'), ['--version'], '0.4.1'],
   [resolve(root, 'node_modules/.bin/oxlint'), ['--version'], '1.77.0'],
   [resolve(root, 'node_modules/.bin/jscpd'), ['--version'], '5.0.14'],
   [resolve(root, 'bin/tracedecay'), ['--version'], '0.0.73'],

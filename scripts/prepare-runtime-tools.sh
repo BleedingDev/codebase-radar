@@ -9,7 +9,11 @@ download_verified() {
   local sha256="$2"
   local output="$3"
   curl --fail --silent --show-error --location "$url" --output "$output"
-  echo "$sha256  $output" | sha256sum --check --status
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    echo "$sha256  $output" | shasum --algorithm 256 --check
+  else
+    echo "$sha256  $output" | sha256sum --check --status
+  fi
 }
 
 scratch="$(mktemp -d)"

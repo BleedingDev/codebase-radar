@@ -62,6 +62,7 @@ export class FindingScores extends Schema.Class<FindingScores>('FindingScores')(
 export class Finding extends Schema.Class<Finding>('Finding')({
   id: Schema.String,
   fingerprint: Schema.String,
+  mechanism: Schema.optional(Schema.String),
   title: Schema.String,
   category: FindingCategory,
   action: ActionClass,
@@ -119,7 +120,7 @@ export class RepositorySnapshot extends Schema.Class<RepositorySnapshot>(
 }) {}
 
 export class ScanProfile extends Schema.Class<ScanProfile>('ScanProfile')({
-  version: Schema.Literal('2026-08-09'),
+  version: Schema.Literals(['2026-08-09', 'dogfood:max/v1']),
   frameworks: Schema.Array(Framework),
   languageCoverage: Schema.Array(Schema.String),
   limitations: Schema.Array(Schema.String),

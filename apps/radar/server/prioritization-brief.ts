@@ -13,7 +13,7 @@ export const prioritizationBrief = (scan: ScanRecord) =>
         repository: scan.result.repository,
         audience: scan.audience,
         objective:
-          'Choose no more than five next decisions and explain why each deserves attention before the remaining findings.',
+          'Review every candidate, choose no more than five next decisions, and explain why each deserves attention before the remaining findings.',
         decisionRules: [
           'Prefer direct, corroborated evidence over inference or raw volume.',
           'Keep consequence, reach, confidence, effort, and change risk separate; no composite score proves codebase health.',
@@ -22,7 +22,7 @@ export const prioritizationBrief = (scan: ScanRecord) =>
           'When evidence is insufficient, ask for investigation instead of inventing impact.',
           'Audience changes wording, never the evidence or ordered decisions.',
         ],
-        candidates: scan.result.findings.slice(0, 20),
+        candidates: scan.result.findings,
         requiredOutput: [
           'An ordered list of finding IDs with fix now, investigate, monitor, or do not fix.',
           'One plain-language reason and one concrete next move for every selected finding.',

@@ -27,6 +27,7 @@ import {
 } from '../shared/domain';
 import { decisionHeadline } from '../shared/audience';
 import { candidateHash, FindingCandidate } from './analyzers';
+import { maximalAnalysisProfile } from './analysis-policy';
 
 const RerankResponse = Schema.Struct({
   adjustments: Schema.Array(
@@ -51,6 +52,13 @@ const CompletionResponse = Schema.Struct({
 });
 
 const clamp = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
+
+const priorityCap = (tags: ReadonlyArray<string>) => {
+  if (tags.includes('heuristic-only')) return 24;
+  if (tags.includes('style-policy')) return 20;
+  if (tags.includes('generated-or-test')) return 28;
+  return 100;
+};
 
 const actionFor = (
   priority: number,
@@ -137,7 +145,6 @@ const llmAdjustments = Effect.fn('llmAdjustments')(function* (
           adjustment.adjustment >= -8 &&
           adjustment.adjustment <= 8,
       )
-      .slice(0, 20)
       .map(adjustment => [
         adjustment.fingerprint,
         {
@@ -153,7 +160,6 @@ export const prioritize = Effect.fn('prioritize')(function* (
 ) {
   const groups = new Map<string, FindingCandidate>();
   for (const candidate of candidates) {
-    if (candidate.tags.includes('style-policy')) continue;
     const fingerprint = yield* candidateHash(candidate.fingerprintSeed.toLowerCase());
     const current = groups.get(fingerprint);
     groups.set(
@@ -183,15 +189,19 @@ export const prioritize = Effect.fn('prioritize')(function* (
     );
   }
   const baseFindings = [...groups.entries()].map(([fingerprint, candidate]) => {
-    const priority = clamp(
-      candidate.consequence * 0.4 +
-        candidate.blastRadius * 0.25 +
-        candidate.confidence * 0.25 +
-        (100 - candidate.effort) * 0.1,
+    const priority = Math.min(
+      priorityCap(candidate.tags),
+      clamp(
+        candidate.consequence * 0.4 +
+          candidate.blastRadius * 0.25 +
+          candidate.confidence * 0.25 +
+          (100 - candidate.effort) * 0.1,
+      ),
     );
     return new Finding({
       id: `finding_${fingerprint}`,
       fingerprint,
+      mechanism: candidate.evidence[0]?.analyzer ?? 'unattributed',
       title: candidate.title,
       category: candidate.category,
       action: actionFor(priority, candidate.confidence, candidate.tags),
@@ -226,7 +236,10 @@ export const prioritize = Effect.fn('prioritize')(function* (
     .map(finding => {
       const adjustment = adjustments.get(finding.fingerprint);
       if (adjustment === undefined) return finding;
-      const priority = clamp(finding.scores.priority + adjustment.adjustment);
+      const priority = Math.min(
+        priorityCap(finding.tags),
+        clamp(finding.scores.priority + adjustment.adjustment),
+      );
       return new Finding({
         ...finding,
         action: actionFor(priority, finding.scores.confidence, finding.tags),
@@ -321,7 +334,7 @@ export const buildScanResult = Effect.fn('buildScanResult')(function* (input: {
     createdAt: input.createdAt,
     completedAt,
     profile: new ScanProfile({
-      version: '2026-08-09',
+      version: maximalAnalysisProfile,
       frameworks: input.frameworks,
       languageCoverage: [
         'TypeScript',
@@ -332,7 +345,8 @@ export const buildScanResult = Effect.fn('buildScanResult')(function* (input: {
       ],
       limitations: [
         `Detected framework profile: ${frameworkNames}.`,
-        'No dependencies, builds, tests, hooks, submodules, or repository executables were run.',
+        'dogfood:max is the single enforced policy; incomplete required analysis fails instead of publishing a partial backlog.',
+        'Untrusted repository dependencies, builds, tests, hooks, submodules, and executables are not run without a hardened sandbox.',
         'Angular, Svelte, and Solid receive universal TS/JS analysis without framework-template semantic linting.',
         'Static structure and advisories do not prove runtime reachability, exploitability, financial loss, or business impact.',
       ],

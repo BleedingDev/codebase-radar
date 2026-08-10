@@ -1,3 +1,4 @@
+import { maximalAnalysisViolations } from './analysis-policy';
 import {
   Cause,
   Config,
@@ -20,6 +21,7 @@ import {
   runStrictestComparator,
   runZizmor,
 } from './analyzers';
+import { runCalldiff } from './calldiff';
 import { inventoryRepository } from './inventory';
 import { boundedDiagnostic, runCommand } from './process';
 import { buildScanResult } from './prioritize';
@@ -131,25 +133,31 @@ const performScan = Effect.fn('performScan')(function* (scan: ScanRecord) {
   outputs.push(yield* runOxlint(repoRoot, inventory, runtimeRoot));
 
   yield* store.updateScan(scan.id, {
-    progress: 47,
+    progress: 44,
     stage: 'Looking for repeated code',
   });
   outputs.push(yield* runJscpd(scanRoot, repoRoot, inventory, runtimeRoot));
 
   yield* store.updateScan(scan.id, {
-    progress: 57,
+    progress: 53,
+    stage: 'Tracing repeated call-tree nodes',
+  });
+  outputs.push(yield* runCalldiff(repoRoot, inventory, runtimeRoot));
+
+  yield* store.updateScan(scan.id, {
+    progress: 62,
     stage: 'Checking automation safety',
   });
   outputs.push(yield* runZizmor(repoRoot, inventory, runtimeRoot));
 
   yield* store.updateScan(scan.id, {
-    progress: 65,
+    progress: 70,
     stage: 'Checking known dependency risks',
   });
   outputs.push(yield* runOsv(scanRoot, repoRoot, inventory, runtimeRoot));
 
   yield* store.updateScan(scan.id, {
-    progress: 73,
+    progress: 78,
     stage: 'Mapping change impact',
   });
   outputs.push(
@@ -160,6 +168,16 @@ const performScan = Effect.fn('performScan')(function* (scan: ScanRecord) {
       analyzerRoot: runtimeRoot,
     }),
   );
+
+  const policyViolations = maximalAnalysisViolations({
+    inventoryTruncated: inventory.truncated,
+    analyzerRuns: outputs.map(output => output.run),
+  });
+  if (policyViolations.length > 0) {
+    return yield* new ScanFailure({
+      message: `dogfood:max analysis was incomplete: ${policyViolations.join('; ')}`,
+    });
+  }
 
   yield* store.updateScan(scan.id, {
     progress: 89,

@@ -7,7 +7,7 @@ zerops:
         - npm install --global --prefix /home/zerops/.local pnpm@11.17.0
       buildCommands:
         - /home/zerops/.local/bin/pnpm install --frozen-lockfile --store-dir .pnpm-store
-        - /home/zerops/.local/bin/pnpm --filter @codebase-radar/app check
+        - /home/zerops/.local/bin/pnpm dogfood
         - /home/zerops/.local/bin/pnpm --filter @codebase-radar/app run deploy
         - /home/zerops/.local/bin/pnpm --filter @codebase-radar/analyzer-runtime deploy --prod .zerops/analyzer-runtime
         - /home/zerops/.local/bin/pnpm --filter @codebase-radar/agent-runtime deploy --prod .zerops/agent-runtime
