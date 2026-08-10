@@ -7,27 +7,34 @@ export class InvalidRepository extends Schema.TaggedErrorClass<InvalidRepository
 
 export const parseGithubRepository = Effect.fn('parseGithubRepository')(
   function* (input: string) {
-    const url = yield* Effect.try({
-      try: () => new URL(input.trim()),
-      catch: () =>
-        new InvalidRepository({
-          message: 'Enter a full public GitHub repository URL.',
-        }),
-    });
-    if (
-      url.protocol !== 'https:' ||
-      url.hostname !== 'github.com' ||
-      url.username ||
-      url.password ||
-      url.search ||
-      url.hash
-    ) {
-      return yield* new InvalidRepository({
-        message:
-          'Only credential-free https://github.com/owner/repository URLs are accepted.',
+    const trimmed = input.trim();
+    let repositoryPath = trimmed;
+    if (trimmed.includes('://')) {
+      const url = yield* Effect.try({
+        try: () => new URL(trimmed),
+        catch: () =>
+          new InvalidRepository({
+            message: 'Enter owner/repository or paste a public GitHub URL.',
+          }),
       });
+      if (
+        url.protocol !== 'https:' ||
+        url.hostname !== 'github.com' ||
+        url.username ||
+        url.password ||
+        url.search ||
+        url.hash
+      ) {
+        return yield* new InvalidRepository({
+          message: 'Only credential-free public GitHub repositories are accepted.',
+        });
+      }
+      repositoryPath = url.pathname;
     }
-    const segments = url.pathname.replace(/\.git$/u, '').split('/').filter(Boolean);
+    const segments = repositoryPath
+      .replace(/\.git$/u, '')
+      .split('/')
+      .filter(Boolean);
     const safe = /^[A-Za-z0-9_.-]+$/u;
     if (
       segments.length !== 2 ||
@@ -37,7 +44,7 @@ export const parseGithubRepository = Effect.fn('parseGithubRepository')(
       !safe.test(segments[1])
     ) {
       return yield* new InvalidRepository({
-        message: 'The URL must identify exactly one GitHub owner and repository.',
+        message: 'Enter exactly one GitHub repository using owner/repository.',
       });
     }
     return {

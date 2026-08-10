@@ -167,7 +167,7 @@ export const RadarApi = HttpApi.make('RadarApi').add(
       HttpApiEndpoint.post('createScan', '/scans', {
         error: Schema.Union([InvalidInputHttp, ApiFailureHttp]),
         payload: Schema.Struct({
-          githubUrl: Schema.String,
+          repository: Schema.String,
           audience: Audience,
           profileId: Schema.optional(Schema.String),
         }),

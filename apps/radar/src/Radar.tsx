@@ -18,6 +18,7 @@ import {
   audienceLabel,
   decisionHeadline,
 } from '../shared/audience';
+import { parseGithubRepository } from '../shared/contracts';
 import { Audience, ScanRecord } from '../shared/domain';
 import { AgentPriority } from './AgentPriority';
 import { RadarClient } from './radar-client';
@@ -66,7 +67,7 @@ const ScanWorkflowState = Schema.TaggedUnion({
   Submitting: {
     repositories: Schema.Array(ScanRecord),
     scans: Schema.Array(ScanRecord),
-    repositoryUrl: Schema.String,
+    repositoryInput: Schema.String,
     displayName: Schema.String,
     audience: Audience,
   },
@@ -88,7 +89,7 @@ const ScanWorkflowState = Schema.TaggedUnion({
 
 const ScanWorkflowEvent = Schema.TaggedUnion({
   Submit: {
-    repositoryUrl: Schema.String,
+    repositoryInput: Schema.String,
     displayName: Schema.String,
     audience: Audience,
   },
@@ -223,7 +224,7 @@ const ScanWorkflow = Machine.make({
         target.full.Submitting.from({
           repositories: state.repositories,
           scans: state.scans,
-          repositoryUrl: event.repositoryUrl,
+          repositoryInput: event.repositoryInput,
           displayName: event.displayName,
           audience: event.audience,
         }),
@@ -346,7 +347,7 @@ const ScanWorkflow = Machine.make({
                 Effect.flatMap(profile =>
                   client.radar.createScan({
                     payload: {
-                      githubUrl: state.repositoryUrl,
+                      repository: state.repositoryInput,
                       audience: state.audience,
                       profileId: profile.id,
                     },
@@ -386,7 +387,7 @@ const ScanWorkflow = Machine.make({
           repositories: state.repositories,
           scans: state.scans,
           selected: null,
-          error: 'The review could not be started. Check the link and try again.',
+          error: 'The review could not be started. Check the repository and try again.',
         }),
     },
   },
@@ -397,9 +398,7 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
   const navigationState = useRouterState({
     select: state => state.location.state,
   });
-  const [repositoryUrl, setRepositoryUrl] = useState(
-    'https://github.com/realworld-apps/angular-realworld-example-app',
-  );
+  const [repositoryInput, setRepositoryInput] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [audience, setAudience] = useState<ScanRecord['audience']>('technical');
   const machineAtom = useMemo(
@@ -451,7 +450,7 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
     event.preventDefault();
     send(
       ScanWorkflowEvent.cases.Submit.make({
-        repositoryUrl,
+        repositoryInput,
         displayName,
         audience,
       }),
@@ -860,10 +859,28 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
                 <span aria-hidden="true">GH/</span>
                 <input
                   id="repository-url"
-                  type="url"
-                  value={repositoryUrl}
-                  onChange={event => setRepositoryUrl(event.currentTarget.value)}
-                  placeholder="https://github.com/owner/repository"
+                  name="repository"
+                  type="text"
+                  value={repositoryInput}
+                  onChange={event => {
+                    const input = event.currentTarget.value;
+                    setRepositoryInput(
+                      Effect.runSync(
+                        parseGithubRepository(input).pipe(
+                          Effect.match({
+                            onFailure: () => input,
+                            onSuccess: repository =>
+                              `${repository.owner}/${repository.repository}`,
+                          }),
+                        ),
+                      ),
+                    );
+                  }}
+                  placeholder="owner/repository"
+                  pattern="[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   required
                 />
               </div>

@@ -515,7 +515,7 @@ const RadarGroupLive = HttpApiBuilder.group(RadarApi, 'radar', handlers =>
       Effect.gen(function* () {
         const store = yield* RadarStore;
         const coordinator = yield* ScanCoordinator;
-        const repository = yield* parseGithubRepository(payload.githubUrl).pipe(
+        const repository = yield* parseGithubRepository(payload.repository).pipe(
           Effect.mapError(error => new InvalidInput({ message: error.message })),
         );
         const scan = yield* Effect.acquireUseRelease(

@@ -4,22 +4,40 @@ import { decisionHeadline } from './audience';
 import { parseGithubRepository } from './contracts';
 
 describe('GitHub repository contract', () => {
-  it('normalizes one public repository identity', () =>
+  it('normalizes shorthand and full URLs to one public repository identity', () =>
     Effect.runPromise(
-      parseGithubRepository('https://github.com/BleedingDev/codebase-radar.git'),
-    ).then(repository => {
-      expect(repository).toEqual({
-        owner: 'BleedingDev',
-        repository: 'codebase-radar',
-        url: 'https://github.com/BleedingDev/codebase-radar',
-      });
+      Effect.forEach(
+        [
+          'BleedingDev/codebase-radar',
+          'https://github.com/BleedingDev/codebase-radar.git',
+        ],
+        parseGithubRepository,
+      ),
+    ).then(repositories => {
+      expect(repositories).toEqual([
+        {
+          owner: 'BleedingDev',
+          repository: 'codebase-radar',
+          url: 'https://github.com/BleedingDev/codebase-radar',
+        },
+        {
+          owner: 'BleedingDev',
+          repository: 'codebase-radar',
+          url: 'https://github.com/BleedingDev/codebase-radar',
+        },
+      ]);
     }));
 
   it('rejects credentials, query strings, and nested paths', () =>
     Effect.runPromise(
       Effect.forEach(
         [
+          '',
+          'owner',
+          'github.com/org/repo',
           'https://token@github.com/org/repo',
+          'http://github.com/org/repo',
+          'https://example.com/org/repo',
           'https://github.com/org/repo?ref=main',
           'https://github.com/org/repo/tree/main',
         ],
