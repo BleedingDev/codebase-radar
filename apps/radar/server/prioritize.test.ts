@@ -123,6 +123,36 @@ describe('priority policy', () => {
     });
   });
 
+  it('keeps structural similarity below automatic-fix urgency', () =>
+    Effect.runPromise(
+      prioritize([
+        new FindingCandidate({
+          fingerprintSeed: 'structural-similarity',
+          title: 'Possible structural duplicate',
+          category: 'maintainability',
+          summary: 'Two callable bodies share structural signals.',
+          technicalSummary: 'The analyzer reports a strong static match.',
+          recommendation: 'Compare intent, callers, and tests first.',
+          evidence: [
+            new Evidence({
+              analyzer: 'TraceDecay',
+              kind: 'strong_proxy',
+              message: 'Structural similarity detected.',
+            }),
+          ],
+          tags: ['tracedecay', 'redundancy', 'structural-similarity'],
+          consequence: 100,
+          blastRadius: 100,
+          confidence: 100,
+          effort: 0,
+          changeExposure: 100,
+        }),
+      ]).pipe(Effect.provide(TestServices)),
+    ).then(findings => {
+      expect(findings[0]?.scores.priority).toBe(58);
+      expect(findings[0]?.action).toBe('investigate');
+    }));
+
   it('ranks corroborated consequential evidence above low-value observations', () =>
     Effect.runPromise(
       prioritize([

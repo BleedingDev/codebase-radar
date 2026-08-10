@@ -55,6 +55,7 @@ const clamp = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
 
 const priorityCap = (tags: ReadonlyArray<string>) => {
   if (tags.includes('heuristic-only')) return 24;
+  if (tags.includes('structural-similarity')) return 58;
   if (tags.includes('style-policy')) return 20;
   if (tags.includes('generated-or-test')) return 28;
   return 100;

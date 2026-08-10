@@ -618,6 +618,7 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
               tags: [
                 'tracedecay',
                 'redundancy',
+                'structural-similarity',
                 pair.severity,
                 ...(heuristic ? ['heuristic-only'] : []),
                 ...(generated ? ['generated-or-test'] : []),
