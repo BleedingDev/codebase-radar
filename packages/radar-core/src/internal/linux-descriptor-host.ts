@@ -168,7 +168,11 @@ const duplicateDirectory = (
   operation: WorkspaceAccessError['operation'],
 ): Effect.Effect<RetainedDirectory, WorkspaceAccessError> =>
   Effect.tryPromise({
-    try: () => open(descriptorPath(directory.file), DirectoryOpenFlags),
+    // `/proc/<pid>/fd/<fd>` is itself a symlink. Keep O_NOFOLLOW protecting
+    // the final component by opening the retained directory through `/.`;
+    // otherwise Linux rejects every legitimate descriptor duplication with
+    // ELOOP before a workspace can be allocated.
+    try: () => open(`${descriptorPath(directory.file)}/.`, DirectoryOpenFlags),
     catch: () => accessError(operation, 'unsafe-entry'),
   }).pipe(
     Effect.flatMap(file => identityOf(file).pipe(
