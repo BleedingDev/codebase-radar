@@ -14,6 +14,7 @@ import {
 } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const cliRoot = '/build/source/.zerops/radar-cli';
 const controlRoot = '/build/source/.zerops/analyzer-control';
@@ -57,8 +58,35 @@ for (const [name, expectedMode] of expectedControl) {
   }
 }
 
-const fromCli = createRequire(resolve(cliRoot, 'package.json'));
-const coreEntry = realpathSync(fromCli.resolve('@codebase-radar/core'));
+const coreResolution = spawnSync(
+  nodePath,
+  [
+    '--input-type=module',
+    '--eval',
+    "process.stdout.write(import.meta.resolve('@codebase-radar/core'))",
+  ],
+  {
+    cwd: cliRoot,
+    encoding: 'utf8',
+    env: {
+      HOME: '/nonexistent',
+      LANG: 'C.UTF-8',
+      LC_ALL: 'C.UTF-8',
+      NO_COLOR: '1',
+      PATH: '/usr/bin:/bin',
+    },
+    shell: false,
+    windowsHide: true,
+  },
+);
+if (
+  coreResolution.error ||
+  coreResolution.status !== 0 ||
+  String(coreResolution.stderr) !== ''
+) {
+  fail('Deployed core package did not resolve through its public ESM export.');
+}
+const coreEntry = realpathSync(fileURLToPath(String(coreResolution.stdout)));
 const fromCore = createRequire(resolve(coreEntry, '../../package.json'));
 const verifier = realpathSync(
   fromCore.resolve('@codebase-radar/analyzer-runtime/runtime-verifier'),
