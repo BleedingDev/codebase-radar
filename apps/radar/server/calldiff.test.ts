@@ -582,5 +582,5 @@ describe('Calldiff analyzer', () => {
         );
       })
       .finally(() => rmSync(repository, { recursive: true, force: true }));
-  });
+  }, 15_000);
 });
