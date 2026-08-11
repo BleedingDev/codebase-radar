@@ -77,9 +77,9 @@ const source = () =>
     snapshotDigest: `git:${commitSha}`,
   });
 
-const finding = (index: number, prefix = 'finding') =>
+const finding = (index: number, prefix = 'finding', opaqueIdIndex = index) =>
   new Finding({
-    id: `${prefix}-${String(index).padStart(4, '0')}`,
+    id: `${prefix}-${String(opaqueIdIndex).padStart(4, '0')}`,
     fingerprint: `fingerprint-${String(index).padStart(4, '0')}`,
     mechanism: 'structural dependency cycle',
     title: `Finding ${index}`,
@@ -138,8 +138,14 @@ const runs = () =>
       }),
   );
 
-const successfulScan = (count: number, prefix = 'finding') => {
-  const findings = Array.from({ length: count }, (_, index) => finding(index, prefix));
+const successfulScan = (
+  count: number,
+  prefix = 'finding',
+  opaqueIdIndex: (index: number, count: number) => number = index => index,
+) => {
+  const findings = Array.from({ length: count }, (_, index) =>
+    finding(index, prefix, opaqueIdIndex(index, count)),
+  );
   const identity = source();
   return new SuccessfulScanResult({
     schemaVersion: 'codebase-radar.scan-result/v2',
@@ -441,11 +447,19 @@ describe('complete Coding Agent priority tournament', () => {
   });
 
   it('does not use opaque finding-ID spelling to decide rank', () => {
-    const first = successfulScan(100, 'opaque-first');
-    const second = successfulScan(100, 'opaque-second');
-    const firstExit = completeTournament(first, true).exit;
-    const secondExit = completeTournament(second, true).exit;
+    const first = successfulScan(26, 'opaque-first');
+    const second = successfulScan(
+      26,
+      'opaque-second',
+      (index, count) => count - index - 1,
+    );
+    const firstTournament = completeTournament(first, true);
+    const secondTournament = completeTournament(second, true);
+    const firstExit = firstTournament.exit;
+    const secondExit = secondTournament.exit;
 
+    expect(firstTournament.requests.length).toBeGreaterThan(1);
+    expect(secondTournament.requests.length).toBeGreaterThan(1);
     expect(Exit.isSuccess(firstExit)).toBe(true);
     expect(Exit.isSuccess(secondExit)).toBe(true);
     if (Exit.isSuccess(firstExit) && Exit.isSuccess(secondExit)) {
