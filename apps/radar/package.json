@@ -10,7 +10,7 @@
     "dev": "modern dev",
     "smoke:production-output": "node scripts/production-output-smoke.mjs",
     "start": "modern start",
-    "test": "vitest run"
+    "test": "vitest run --maxWorkers=1"
   },
   "engines": {
     "node": ">=24"
