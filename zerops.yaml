@@ -147,36 +147,7 @@ zerops:
         # import.meta.url sibling of the bundled core. Stage the exact minimal
         # independently deployed control bundle now; runtime init establishes
         # its root-owned metadata and doctor verifies the compiled anchor.
-        - |-
-          set -eu
-          control_root=/build/source/.zerops/analyzer-control
-          test ! -e "$control_root"
-          test ! -L "$control_root"
-          /bin/mkdir -m 0755 -- "$control_root"
-          for source_target in \
-            'packages/analyzer-runtime/runtime-snapshot-loader.mjs:runtime-snapshot-loader.mjs' \
-            'packages/analyzer-runtime/control/resource-governance-launcher.mjs:resource-governance-launcher.mjs' \
-            'packages/analyzer-runtime/runtime-memfd-addon.node:runtime-memfd-addon.node'; do
-            source=${source_target%%:*}
-            target=${source_target#*:}
-            test -f "/build/source/$source"
-            test ! -L "/build/source/$source"
-            /bin/cp --no-dereference --preserve=mode -- "/build/source/$source" "$control_root/$target"
-            test -f "$control_root/$target"
-            test ! -L "$control_root/$target"
-            case "$target" in
-              runtime-snapshot-loader.mjs|resource-governance-launcher.mjs) expected_mode=444 ;;
-              runtime-memfd-addon.node) expected_mode=555 ;;
-              *) exit 1 ;;
-            esac
-            /bin/chmod "$expected_mode" -- "$control_root/$target"
-            test "$(/usr/bin/stat -c '%a:%h' "$control_root/$target")" = "$expected_mode:1"
-          done
-          set -- "$control_root"/*
-          test "$#" = 3
-          test "$1" = "$control_root/resource-governance-launcher.mjs"
-          test "$2" = "$control_root/runtime-memfd-addon.node"
-          test "$3" = "$control_root/runtime-snapshot-loader.mjs"
+        - /bin/sh /build/source/scripts/zerops-stage-control-root.sh
         - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/app run deploy
         - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/cli deploy --prod /build/source/.zerops/radar-cli
         # Resolve the verifier from the separately deployed CLI dependency
@@ -204,6 +175,7 @@ zerops:
         - apps/radar/.output
         - apps/radar/scripts/production-output-smoke.mjs
         - scripts/zerops-init-analysis-cgroup.sh
+        - scripts/zerops-init-control-root.sh
         - .zerops/radar-cli
         - .zerops/analyzer-control
         - .zerops/analyzer-runtime
@@ -333,41 +305,7 @@ zerops:
         # CLI closure. There is no repair/fallback path: an unexpected entry,
         # link, owner, or writable mode aborts init; doctor later checks the
         # anchor's exact per-file modes, sizes, and hashes.
-        - |-
-          set -efu
-          control_root=/var/www/.zerops/analyzer-control
-          test "$RADAR_ANALYZER_CONTROL_ROOT" = "$control_root"
-          test "$control_root" != "$RADAR_ANALYZER_ROOT"
-          test "$control_root" != /var/www/.zerops/radar-cli
-          test -d "$control_root"
-          test ! -L "$control_root"
-          test "$(/usr/bin/realpath "$control_root")" = "$control_root"
-          sudo /bin/chown root:root -- "$control_root"
-          sudo /bin/chmod 0555 -- "$control_root"
-          test "$(/usr/bin/stat -c '%u:%g:%a' "$control_root")" = 0:0:555
-          set -- "$control_root"/* "$control_root"/.[!.]* "$control_root"/..?*
-          entry_count=0
-          for entry in "$@"; do
-            if [ ! -e "$entry" ] && [ ! -L "$entry" ]; then
-              continue
-            fi
-            entry_count=$((entry_count + 1))
-            case "$entry" in
-              "$control_root/runtime-snapshot-loader.mjs"|"$control_root/resource-governance-launcher.mjs")
-                expected_mode=444
-                ;;
-              "$control_root/runtime-memfd-addon.node")
-                expected_mode=555
-                ;;
-              *) exit 1 ;;
-            esac
-            test -f "$entry"
-            test ! -L "$entry"
-            sudo /bin/chown root:root -- "$entry"
-            sudo /bin/chmod "$expected_mode" -- "$entry"
-            test "$(/usr/bin/stat -c '%u:%g:%a:%h' "$entry")" = "0:0:$expected_mode:1"
-          done
-          test "$entry_count" = 3
+        - /bin/sh /var/www/scripts/zerops-init-control-root.sh
         - /bin/mkdir -p -m 0700 -- /var/www/.radar-workspaces
         - test -d /var/www/.radar-workspaces
         - test ! -L /var/www/.radar-workspaces
