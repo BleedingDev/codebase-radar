@@ -32,8 +32,8 @@ const resourceGovernance = Object.freeze({
 
 export const runtimeTrustAnchor = Object.freeze({
   schemaVersion: 'codebase-radar.analyzer-runtime-trust-anchor/v1',
-  manifestSha256: '0dfb7a8f17b53dfcf75a2a8c1684cfe33b3bfc42f65798ed4695a2966a6d4c0a',
-  policyDigest: 'da777485716f9409b819e5d125d1836d0f2b92318428febf667a878e40780f3d',
+  manifestSha256: 'e43f3c3e9f8073262b419130177acbfaccec8a11405fb6485924cc9d99644010',
+  policyDigest: '3b393279e851c73fd1df3d9061eafb169bfae1a71d325d9fbb378c0cccd22ecd',
   runnerSha256: '483a580f586da6e206f95207b7e64231bd0668bea1a8a71aa0576f470034ec1f',
   buildIdentity: 'codebase-radar-analyzer-runtime-0.1.0-dogfood-max-v1',
   analyzerControl: Object.freeze({
@@ -43,13 +43,13 @@ export const runtimeTrustAnchor = Object.freeze({
       Object.freeze({
         path: 'runtime-snapshot-loader.mjs',
         byteLength: 25020,
-        sha256: 'be4b1b1c1bef166888f0c2dc32f5a7e6b0dc802bef5e3ebc4d30769dd8f9fd74',
+        sha256: 'c09f4fa63a33135f709fdc96c7d6fb34ae46a76220e211555ea76694fa450cb3',
         mode: '0444',
       }),
       Object.freeze({
         path: 'resource-governance-launcher.mjs',
         byteLength: 55418,
-        sha256: 'a70f862c766430f066471cda351f42bb32ac0aa7a33c5502d1f0acf01d79639d',
+        sha256: '705387fbe757a51257bc1344f97a5d0b99609ffe184102630015ce538a20cfd5',
         mode: '0444',
       }),
       Object.freeze({

@@ -37,6 +37,8 @@ COPY_MAX_AGGREGATE_BYTES = 1024 * 1024 * 1024
 COPY_MAX_SYMLINK_BYTES = 4096
 COPY_ENTRY_METADATA_BYTES = 256
 COPY_CHUNK_BYTES = 64 * 1024
+COPY_MAX_GENERATED_BIN_ENTRIES = 256
+COPY_MAX_GENERATED_BIN_BYTES = 4 * 1024 * 1024
 TAR_MAX_ARCHIVE_BYTES = 256 * 1024 * 1024
 
 
@@ -160,6 +162,94 @@ def open_child_directory(parent_descriptor: int, name: str) -> int:
     return os.open(name, flags, dir_fd=parent_descriptor)
 
 
+def is_generated_package_bin_directory(relative_path: str) -> bool:
+    parts = relative_path.split("/")
+    if len(parts) == 7:
+        return (
+            parts[0:2] == ["node_modules", ".pnpm"]
+            and parts[3] == "node_modules"
+            and not parts[4].startswith("@")
+            and parts[5:7] == ["node_modules", ".bin"]
+        )
+    if len(parts) == 8:
+        return (
+            parts[0:2] == ["node_modules", ".pnpm"]
+            and parts[3] == "node_modules"
+            and parts[4].startswith("@")
+            and parts[6:8] == ["node_modules", ".bin"]
+        )
+    return False
+
+
+def validate_omitted_generated_package_bins(
+    directory: int,
+    relative_path: str,
+    budget: CopyBudget,
+) -> None:
+    before = os.fstat(directory)
+    if not stat.S_ISDIR(before.st_mode):
+        fail("source-copy-generated-bin-invalid", "Generated package executable directory is invalid.")
+    try:
+        names = sorted(os.listdir(directory))
+    except OSError as error:
+        fail("source-copy-generated-bin-invalid", "Generated package executables could not be listed: " + str(error) + ".")
+    if len(names) > COPY_MAX_GENERATED_BIN_ENTRIES:
+        fail("source-copy-generated-bin-invalid", "Generated package executables exceed their bounded entry count.")
+    generated_bytes = 0
+    for name in names:
+        validate_copy_name(name)
+        try:
+            named = os.stat(name, dir_fd=directory, follow_symlinks=False)
+        except OSError as error:
+            fail("source-copy-changed", "Generated package executable disappeared before validation: " + str(error) + ".")
+        if (
+            not stat.S_ISREG(named.st_mode)
+            or named.st_nlink != 1
+            or stat.S_IMODE(named.st_mode) & 0o7000
+            or named.st_size < 0
+        ):
+            fail("source-copy-generated-bin-invalid", "Generated package executable must be an independent regular file.")
+        generated_bytes += named.st_size
+        if generated_bytes > COPY_MAX_GENERATED_BIN_BYTES:
+            fail("source-copy-generated-bin-invalid", "Generated package executables exceed their bounded byte count.")
+        budget.reserve(named.st_size)
+        flags = os.O_RDONLY
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        if hasattr(os, "O_CLOEXEC"):
+            flags |= os.O_CLOEXEC
+        try:
+            descriptor = os.open(name, flags, dir_fd=directory)
+        except OSError as error:
+            fail("source-copy-changed", "Generated package executable could not be opened safely: " + str(error) + ".")
+        try:
+            opened = os.fstat(descriptor)
+            if metadata_identity(opened) != metadata_identity(named):
+                fail("source-copy-changed", "Generated package executable changed before it was opened.")
+            offset = 0
+            while offset < opened.st_size:
+                requested = min(COPY_CHUNK_BYTES, opened.st_size - offset)
+                chunk = os.pread(descriptor, requested, offset)
+                if len(chunk) != requested:
+                    fail("source-copy-changed", "Generated package executable changed while it was read.")
+                offset += len(chunk)
+            after_descriptor = os.fstat(descriptor)
+            after_name = os.stat(name, dir_fd=directory, follow_symlinks=False)
+            if (
+                metadata_identity(opened) != metadata_identity(after_descriptor)
+                or metadata_identity(opened) != metadata_identity(after_name)
+            ):
+                fail("source-copy-changed", "Generated package executable changed while it was validated.")
+        finally:
+            os.close(descriptor)
+    try:
+        after_names = sorted(os.listdir(directory))
+    except OSError as error:
+        fail("source-copy-generated-bin-invalid", "Generated package executables could not be relisted: " + str(error) + ".")
+    if names != after_names or metadata_identity(before) != metadata_identity(os.fstat(directory)):
+        fail("source-copy-changed", "Generated package executable directory changed while it was validated.")
+
+
 def copy_regular_file(
     source_parent: int,
     destination_parent: int,
@@ -246,6 +336,27 @@ def copy_directory_contents(
             continue
         if stat.S_ISDIR(mode):
             budget.reserve(0)
+            child_relative = name if relative_path == "" else relative_path + "/" + name
+            if is_generated_package_bin_directory(child_relative):
+                try:
+                    source_child = open_child_directory(source, name)
+                except OSError as error:
+                    fail("source-copy-generated-bin-invalid", "Generated package executable directory could not be opened safely: " + str(error) + ".")
+                try:
+                    opened = os.fstat(source_child)
+                    if metadata_identity(opened) != metadata_identity(before):
+                        fail("source-copy-changed", "Generated package executable directory changed before it was opened.")
+                    validate_omitted_generated_package_bins(
+                        source_child,
+                        child_relative,
+                        budget,
+                    )
+                    after_name = os.stat(name, dir_fd=source, follow_symlinks=False)
+                    if metadata_identity(opened) != metadata_identity(after_name):
+                        fail("source-copy-changed", "Generated package executable directory changed while it was omitted.")
+                finally:
+                    os.close(source_child)
+                continue
             try:
                 os.mkdir(name, 0o700, dir_fd=destination)
                 source_child = open_child_directory(source, name)
@@ -256,7 +367,6 @@ def copy_directory_contents(
                 opened = os.fstat(source_child)
                 if metadata_identity(opened) != metadata_identity(before):
                     fail("source-copy-changed", "Runtime source directory changed before it was opened.")
-                child_relative = name if relative_path == "" else relative_path + "/" + name
                 copy_directory_contents(
                     source_child,
                     destination_child,

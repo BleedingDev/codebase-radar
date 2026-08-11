@@ -154,7 +154,7 @@ export const requiredSemanticRunnerPackages = Object.freeze([
 // It is updated together with runtime-manifest.json by the trusted workspace
 // review/change process.
 export const canonicalManifestPolicySha256 =
-  'da777485716f9409b819e5d125d1836d0f2b92318428febf667a878e40780f3d';
+  '3b393279e851c73fd1df3d9061eafb169bfae1a71d325d9fbb378c0cccd22ecd';
 
 const expectedAnalyzerById = new Map(
   requiredDogfoodAnalyzers.map(item => [item.id, item.analyzer]),
@@ -1891,7 +1891,11 @@ const verifyChecksum = (root, analyzer, checksum, cache, packageRoots, budget) =
   }
 };
 
-const packageTreeDigest = (packageRoot, budget) => {
+const packageTreeDigest = (
+  packageRoot,
+  budget,
+  { allowGeneratedPackageBins = false } = {},
+) => {
   const activeBudget = activeVerificationBudget(budget);
   const hash = createHash('sha256');
   let treeEntries = 0;
@@ -1960,6 +1964,64 @@ const packageTreeDigest = (packageRoot, budget) => {
       fail('package-tree-symlink', `Package tree ${packageRoot} contains an unmodeled symlink at ${relativePath}.`);
     }
     if (metadata.isDirectory()) {
+      if (relativePath === 'node_modules/.bin') {
+        if (!allowGeneratedPackageBins) {
+          fail(
+            'package-tree-generated-bin',
+            `Package tree ${packageRoot} contains package-manager-generated executable shims.`,
+          );
+        }
+        const generatedEntries = boundedDirectoryEntries({
+          directory: absolutePath,
+          label: `generated package executables in ${packageRoot}`,
+          budget: activeBudget,
+          entryCode: 'package-tree-generated-bin',
+          entryLimitCode: 'package-tree-generated-bin',
+          maximumEntries: 256,
+        });
+        for (const generatedEntry of generatedEntries) {
+          treeEntries += 1;
+          if (treeEntries > runtimeVerificationBounds.packageTreeEntries) {
+            fail('package-tree-entry-limit', `Package tree ${packageRoot} exceeds its ${runtimeVerificationBounds.packageTreeEntries} entry limit.`);
+          }
+          const generatedPath = `${relativePath}/${generatedEntry.name}`;
+          const generatedAbsolutePath = join(absolutePath, generatedEntry.name);
+          let generatedMetadata;
+          try {
+            generatedMetadata = lstatSync(generatedAbsolutePath, { bigint: true });
+          } catch (error) {
+            fail('package-tree-generated-bin', `Cannot inspect generated package executable ${generatedPath}: ${error instanceof Error ? error.message : String(error)}.`);
+          }
+          treeMode(generatedMetadata, generatedPath);
+          if (!generatedMetadata.isFile() || generatedMetadata.isSymbolicLink()) {
+            fail('package-tree-generated-bin', `Generated package executable ${generatedPath} must be a regular file.`);
+          }
+          assertTrustedFile(generatedMetadata, generatedPath);
+          if (generatedMetadata.size > BigInt(runtimeVerificationBounds.textBytes)) {
+            fail('package-tree-generated-bin', `Generated package executable ${generatedPath} exceeds its bounded text size.`);
+          }
+          treeBytes += generatedMetadata.size;
+          if (treeBytes > BigInt(runtimeVerificationBounds.packageTreeBytes)) {
+            fail('package-tree-byte-limit', `Package tree ${packageRoot} exceeds its ${runtimeVerificationBounds.packageTreeBytes} byte limit.`);
+          }
+          // pnpm writes absolute install-root paths into these generated
+          // wrappers. Read them through the normal descriptor/identity bounds
+          // so hostile source bytes stay bounded, but do not make an
+          // installation pathname part of the package payload identity. The
+          // atomic staging copier omits this exact namespace, and production
+          // verification rejects it if it survives staging.
+          sha256File(generatedAbsolutePath, {
+            label: `Generated package executable ${generatedPath}`,
+            maximumBytes: runtimeVerificationBounds.textBytes,
+            budget: activeBudget,
+            invalidCode: 'package-tree-generated-bin',
+            hardlinkCode: 'package-tree-hardlink',
+            oversizeCode: 'package-tree-generated-bin',
+            changedCode: 'package-tree-changed',
+          });
+        }
+        continue;
+      }
       if (frame.depth + 1 > runtimeVerificationBounds.directoryDepth) {
         fail('package-tree-depth-limit', `Package tree ${packageRoot} exceeds its ${runtimeVerificationBounds.directoryDepth} directory depth limit.`);
       }
@@ -2001,7 +2063,9 @@ const packageTreeDigest = (packageRoot, budget) => {
 };
 
 export const packageTreeSha256 = packageRoot =>
-  packageTreeDigest(packageRoot, createVerificationBudget());
+  packageTreeDigest(packageRoot, createVerificationBudget(), {
+    allowGeneratedPackageBins: true,
+  });
 
 const assertPackageTreeSha256WithBudget = ({
   analyzer,

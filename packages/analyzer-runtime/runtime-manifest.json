@@ -315,7 +315,7 @@
           "version": "7.0.6",
           "packageJson": "node_modules/.pnpm/cross-spawn@7.0.6/node_modules/cross-spawn/package.json",
           "sourceIntegrity": "sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==",
-          "treeSha256": "e662cd27c44fe7f4b89df732a6d0c50eb4b33dd22073cefb5e2e48dbf6668af7",
+          "treeSha256": "e2a1a41a4bc2ef8c309ab90f8a86364f37fec54f7b11216bf635a9f08e090185",
           "resolutionPaths": [
             "node_modules/.pnpm/cross-spawn@7.0.6/node_modules/cross-spawn/package.json"
           ]
@@ -548,7 +548,7 @@
           "version": "7.10.2",
           "packageJson": "node_modules/.pnpm/ultracite@7.10.2_oxlint@1.77.0/node_modules/ultracite/package.json",
           "sourceIntegrity": "sha512-WP1Hu/BKy/BDgntaiU33uq2Y8hKL2gEO5li2wfg7XFvmlyIkGDEy8qbWg7GHsxTEjEpWOAKpyFSF8aqc3JNEGQ==",
-          "treeSha256": "339b03004f818927a05b7f1e9a7532476654ccef46f8a7f9ba1e258a4fe26545",
+          "treeSha256": "d4bb45a504a17d8c76f5a21756b86e954e0b6081624b59e2dd4433416f55c3da",
           "resolutionPaths": [
             "node_modules/.pnpm/ultracite@7.10.2_oxlint@1.77.0/node_modules/ultracite/config/oxlint/core/index.mjs",
             "node_modules/.pnpm/ultracite@7.10.2_oxlint@1.77.0/node_modules/ultracite/config/oxlint/react/index.mjs",
@@ -835,7 +835,7 @@
           "version": "0.4.1",
           "packageJson": "node_modules/.pnpm/calldiff@0.4.1/node_modules/calldiff/package.json",
           "sourceIntegrity": "sha512-Kh+psFVMYdiHNwGuQszni/oIn1Hr9BcQg6JaSdl5GtRhZ1/G/bLbzE9vCUxKM/9vAh7JOqTSYxd1okl+QJXrlg==",
-          "treeSha256": "d3c4caa3912c560a4ae48a9d639adae89fac39d96113990a36bb1a4546551df1",
+          "treeSha256": "591102176737c8f079ff61ee6de1f293ff6e9abcb1f49c85a4798154e35f7742",
           "resolutionPaths": [
             "node_modules/.pnpm/calldiff@0.4.1/node_modules/calldiff/dist/calltree.js",
             "node_modules/.pnpm/calldiff@0.4.1/node_modules/calldiff/dist/extract.js",
@@ -848,7 +848,7 @@
           "version": "0.4.26",
           "packageJson": "node_modules/.pnpm/incur@0.4.26/node_modules/incur/package.json",
           "sourceIntegrity": "sha512-63lwOc8+o1VeFkIW3sWWMrDSP5Dd1NsvucUWyxLUk+DoNRiNl7cj481nlLdlboXkq+tqYPBSlV/7XbylS2S4BA==",
-          "treeSha256": "18656b14732c2480ec5a18c7b1e866864ad94a5e267186c7c39e7c9c68776e43",
+          "treeSha256": "71dd7892482b574f73c216aae779db6e4cc6c55a54639f28048aeed186375ae2",
           "resolutionPaths": [
             "node_modules/.pnpm/incur@0.4.26/node_modules/incur/package.json"
           ]
@@ -903,7 +903,7 @@
           "version": "0.23.1",
           "packageJson": "node_modules/.pnpm/tree-sitter-javascript@0.23.1_tree-sitter@0.25.1/node_modules/tree-sitter-javascript/package.json",
           "sourceIntegrity": "sha512-/bnhbrTD9frUYHQTiYnPcxyHORIw157ERBa6dqzaKxvR/x3PC4Yzd+D1pZIMS6zNg2v3a8BZ0oK7jHqsQo9fWA==",
-          "treeSha256": "80ed7b291b5b1e8d05b5da02c047a1277920848224de012b3cc561453aa55bd1",
+          "treeSha256": "a2ffbdddd7776f3072d1f5d54fcb606cd99cd5c7a1287fbf26a3bb441e26db94",
           "resolutionPaths": [
             "node_modules/.pnpm/tree-sitter-javascript@0.23.1_tree-sitter@0.25.1/node_modules/tree-sitter-javascript/bindings/node/index.js",
             "node_modules/.pnpm/tree-sitter-javascript@0.23.1_tree-sitter@0.25.1/node_modules/tree-sitter-javascript/prebuilds/linux-x64/tree-sitter-javascript.node"
@@ -915,7 +915,7 @@
           "version": "0.23.2",
           "packageJson": "node_modules/.pnpm/tree-sitter-typescript@0.23.2_tree-sitter@0.25.1/node_modules/tree-sitter-typescript/package.json",
           "sourceIntegrity": "sha512-e04JUUKxTT53/x3Uq1zIL45DoYKVfHH4CZqwgZhPg5qYROl5nQjV+85ruFzFGZxu+QeFVbRTPDRnqL9UbU4VeA==",
-          "treeSha256": "6747883035f23e30be221da5875ae7adf3871f6fd2a869f90d000140374d9ec6",
+          "treeSha256": "0165eaf3a02889f41d3f38cc8a82e31c176a2ba1cb5b0e1b808106c53c1ebfd3",
           "resolutionPaths": [
             "node_modules/.pnpm/tree-sitter-typescript@0.23.2_tree-sitter@0.25.1/node_modules/tree-sitter-typescript/bindings/node/index.js",
             "node_modules/.pnpm/tree-sitter-typescript@0.23.2_tree-sitter@0.25.1/node_modules/tree-sitter-typescript/prebuilds/linux-x64/tree-sitter-typescript.node"
@@ -927,7 +927,7 @@
           "version": "0.25.1",
           "packageJson": "node_modules/.pnpm/tree-sitter@0.25.1/node_modules/tree-sitter/package.json",
           "sourceIntegrity": "sha512-mrcEdkYtHfrK1A6fs3O6FxkBo0Qig5XUXqHhxUOQu0bmPo00QF4XaSx4edpazdHwxnSCjlGKGgIqWdaN4dvTLA==",
-          "treeSha256": "1f8eeee6690bb132e6ae77c563bc2135caf68b66d2fb3efad63156b741af526b",
+          "treeSha256": "82e4124bb06f2be1a1ec265ad13b69975c1f28d31c277b9078b21d21a6363fb5",
           "resolutionPaths": [
             "node_modules/.pnpm/tree-sitter@0.25.1/node_modules/tree-sitter/index.js",
             "node_modules/.pnpm/tree-sitter@0.25.1/node_modules/tree-sitter/prebuilds/linux-x64/tree-sitter.node"

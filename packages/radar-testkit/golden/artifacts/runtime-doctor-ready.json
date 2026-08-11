@@ -5,42 +5,42 @@
     {
       "id": "calldiff",
       "status": "ready",
-      "detail": "Calldiff 0.4.1; profile all-root-call-trees-max/v2; manifest sha256:da777485716f9409b819e5d125d1836d0f2b92318428febf667a878e40780f3d"
+      "detail": "Calldiff 0.4.1; profile all-root-call-trees-max/v2; manifest sha256:3b393279e851c73fd1df3d9061eafb169bfae1a71d325d9fbb378c0cccd22ecd"
     },
     {
       "id": "jscpd",
       "status": "ready",
-      "detail": "JSCPD 5.0.14; profile radar-duplicates-max/v2; manifest sha256:da777485716f9409b819e5d125d1836d0f2b92318428febf667a878e40780f3d"
+      "detail": "JSCPD 5.0.14; profile radar-duplicates-max/v2; manifest sha256:3b393279e851c73fd1df3d9061eafb169bfae1a71d325d9fbb378c0cccd22ecd"
     },
     {
       "id": "manifest-digest",
       "status": "ready",
-      "detail": "codebase-radar.analyzer-runtime/v1 manifest 1 sha256:da777485716f9409b819e5d125d1836d0f2b92318428febf667a878e40780f3d"
+      "detail": "codebase-radar.analyzer-runtime/v1 manifest 1 sha256:3b393279e851c73fd1df3d9061eafb169bfae1a71d325d9fbb378c0cccd22ecd"
     },
     {
       "id": "osv-scanner",
       "status": "ready",
-      "detail": "OSV-Scanner 2.5.0; profile js-lockfiles-offline-pinned/v1; manifest sha256:da777485716f9409b819e5d125d1836d0f2b92318428febf667a878e40780f3d"
+      "detail": "OSV-Scanner 2.5.0; profile js-lockfiles-offline-pinned/v1; manifest sha256:3b393279e851c73fd1df3d9061eafb169bfae1a71d325d9fbb378c0cccd22ecd"
     },
     {
       "id": "oxlint-ultracite",
       "status": "ready",
-      "detail": "Oxlint + Ultracite 1.77.0 + 7.10.2; profiles radar/oxlint-core.mjs, radar/oxlint-react.mjs, radar/oxlint-vue.mjs, radar/oxlint-react-vue.mjs; manifest sha256:da777485716f9409b819e5d125d1836d0f2b92318428febf667a878e40780f3d"
+      "detail": "Oxlint + Ultracite 1.77.0 + 7.10.2; profiles radar/oxlint-core.mjs, radar/oxlint-react.mjs, radar/oxlint-vue.mjs, radar/oxlint-react-vue.mjs; manifest sha256:3b393279e851c73fd1df3d9061eafb169bfae1a71d325d9fbb378c0cccd22ecd"
     },
     {
       "id": "strictest-comparator",
       "status": "ready",
-      "detail": "strictest-comparator @tsconfig/strictest 2.0.8; profile radar.tsconfig-gap/v1; manifest sha256:da777485716f9409b819e5d125d1836d0f2b92318428febf667a878e40780f3d"
+      "detail": "strictest-comparator @tsconfig/strictest 2.0.8; profile radar.tsconfig-gap/v1; manifest sha256:3b393279e851c73fd1df3d9061eafb169bfae1a71d325d9fbb378c0cccd22ecd"
     },
     {
       "id": "tracedecay",
       "status": "ready",
-      "detail": "TraceDecay 0.0.73; profile structural-max/v2; manifest sha256:da777485716f9409b819e5d125d1836d0f2b92318428febf667a878e40780f3d"
+      "detail": "TraceDecay 0.0.73; profile structural-max/v2; manifest sha256:3b393279e851c73fd1df3d9061eafb169bfae1a71d325d9fbb378c0cccd22ecd"
     },
     {
       "id": "zizmor",
       "status": "ready",
-      "detail": "zizmor 1.29.0; profile offline-regular/v1; manifest sha256:da777485716f9409b819e5d125d1836d0f2b92318428febf667a878e40780f3d"
+      "detail": "zizmor 1.29.0; profile offline-regular/v1; manifest sha256:3b393279e851c73fd1df3d9061eafb169bfae1a71d325d9fbb378c0cccd22ecd"
     }
   ]
 }

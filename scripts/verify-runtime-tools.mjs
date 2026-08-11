@@ -30,9 +30,9 @@ const trustedOsvValidatorRoot = realpathSync(
   resolve(workspaceRoot, 'packages/analyzer-runtime'),
 );
 const expectedManifestSha256 =
-  '0dfb7a8f17b53dfcf75a2a8c1684cfe33b3bfc42f65798ed4695a2966a6d4c0a';
+  'e43f3c3e9f8073262b419130177acbfaccec8a11405fb6485924cc9d99644010';
 const expectedTargetVerifierSha256 =
-  '37a332ea096895ad0a79c83d4f824a2c8b08df2a1c8116536c7616734e99e375';
+  '16e73bc78edde58c3abf9a88f3a100c772a0ef2200628a741eb66d87d79a2917';
 const outerTimeoutMs = 120000;
 const outerMaxOutputBytes = 131072;
 const trustedOsvValidatorMaximumBytes = 4 * 1024 * 1024;

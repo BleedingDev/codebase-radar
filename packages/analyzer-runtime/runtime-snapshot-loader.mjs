@@ -27,7 +27,7 @@ const LoaderAddonFd = 5;
 const LoaderProgramFd = 6;
 const RuntimeRoot = `/proc/self/fd/${RuntimeRootFd}`;
 const DirectoryCreationMode = 0o755;
-const RuntimeManifestSha256 = '0dfb7a8f17b53dfcf75a2a8c1684cfe33b3bfc42f65798ed4695a2966a6d4c0a';
+const RuntimeManifestSha256 = 'e43f3c3e9f8073262b419130177acbfaccec8a11405fb6485924cc9d99644010';
 const SemanticRunnerSha256 = '483a580f586da6e206f95207b7e64231bd0668bea1a8a71aa0576f470034ec1f';
 const RuntimeNode = Object.freeze({
   path: 'bin/node',

@@ -1470,6 +1470,36 @@ test('rejects huge sparse package metadata and package descendants before hashin
   );
 });
 
+test('omits only generated package-local executables from source identity and rejects them at runtime', () => {
+  const root = makeTemporaryRoot('radar-runtime-generated-package-bin-');
+  const generatedDirectory = join(root, 'node_modules/.bin');
+  mkdirSync(generatedDirectory, { recursive: true });
+  writeFileSync(join(root, 'package.json'), '{"name":"fixture","version":"1.0.0"}\n');
+  const normalizedDigest = packageTreeSha256(root);
+  writeFileSync(
+    join(generatedDirectory, 'fixture'),
+    '#!/bin/sh\n# cmd-shim-target=/one/install/root/node_modules/.pnpm/fixture/bin.js\n',
+    { mode: 0o755 },
+  );
+  assert.equal(packageTreeSha256(root), normalizedDigest);
+  assert.throws(
+    () => assertPackageTreeSha256({
+      analyzer: 'fixture',
+      packageName: 'fixture@1.0.0',
+      packageRoot: root,
+      expectedSha256: normalizedDigest,
+    }),
+    error => error?.code === 'package-tree-generated-bin',
+  );
+  rmSync(generatedDirectory, { recursive: true });
+  assert.doesNotThrow(() => assertPackageTreeSha256({
+    analyzer: 'fixture',
+    packageName: 'fixture@1.0.0',
+    packageRoot: root,
+    expectedSha256: normalizedDigest,
+  }));
+});
+
 test('caps package-tree directory enumeration before an unbounded entry array forms', () => {
   const root = makeTemporaryRoot('radar-runtime-package-entry-limit-');
   for (let index = 0; index <= runtimeVerificationBounds.packageTreeEntries; index += 1) {
@@ -1656,6 +1686,10 @@ test('rejects tampered Calldiff and Oxlint closure files before any canary can r
         encoding: 'utf8',
       });
       assert.equal(copied.status, 0, copied.stderr);
+      rmSync(join(copiedPackage, 'node_modules/.bin'), {
+        recursive: true,
+        force: true,
+      });
       assert.equal(packageTreeSha256(copiedPackage), expected);
       const marker = join(root, 'canary-executed');
       const canary = join(root, 'canary.mjs');
@@ -1899,10 +1933,40 @@ test('descriptor-copies runtime sources within fixed type, link, depth, and byte
   mkdirSync(validDestination);
   writeFileSync(join(validSource, 'payload'), 'bounded payload\n');
   symlinkSync('../payload', join(validSource, 'node_modules/payload'));
+  const generatedPackageBin = join(
+    validSource,
+    'node_modules/.pnpm/cross-spawn@7.0.6/node_modules/cross-spawn/node_modules/.bin',
+  );
+  mkdirSync(generatedPackageBin, { recursive: true });
+  writeFileSync(
+    join(generatedPackageBin, 'node-which'),
+    '#!/bin/sh\n# cmd-shim-target=/absolute/build/root/node-which\n',
+    { mode: 0o755 },
+  );
+  const packageExampleBin = join(
+    validSource,
+    'node_modules/.pnpm/incur@0.4.26/node_modules/incur/examples/npm/node_modules/.bin',
+  );
+  mkdirSync(packageExampleBin, { recursive: true });
+  writeFileSync(join(packageExampleBin, 'fixture'), 'package payload\n');
   const valid = runCopy(validSource, validDestination);
   assert.equal(valid.status, 0, valid.stderr);
   assert.equal(readFileSync(join(validDestination, 'payload'), 'utf8'), 'bounded payload\n');
   assert.equal(readlinkSync(join(validDestination, 'node_modules/payload')), '../payload');
+  assert.equal(
+    existsSync(join(
+      validDestination,
+      'node_modules/.pnpm/cross-spawn@7.0.6/node_modules/cross-spawn/node_modules/.bin',
+    )),
+    false,
+  );
+  assert.equal(
+    readFileSync(join(
+      validDestination,
+      'node_modules/.pnpm/incur@0.4.26/node_modules/incur/examples/npm/node_modules/.bin/fixture',
+    ), 'utf8'),
+    'package payload\n',
+  );
 
   const oversizedRoot = makeTemporaryRoot('radar-runtime-source-copy-oversized-');
   const oversizedSource = join(oversizedRoot, 'source');
