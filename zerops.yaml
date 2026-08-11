@@ -124,8 +124,8 @@ zerops:
       buildCommands:
         # The frozen lockfile is the deployment authority for Effect 4 and the
         # UltraModern aliases. Do not substitute a floating installer command.
-        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm install --frozen-lockfile --store-dir .pnpm-store
-        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm dogfood
+        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/home/zerops/.local/bin:/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm install --frozen-lockfile --store-dir .pnpm-store
+        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/home/zerops/.local/bin:/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm dogfood
         # Build commands run in /build/source. Recreate this deployment-only
         # root on every candidate so a cached/stale .zerops runtime can never
         # satisfy the prepare, verifier, or launch path.
@@ -136,20 +136,20 @@ zerops:
         # before Modern packages the app, or either CLI/analyzer closure is
         # copied. The runtime manifest later seals the target copy; the CLI
         # assertion checks its independently deployed dependency copy.
-        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/analyzer-runtime build:runtime-memfd-addon
-        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/analyzer-runtime check:runtime-memfd-addon
+        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/home/zerops/.local/bin:/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/analyzer-runtime build:runtime-memfd-addon
+        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/home/zerops/.local/bin:/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/analyzer-runtime check:runtime-memfd-addon
         # The separate governance launcher is a reproducible standalone
         # control-root artifact, not a Modern-bundled import. Build it before
         # app packaging and reject a non-reproducible checked-in bundle.
-        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/analyzer-runtime build:resource-governance-launcher
-        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/analyzer-runtime check:resource-governance-launcher
+        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/home/zerops/.local/bin:/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/analyzer-runtime build:resource-governance-launcher
+        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/home/zerops/.local/bin:/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/analyzer-runtime check:resource-governance-launcher
         # Modern may inline application dependencies, so never rely on an
         # import.meta.url sibling of the bundled core. Stage the exact minimal
         # independently deployed control bundle now; runtime init establishes
         # its root-owned metadata and doctor verifies the compiled anchor.
         - /bin/sh /build/source/scripts/zerops-stage-control-root.sh
-        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/app run deploy
-        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/cli deploy --prod /build/source/.zerops/radar-cli
+        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/home/zerops/.local/bin:/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/app run deploy
+        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/home/zerops/.local/bin:/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/cli deploy --prod /build/source/.zerops/radar-cli
         # Resolve the verifier from the separately deployed CLI dependency
         # tree. The target analyzer root must never be an import location.
         - >-
@@ -157,8 +157,8 @@ zerops:
           /usr/bin/env -i HOME=/nonexistent LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/bin:/bin
           /usr/local/lib/radar-node-v24.18.1/bin/node
           /build/source/scripts/verify-deployed-runtime-closure.mjs
-        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/analyzer-runtime deploy --prod /build/source/.zerops/analyzer-runtime
-        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/agent-runtime deploy --prod /build/source/.zerops/agent-runtime
+        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/home/zerops/.local/bin:/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/analyzer-runtime deploy --prod /build/source/.zerops/analyzer-runtime
+        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/home/zerops/.local/bin:/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/agent-runtime deploy --prod /build/source/.zerops/agent-runtime
         # Both the preparation and verification roots are the same freshly
         # staged absolute directory. The verifier rejects any root fallback.
         # Atomic preparation alone obtains the immutable offline OSV snapshot
