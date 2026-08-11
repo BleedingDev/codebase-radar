@@ -53,14 +53,15 @@ const readBoundedBaselineFile = (baselinePath: string) =>
       );
       try {
         const metadata = fstatSync(descriptor);
+        // Physical block counts are not portable across compressed/COW filesystems;
+        // the logical byte cap and bounded descriptor reads are the resource boundary.
         if (
           !metadata.isFile() ||
           metadata.dev !== original.dev ||
           metadata.ino !== original.ino ||
           !Number.isSafeInteger(metadata.size) ||
           metadata.size < 0 ||
-          metadata.size > ContractLimits.encodedResultBytes ||
-          metadata.blocks * 512 < metadata.size
+          metadata.size > ContractLimits.encodedResultBytes
         ) {
           return undefined;
         }
