@@ -215,7 +215,7 @@ zerops:
           port: 3000
           path: /api/ready
         failureTimeout: 300s
-        retryPeriod: 5s
+        retryPeriod: 10s
     run:
       # Keep build and runtime on the same explicit Noble base. The dedicated
       # Node archive below is the sole bootstrap interpreter.
