@@ -1,5 +1,5 @@
 import { NodeHttpClient, NodeServices } from '@effect/platform-node';
-import { Deferred, Effect, Exit, Fiber, Layer, Option, Ref } from 'effect';
+import { Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Schedule } from 'effect';
 import { describe, expect, it } from 'vitest';
 import { AnalysisObserver, RadarAnalysis } from '@codebase-radar/core';
 import {
@@ -1229,8 +1229,18 @@ describe('scan state transitions', () => {
           )).toHaveLength(1);
 
           yield* Deferred.succeed(releaseFirst, undefined);
-          yield* Effect.sleep('15 millis');
-          const finished = yield* Effect.forEach(scans, scan => store.getScan(scan.id));
+          const finished = yield* Effect.forEach(
+            scans,
+            scan => store.getScan(scan.id),
+          ).pipe(
+            Effect.repeat({
+              until: current => current.every(
+                scan => Option.getOrUndefined(scan)?.status === 'completed',
+              ),
+              times: 1_000,
+              schedule: Schedule.spaced('1 millis'),
+            }),
+          );
 
           expect(yield* Ref.get(calls)).toBe(2);
           expect(finished.map(Option.getOrUndefined).every(
