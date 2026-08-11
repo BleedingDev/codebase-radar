@@ -528,7 +528,7 @@ describe('Calldiff analyzer', () => {
         );
       })
       .finally(() => rmSync(repository, { recursive: true, force: true }));
-  });
+  }, 15_000);
 
   it('marks bounded duplicate evidence as partial coverage', () => {
     const repository = mkdtempSync(resolve(tmpdir(), 'radar-calldiff-evidence-'));

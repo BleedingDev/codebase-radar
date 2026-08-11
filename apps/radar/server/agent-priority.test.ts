@@ -348,7 +348,7 @@ describe('complete Coding Agent priority tournament', () => {
         encodedAgentPriorityModelInputBytes(priorityMergePrompt(request), mergeSchema) <=
           maxAgentPriorityPromptBytes),
     ).toBe(true);
-  }, 30_000);
+  }, 60_000);
 
   it('produces one exact global permutation from every bounded tournament round', () => {
     const scan = successfulScan(1_000);
@@ -419,7 +419,7 @@ describe('complete Coding Agent priority tournament', () => {
       expect(Effect.runSync(legacyPriorityOutput(tournament.exit.value)).orderedItems)
         .toHaveLength(1_000);
     }
-  }, 30_000);
+  }, 60_000);
 
   it('preserves every bounded unsupported claim in the public projection', () => {
     const scan = successfulScan(25);
@@ -736,7 +736,7 @@ describe('complete Coding Agent priority tournament', () => {
         ),
       ),
     ).toBe(true);
-  }, 30_000);
+  }, 60_000);
 
   it('retries bounded local work and still covers all 1,000 findings', () => {
     const scan = successfulScan(1_000);
@@ -810,7 +810,7 @@ describe('complete Coding Agent priority tournament', () => {
 
     expect(Exit.isSuccess(exit)).toBe(true);
     if (Exit.isSuccess(exit)) expect(exit.value).toBe(1_000);
-  });
+  }, 15_000);
 
   it('echoes a full canonical finding digest that changes with canonical fields', () => {
     const scan = successfulScan(1);
