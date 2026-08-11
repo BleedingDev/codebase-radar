@@ -214,8 +214,8 @@ zerops:
         httpGet:
           port: 3000
           path: /api/ready
-        failureTimeout: 300
-        retryPeriod: 5
+        failureTimeout: 300s
+        retryPeriod: 5s
     run:
       # Keep build and runtime on the same explicit Noble base. The dedicated
       # Node archive below is the sole bootstrap interpreter.
@@ -603,7 +603,7 @@ zerops:
         httpGet:
           port: 3000
           path: /api/ready
-        failureTimeout: 120
-        disconnectTimeout: 30
-        recoveryTimeout: 30
-        execPeriod: 30
+        failureTimeout: 120s
+        disconnectTimeout: 30s
+        recoveryTimeout: 30s
+        execPeriod: 30s
