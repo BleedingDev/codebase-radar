@@ -11,13 +11,13 @@ export interface RuntimeTrustAnchor {
       Readonly<{
         readonly path: 'runtime-snapshot-loader.mjs';
         readonly byteLength: 25020;
-        readonly sha256: 'c09f4fa63a33135f709fdc96c7d6fb34ae46a76220e211555ea76694fa450cb3';
+        readonly sha256: '6799a5628b5ed2f0f08b46e03c9dce0b4d45f0b8fafdd2b0b3074795934ce0d2';
         readonly mode: '0444';
       }>,
       Readonly<{
         readonly path: 'resource-governance-launcher.mjs';
         readonly byteLength: 55418;
-        readonly sha256: '705387fbe757a51257bc1344f97a5d0b99609ffe184102630015ce538a20cfd5';
+        readonly sha256: 'ae1d0a39697e6ac051a5f21fc62998637897504cee5871be682c18471519bcaf';
         readonly mode: '0444';
       }>,
       Readonly<{

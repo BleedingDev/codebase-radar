@@ -3,7 +3,7 @@
     "schemaVersion": "codebase-radar.analyzer-runtime/v1",
     "manifestVersion": 1,
     "analysisPolicy": "dogfood:max/v1",
-    "digest": "3b393279e851c73fd1df3d9061eafb169bfae1a71d325d9fbb378c0cccd22ecd"
+    "digest": "ae5eab1fea82a3f06692132d9102ff9626f837d2efa9d7626c6c6b5312da81b8"
   },
   "failures": [
     {

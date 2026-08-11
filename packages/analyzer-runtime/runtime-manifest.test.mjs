@@ -1470,10 +1470,12 @@ test('rejects huge sparse package metadata and package descendants before hashin
   );
 });
 
-test('omits only generated package-local executables from source identity and rejects them at runtime', () => {
+test('omits only generated package-local executables and empty temporary directories from source identity', () => {
   const root = makeTemporaryRoot('radar-runtime-generated-package-bin-');
   const generatedDirectory = join(root, 'node_modules/.bin');
+  const generatedTemp = join(root, 'node_modules/.tmp');
   mkdirSync(generatedDirectory, { recursive: true });
+  mkdirSync(generatedTemp);
   writeFileSync(join(root, 'package.json'), '{"name":"fixture","version":"1.0.0"}\n');
   const normalizedDigest = packageTreeSha256(root);
   writeFileSync(
@@ -1492,6 +1494,21 @@ test('omits only generated package-local executables from source identity and re
     error => error?.code === 'package-tree-generated-bin',
   );
   rmSync(generatedDirectory, { recursive: true });
+  assert.throws(
+    () => assertPackageTreeSha256({
+      analyzer: 'fixture',
+      packageName: 'fixture@1.0.0',
+      packageRoot: root,
+      expectedSha256: normalizedDigest,
+    }),
+    error => error?.code === 'package-tree-generated-temp',
+  );
+  writeFileSync(join(generatedTemp, 'unexpected'), 'not generated package payload\n');
+  assert.throws(
+    () => packageTreeSha256(root),
+    error => error?.code === 'package-tree-generated-temp',
+  );
+  rmSync(generatedTemp, { recursive: true });
   assert.doesNotThrow(() => assertPackageTreeSha256({
     analyzer: 'fixture',
     packageName: 'fixture@1.0.0',
@@ -1943,6 +1960,11 @@ test('descriptor-copies runtime sources within fixed type, link, depth, and byte
     '#!/bin/sh\n# cmd-shim-target=/absolute/build/root/node-which\n',
     { mode: 0o755 },
   );
+  const generatedPackageTemp = join(
+    validSource,
+    'node_modules/.pnpm/tree-sitter@0.25.1/node_modules/tree-sitter/node_modules/.tmp',
+  );
+  mkdirSync(generatedPackageTemp, { recursive: true });
   const packageExampleBin = join(
     validSource,
     'node_modules/.pnpm/incur@0.4.26/node_modules/incur/examples/npm/node_modules/.bin',
@@ -1961,12 +1983,33 @@ test('descriptor-copies runtime sources within fixed type, link, depth, and byte
     false,
   );
   assert.equal(
+    existsSync(join(
+      validDestination,
+      'node_modules/.pnpm/tree-sitter@0.25.1/node_modules/tree-sitter/node_modules/.tmp',
+    )),
+    false,
+  );
+  assert.equal(
     readFileSync(join(
       validDestination,
       'node_modules/.pnpm/incur@0.4.26/node_modules/incur/examples/npm/node_modules/.bin/fixture',
     ), 'utf8'),
     'package payload\n',
   );
+
+  const generatedTempRoot = makeTemporaryRoot('radar-runtime-source-copy-generated-temp-');
+  const generatedTempSource = join(generatedTempRoot, 'source');
+  const generatedTempDestination = join(generatedTempRoot, 'destination');
+  const nonemptyGeneratedTemp = join(
+    generatedTempSource,
+    'node_modules/.pnpm/tree-sitter@0.25.1/node_modules/tree-sitter/node_modules/.tmp',
+  );
+  mkdirSync(nonemptyGeneratedTemp, { recursive: true });
+  mkdirSync(generatedTempDestination);
+  writeFileSync(join(nonemptyGeneratedTemp, 'unexpected'), 'must not be omitted\n');
+  const generatedTempResult = runCopy(generatedTempSource, generatedTempDestination);
+  assert.notEqual(generatedTempResult.status, 0);
+  assert.match(generatedTempResult.stderr, /source-copy-generated-temp-invalid/u);
 
   const oversizedRoot = makeTemporaryRoot('radar-runtime-source-copy-oversized-');
   const oversizedSource = join(oversizedRoot, 'source');

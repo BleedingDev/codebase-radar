@@ -162,21 +162,21 @@ def open_child_directory(parent_descriptor: int, name: str) -> int:
     return os.open(name, flags, dir_fd=parent_descriptor)
 
 
-def is_generated_package_bin_directory(relative_path: str) -> bool:
+def is_generated_package_directory(relative_path: str, generated_name: str) -> bool:
     parts = relative_path.split("/")
     if len(parts) == 7:
         return (
             parts[0:2] == ["node_modules", ".pnpm"]
             and parts[3] == "node_modules"
             and not parts[4].startswith("@")
-            and parts[5:7] == ["node_modules", ".bin"]
+            and parts[5:7] == ["node_modules", generated_name]
         )
     if len(parts) == 8:
         return (
             parts[0:2] == ["node_modules", ".pnpm"]
             and parts[3] == "node_modules"
             and parts[4].startswith("@")
-            and parts[6:8] == ["node_modules", ".bin"]
+            and parts[6:8] == ["node_modules", generated_name]
         )
     return False
 
@@ -248,6 +248,22 @@ def validate_omitted_generated_package_bins(
         fail("source-copy-generated-bin-invalid", "Generated package executables could not be relisted: " + str(error) + ".")
     if names != after_names or metadata_identity(before) != metadata_identity(os.fstat(directory)):
         fail("source-copy-changed", "Generated package executable directory changed while it was validated.")
+
+
+def validate_omitted_generated_package_temp(
+    directory: int,
+) -> None:
+    before = os.fstat(directory)
+    if not stat.S_ISDIR(before.st_mode):
+        fail("source-copy-generated-temp-invalid", "Generated package temporary directory is invalid.")
+    try:
+        names = os.listdir(directory)
+    except OSError as error:
+        fail("source-copy-generated-temp-invalid", "Generated package temporary directory could not be listed: " + str(error) + ".")
+    if names:
+        fail("source-copy-generated-temp-invalid", "Generated package temporary directory must be empty.")
+    if metadata_identity(before) != metadata_identity(os.fstat(directory)):
+        fail("source-copy-changed", "Generated package temporary directory changed while it was validated.")
 
 
 def copy_regular_file(
@@ -337,23 +353,29 @@ def copy_directory_contents(
         if stat.S_ISDIR(mode):
             budget.reserve(0)
             child_relative = name if relative_path == "" else relative_path + "/" + name
-            if is_generated_package_bin_directory(child_relative):
+            is_generated_bin = is_generated_package_directory(child_relative, ".bin")
+            is_generated_temp = is_generated_package_directory(child_relative, ".tmp")
+            if is_generated_bin or is_generated_temp:
                 try:
                     source_child = open_child_directory(source, name)
                 except OSError as error:
-                    fail("source-copy-generated-bin-invalid", "Generated package executable directory could not be opened safely: " + str(error) + ".")
+                    code = "source-copy-generated-bin-invalid" if is_generated_bin else "source-copy-generated-temp-invalid"
+                    fail(code, "Generated package directory could not be opened safely: " + str(error) + ".")
                 try:
                     opened = os.fstat(source_child)
                     if metadata_identity(opened) != metadata_identity(before):
-                        fail("source-copy-changed", "Generated package executable directory changed before it was opened.")
-                    validate_omitted_generated_package_bins(
-                        source_child,
-                        child_relative,
-                        budget,
-                    )
+                        fail("source-copy-changed", "Generated package directory changed before it was opened.")
+                    if is_generated_bin:
+                        validate_omitted_generated_package_bins(
+                            source_child,
+                            child_relative,
+                            budget,
+                        )
+                    else:
+                        validate_omitted_generated_package_temp(source_child)
                     after_name = os.stat(name, dir_fd=source, follow_symlinks=False)
                     if metadata_identity(opened) != metadata_identity(after_name):
-                        fail("source-copy-changed", "Generated package executable directory changed while it was omitted.")
+                        fail("source-copy-changed", "Generated package directory changed while it was omitted.")
                 finally:
                     os.close(source_child)
                 continue

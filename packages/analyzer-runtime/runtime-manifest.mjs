@@ -154,7 +154,7 @@ export const requiredSemanticRunnerPackages = Object.freeze([
 // It is updated together with runtime-manifest.json by the trusted workspace
 // review/change process.
 export const canonicalManifestPolicySha256 =
-  '3b393279e851c73fd1df3d9061eafb169bfae1a71d325d9fbb378c0cccd22ecd';
+  'ae5eab1fea82a3f06692132d9102ff9626f837d2efa9d7626c6c6b5312da81b8';
 
 const expectedAnalyzerById = new Map(
   requiredDogfoodAnalyzers.map(item => [item.id, item.analyzer]),
@@ -1964,6 +1964,23 @@ const packageTreeDigest = (
       fail('package-tree-symlink', `Package tree ${packageRoot} contains an unmodeled symlink at ${relativePath}.`);
     }
     if (metadata.isDirectory()) {
+      if (relativePath === 'node_modules/.tmp') {
+        if (!allowGeneratedPackageBins) {
+          fail(
+            'package-tree-generated-temp',
+            `Package tree ${packageRoot} contains a package-manager-generated temporary directory.`,
+          );
+        }
+        boundedDirectoryEntries({
+          directory: absolutePath,
+          label: `generated package temporary directory in ${packageRoot}`,
+          budget: activeBudget,
+          entryCode: 'package-tree-generated-temp',
+          entryLimitCode: 'package-tree-generated-temp',
+          maximumEntries: 0,
+        });
+        continue;
+      }
       if (relativePath === 'node_modules/.bin') {
         if (!allowGeneratedPackageBins) {
           fail(

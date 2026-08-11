@@ -903,7 +903,7 @@
           "version": "0.23.1",
           "packageJson": "node_modules/.pnpm/tree-sitter-javascript@0.23.1_tree-sitter@0.25.1/node_modules/tree-sitter-javascript/package.json",
           "sourceIntegrity": "sha512-/bnhbrTD9frUYHQTiYnPcxyHORIw157ERBa6dqzaKxvR/x3PC4Yzd+D1pZIMS6zNg2v3a8BZ0oK7jHqsQo9fWA==",
-          "treeSha256": "a2ffbdddd7776f3072d1f5d54fcb606cd99cd5c7a1287fbf26a3bb441e26db94",
+          "treeSha256": "80657b40de0b0600a23738b643acca963ae111703ac46c60f2ae285728540c19",
           "resolutionPaths": [
             "node_modules/.pnpm/tree-sitter-javascript@0.23.1_tree-sitter@0.25.1/node_modules/tree-sitter-javascript/bindings/node/index.js",
             "node_modules/.pnpm/tree-sitter-javascript@0.23.1_tree-sitter@0.25.1/node_modules/tree-sitter-javascript/prebuilds/linux-x64/tree-sitter-javascript.node"
@@ -915,7 +915,7 @@
           "version": "0.23.2",
           "packageJson": "node_modules/.pnpm/tree-sitter-typescript@0.23.2_tree-sitter@0.25.1/node_modules/tree-sitter-typescript/package.json",
           "sourceIntegrity": "sha512-e04JUUKxTT53/x3Uq1zIL45DoYKVfHH4CZqwgZhPg5qYROl5nQjV+85ruFzFGZxu+QeFVbRTPDRnqL9UbU4VeA==",
-          "treeSha256": "0165eaf3a02889f41d3f38cc8a82e31c176a2ba1cb5b0e1b808106c53c1ebfd3",
+          "treeSha256": "366f05f48452797f3eecc0b3898f7561caf408b9c92d4700e469d7780fb31295",
           "resolutionPaths": [
             "node_modules/.pnpm/tree-sitter-typescript@0.23.2_tree-sitter@0.25.1/node_modules/tree-sitter-typescript/bindings/node/index.js",
             "node_modules/.pnpm/tree-sitter-typescript@0.23.2_tree-sitter@0.25.1/node_modules/tree-sitter-typescript/prebuilds/linux-x64/tree-sitter-typescript.node"
@@ -927,7 +927,7 @@
           "version": "0.25.1",
           "packageJson": "node_modules/.pnpm/tree-sitter@0.25.1/node_modules/tree-sitter/package.json",
           "sourceIntegrity": "sha512-mrcEdkYtHfrK1A6fs3O6FxkBo0Qig5XUXqHhxUOQu0bmPo00QF4XaSx4edpazdHwxnSCjlGKGgIqWdaN4dvTLA==",
-          "treeSha256": "82e4124bb06f2be1a1ec265ad13b69975c1f28d31c277b9078b21d21a6363fb5",
+          "treeSha256": "e24b6dfb3537e8963cd21300c2f3624682ebc21b9476421771448c05528770c9",
           "resolutionPaths": [
             "node_modules/.pnpm/tree-sitter@0.25.1/node_modules/tree-sitter/index.js",
             "node_modules/.pnpm/tree-sitter@0.25.1/node_modules/tree-sitter/prebuilds/linux-x64/tree-sitter.node"
