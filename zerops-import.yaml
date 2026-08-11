@@ -12,12 +12,23 @@ services:
     priority: 2
 
   - hostname: radar
-    type: nodejs@24
+    type: ubuntu/nodejs@24
     envSecrets:
       RADAR_AGENT_HOME_KEY_V1: <@generateRandomString(<64>)>
     buildFromGit: https://github.com/BleedingDev/codebase-radar
     zeropsSetup: radar
     enableSubdomainAccess: true
+    # Fixed per-container capacity for the Linux resource-governance candidate.
+    # The analyzer child is capped at 2 GiB, so retain 2 GiB headroom for the
+    # app, sealed snapshots, and service processes. These allocation limits do
+    # not prove cgroup-v2 delegation; init and doctor test that separately.
+    verticalAutoscaling:
+      minCpu: 2
+      maxCpu: 2
+      minRam: 4
+      maxRam: 4
+      minDisk: 5
+      maxDisk: 5
     minContainers: 1
     maxContainers: 1
     priority: 1

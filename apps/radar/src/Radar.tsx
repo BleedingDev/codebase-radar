@@ -11,8 +11,9 @@ import { Machine } from '@typeonce/effect-machine';
 import { AtomMachine } from '@typeonce/effect-machine/reactivity';
 import { Schema } from 'effect';
 import { AsyncResult } from 'effect/unstable/reactivity';
-import { useMemo, useState } from 'react';
-import type { FormEvent, MouseEvent } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import type { FormEvent } from 'react';
+import type { FindingScores, SourceIdentity } from '@codebase-radar/contracts';
 import {
   audienceCopy,
   audienceLabel,
@@ -22,6 +23,7 @@ import { parseGithubRepository } from '../shared/contracts';
 import { Audience, ScanRecord } from '../shared/domain';
 import { AgentPriority } from './AgentPriority';
 import { RadarClient } from './radar-client';
+import { requestRouteFocus } from './route-focus';
 import './styles.css';
 
 const audienceOptions = Audience.literals;
@@ -34,6 +36,48 @@ const analyzerTitle = {
   architecture: 'Dependency concern',
   configuration: 'Configuration concern',
 };
+
+export function SourceIdentityHeading({
+  source,
+}: {
+  readonly source: SourceIdentity;
+}) {
+  const revision = source.commitSha?.slice(0, 8) ?? source.snapshotDigest.slice(-8);
+
+  return source._tag === 'GitHubSourceIdentity' ? (
+    <>
+      <p className="eyebrow">GitHub review {revision}</p>
+      <h2>{source.owner}/{source.repository}</h2>
+      <p>GitHub source · default branch {source.defaultBranch}</p>
+    </>
+  ) : (
+    <>
+      <p className="eyebrow">Local review {revision}</p>
+      <h2>{source.repository}</h2>
+      <p>
+        Local snapshot{source.branch ? ` on ${source.branch}` : ''}
+        {source.dirty ? ' with uncommitted changes.' : ' at a clean revision.'}
+      </p>
+    </>
+  );
+}
+
+export function FindingScoreBreakdown({
+  scores,
+}: {
+  readonly scores: FindingScores;
+}) {
+  return (
+    <div className="score-list">
+      <div><span>Priority</span><b>{scores.priority}</b></div>
+      <div><span>Consequence</span><b>{scores.consequence}</b></div>
+      <div><span>Reach</span><b>{scores.blastRadius}</b></div>
+      <div><span>Confidence</span><b>{scores.confidence}</b></div>
+      <div><span>Effort</span><b>{scores.effort}</b></div>
+      <div><span>Change risk</span><b>{scores.changeExposure}</b></div>
+    </div>
+  );
+}
 
 const ReviewRoute = Schema.TaggedUnion({
   Home: {},
@@ -68,7 +112,6 @@ const ScanWorkflowState = Schema.TaggedUnion({
     repositories: Schema.Array(ScanRecord),
     scans: Schema.Array(ScanRecord),
     repositoryInput: Schema.String,
-    displayName: Schema.String,
     audience: Audience,
   },
   Waiting: {
@@ -90,7 +133,6 @@ const ScanWorkflowState = Schema.TaggedUnion({
 const ScanWorkflowEvent = Schema.TaggedUnion({
   Submit: {
     repositoryInput: Schema.String,
-    displayName: Schema.String,
     audience: Audience,
   },
   RetryPolling: {},
@@ -225,7 +267,6 @@ const ScanWorkflow = Machine.make({
           repositories: state.repositories,
           scans: state.scans,
           repositoryInput: event.repositoryInput,
-          displayName: event.displayName,
           audience: event.audience,
         }),
       RetryPolling: ({ state, target }) =>
@@ -334,26 +375,12 @@ const ScanWorkflow = Machine.make({
         id: 'submit-review',
         effect: RadarClient.pipe(
           Effect.flatMap(client =>
-            client.radar
-              .createProfile({
-                payload: {
-                  audience: state.audience,
-                  ...(state.displayName.trim()
-                    ? { displayName: state.displayName.trim() }
-                    : {}),
-                },
-              })
-              .pipe(
-                Effect.flatMap(profile =>
-                  client.radar.createScan({
-                    payload: {
-                      repository: state.repositoryInput,
-                      audience: state.audience,
-                      profileId: profile.id,
-                    },
-                  }),
-                ),
-              ),
+            client.radar.createScan({
+              payload: {
+                repository: state.repositoryInput,
+                audience: state.audience,
+              },
+            }),
           ),
         ),
         onSuccess: scan =>
@@ -399,8 +426,8 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
     select: state => state.location.state,
   });
   const [repositoryInput, setRepositoryInput] = useState('');
-  const [displayName, setDisplayName] = useState('');
   const [audience, setAudience] = useState<ScanRecord['audience']>('technical');
+  const newReviewDialog = useRef<HTMLDialogElement>(null);
   const machineAtom = useMemo(
     () => AtomMachine.make(ScanWorkflow, route),
     [route],
@@ -441,26 +468,29 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
     send(
       ScanWorkflowEvent.cases.Submit.make({
         repositoryInput,
-        displayName,
         audience,
       }),
     );
   };
 
-  const closeNewReview = (event: MouseEvent<HTMLAnchorElement>) => {
+  const closeNewReview = () => {
+    const dialog = newReviewDialog.current;
+    if (dialog?.open) dialog.close();
+    requestRouteFocus();
     if (
       'newReviewOrigin' in navigationState &&
       navigationState.newReviewOrigin === true
     ) {
-      event.preventDefault();
       router.history.back();
+      return;
     }
+    router.history.replace('/');
   };
 
   const result = selected?.result;
   const resultAudience = selected?.audience ?? audience;
-  const visibleFindings = result?.findings ?? [];
-  const presentedHeadline = result
+  const visibleFindings = result?.resultKind === 'complete' ? result.findings : [];
+  const presentedHeadline = result?.resultKind === 'complete'
     ? decisionHeadline(
         result.summary.fixNow,
         result.summary.investigate,
@@ -468,7 +498,7 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
       )
     : '';
   let presentedChange = 'First';
-  if (result?.comparison.previousScanId) {
+  if (result?.resultKind === 'complete' && result.comparison.previousScanId) {
     if (result.comparison.priorityDelta < -4) {
       presentedChange = 'Improved';
     } else if (result.comparison.priorityDelta > 4) {
@@ -495,6 +525,20 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
           scanId: selected.id,
         }
       : undefined;
+
+  useEffect(() => {
+    if (route._tag !== 'NewReview' || redirectReview) return;
+
+    const dialog = newReviewDialog.current;
+    if (!dialog) return;
+
+    if (!dialog.open) dialog.showModal();
+
+    return () => {
+      if (dialog.open) dialog.close();
+    };
+  }, [redirectReview, route._tag]);
+
   if (redirectReview) {
     return (
       <Navigate
@@ -530,7 +574,7 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
         ) : null}
       </header>
 
-      <main id="top">
+      <main>
         {route._tag === 'Home' || route._tag === 'NewReview' ? (
           <section className="hero-grid">
             <div className="hero-copy">
@@ -633,7 +677,13 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
               </section>
             ) : null}
             {route._tag !== 'Home' && route._tag !== 'NewReview' && (!snapshot || loadingState) ? (
-              <div className="running-state">
+              <div
+                aria-atomic="true"
+                aria-busy="true"
+                aria-live="polite"
+                className="running-state"
+                role="status"
+              >
                 <div className="scan-visual" aria-hidden="true">
                   <span className="sweep" />
                 </div>
@@ -647,7 +697,7 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
                     ? 'REPOSITORY NOT AVAILABLE'
                     : 'REVIEW NOT AVAILABLE'}
                 </p>
-                <h2>
+                <h2 role={error ? 'alert' : undefined}>
                   {error || (route._tag === 'Repository'
                     ? 'No scans were found for this repository.'
                     : 'This scan does not belong to this repository.')}
@@ -659,7 +709,7 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
             ) : route._tag !== 'Home' && route._tag !== 'NewReview' && !selected && error ? (
               <div className="empty-state">
                 <p>REVIEW NOT AVAILABLE</p>
-                <h2>{error}</h2>
+                <h2 role="alert">{error}</h2>
                 <Link className="scan-button empty-action" to="/">
                   RETURN HOME
                 </Link>
@@ -672,7 +722,10 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
                 <p className="empty-promise">What to do now, what to check, and what to leave alone.</p>
               </div>
             ) : !result ? (
-              <div className="running-state">
+              <div
+                aria-busy={Boolean(waiting || refreshing)}
+                className="running-state"
+              >
                 <div className="running-meta">
                   <span>{selected.owner}/{selected.repository}</span>
                   <span>{selected.status.toUpperCase()}</span>
@@ -683,14 +736,23 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
                   <i className="ping two" />
                 </div>
                 <h2>{selected.stage}</h2>
-                <div className="progress-track">
+                <div
+                  aria-label="Review progress"
+                  aria-valuemax={100}
+                  aria-valuemin={0}
+                  aria-valuenow={selected.progress}
+                  className="progress-track"
+                  role="progressbar"
+                >
                   <span style={{ width: `${selected.progress}%` }} />
                 </div>
-                <p>{selected.progress}% complete</p>
-                {selected.error ? <p className="error-note">{selected.error}</p> : null}
+                <p aria-atomic="true" aria-live="polite" role="status">
+                  {selected.progress}% complete
+                </p>
+                {selected.error ? <p className="error-note" role="alert">{selected.error}</p> : null}
                 {error ? (
                   <>
-                    <p className="error-note">{error}</p>
+                    <p className="error-note" role="alert">{error}</p>
                     <button
                       className="scan-button empty-action"
                       type="button"
@@ -703,11 +765,20 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
                   </>
                 ) : null}
               </div>
+            ) : result.resultKind === 'legacy-noncanonical' ? (
+              <div className="empty-state">
+                <p>LEGACY REVIEW</p>
+                <h2>{result.source.owner}/{result.source.repository}</h2>
+                <p>
+                  This historical result predates the enforced dogfood:max contract and
+                  is not a canonical prioritized backlog.
+                </p>
+                <p>{result.legacyReason}</p>
+              </div>
             ) : (
               <>
                 <div className="result-header">
-                  <p className="eyebrow">Review {result.repository.commitSha.slice(0, 8)}</p>
-                  <h2>{result.repository.owner}/{result.repository.name}</h2>
+                  <SourceIdentityHeading source={result.source} />
                   <p>{presentedHeadline}</p>
                 </div>
 
@@ -719,12 +790,18 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
                   <div><span>CHANGE</span><b>{presentedChange}</b></div>
                 </div>
 
-                <AgentPriority scan={selected} result={result} />
+                {result.source._tag === 'GitHubSourceIdentity' ? (
+                  <AgentPriority scan={selected} result={result} />
+                ) : (
+                  <p className="priority-progress" role="note">
+                    Agent prioritization is available only for hosted GitHub source snapshots.
+                  </p>
+                )}
 
                 <div className="backlog-head">
                   <div>
                     <p className="eyebrow">Your priority list</p>
-                    <h3>All {result.findings.length} findings, scored.</h3>
+                    <h3>All {visibleFindings.length} findings, scored.</h3>
                   </div>
                   <span>{audienceLabel[resultAudience]}</span>
                 </div>
@@ -752,7 +829,7 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
                         <div className="finding-body">
                           <div className="finding-topline">
                             <span className="action-chip">{finding.action}</span>
-                            <span>{finding.mechanism ?? 'unattributed'}</span>
+                            <span>{finding.mechanism}</span>
                             <span>score {finding.scores.priority}</span>
                             <span>{finding.category}</span>
                             <span>{finding.statusComparedToPrevious}</span>
@@ -765,13 +842,7 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
                           </div>
                           <details className="finding-details">
                             <summary>Why this is ranked here</summary>
-                            <div className="score-list">
-                              <div><span>Consequence</span><b>{finding.scores.consequence}</b></div>
-                              <div><span>Reach</span><b>{finding.scores.blastRadius}</b></div>
-                              <div><span>Confidence</span><b>{finding.scores.confidence}</b></div>
-                              <div><span>Effort</span><b>{finding.scores.effort}</b></div>
-                              <div><span>Change risk</span><b>{finding.scores.changeExposure}</b></div>
-                            </div>
+                            <FindingScoreBreakdown scores={finding.scores} />
                             <div className="evidence-list">
                               {finding.evidence.map((evidence, evidenceIndex) => (
                                 <p key={`${finding.id}-${evidenceIndex}`}>
@@ -802,26 +873,26 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
       </main>
 
       {route._tag === 'NewReview' ? (
-        <>
-          <Link
-            className="dialog-backdrop"
-            to="/"
-            replace
-            onClick={closeNewReview}
-            aria-label="Close new review"
-          />
-          <dialog className="review-dialog" open aria-labelledby="new-review-title">
-            <form className="scan-console" onSubmit={submitScan}>
+          <dialog
+            aria-labelledby="new-review-title"
+            aria-modal="true"
+            className="review-dialog"
+            onCancel={event => {
+              event.preventDefault();
+              closeNewReview();
+            }}
+            ref={newReviewDialog}
+          >
+            <form aria-busy={submitting} className="scan-console" onSubmit={submitScan}>
               <div className="console-head dialog-head">
                 <span id="new-review-title">START A REVIEW</span>
-                <Link
-                  to="/"
-                  replace
-                  onClick={closeNewReview}
+                <button
                   aria-label="Close new review"
+                  onClick={closeNewReview}
+                  type="button"
                 >
                   CLOSE
-                </Link>
+                </button>
               </div>
               <label className="field-label" htmlFor="repository-url">
                 GitHub repository
@@ -877,32 +948,21 @@ function Radar({ route }: { readonly route: typeof ReviewRoute.Type }) {
                 </div>
               </fieldset>
 
-              <details className="profile-options">
-                <summary>Personalize this view</summary>
-                <label className="field-label" htmlFor="display-name">
-                  Profile name <span>optional</span>
-                </label>
-                <input
-                  className="name-input"
-                  id="display-name"
-                  value={displayName}
-                  onChange={event => setDisplayName(event.currentTarget.value)}
-                  placeholder="Ada / Platform team"
-                  maxLength={80}
-                />
-              </details>
-
               <button className="scan-button" disabled={submitting} type="submit">
                 <span>{submitting ? 'STARTING REVIEW' : 'SHOW ME WHAT MATTERS'}</span>
                 <span aria-hidden="true">↗</span>
               </button>
+              {submitting ? (
+                <p aria-atomic="true" aria-live="polite" role="status">
+                  Starting your review…
+                </p>
+              ) : null}
               <p className="boundary-note">
                 Read-only review. We never run your code.
               </p>
-              {error ? <p className="error-note">{error}</p> : null}
+              {error ? <p className="error-note" role="alert">{error}</p> : null}
             </form>
           </dialog>
-        </>
       ) : null}
 
     </div>

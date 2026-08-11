@@ -1,0 +1,67 @@
+{
+  "schemaVersion": "codebase-radar.analyzer-runtime/v1",
+  "manifestVersion": 1,
+  "analysisPolicy": "dogfood:max/v1",
+  "digest": "da777485716f9409b819e5d125d1836d0f2b92318428febf667a878e40780f3d",
+  "analyzers": [
+    {
+      "id": "strictest-comparator",
+      "analyzer": "strictest-comparator",
+      "version": "@tsconfig/strictest 2.0.8",
+      "profileVersions": [
+        "radar.tsconfig-gap/v1"
+      ]
+    },
+    {
+      "id": "oxlint-ultracite",
+      "analyzer": "Oxlint + Ultracite",
+      "version": "1.77.0 + 7.10.2",
+      "profileVersions": [
+        "radar/oxlint-core.mjs",
+        "radar/oxlint-react.mjs",
+        "radar/oxlint-vue.mjs",
+        "radar/oxlint-react-vue.mjs"
+      ]
+    },
+    {
+      "id": "jscpd",
+      "analyzer": "JSCPD",
+      "version": "5.0.14",
+      "profileVersions": [
+        "radar-duplicates-max/v2"
+      ]
+    },
+    {
+      "id": "calldiff",
+      "analyzer": "Calldiff",
+      "version": "0.4.1",
+      "profileVersions": [
+        "all-root-call-trees-max/v2"
+      ]
+    },
+    {
+      "id": "zizmor",
+      "analyzer": "zizmor",
+      "version": "1.29.0",
+      "profileVersions": [
+        "offline-regular/v1"
+      ]
+    },
+    {
+      "id": "osv-scanner",
+      "analyzer": "OSV-Scanner",
+      "version": "2.5.0",
+      "profileVersions": [
+        "js-lockfiles-offline-pinned/v1"
+      ]
+    },
+    {
+      "id": "tracedecay",
+      "analyzer": "TraceDecay",
+      "version": "0.0.73",
+      "profileVersions": [
+        "structural-max/v2"
+      ]
+    }
+  ]
+}

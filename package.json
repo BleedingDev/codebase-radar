@@ -7,13 +7,14 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "pnpm --filter @codebase-radar/app build",
+    "build": "pnpm run build:libraries && pnpm --filter @codebase-radar/app build",
+    "build:libraries": "pnpm --filter @codebase-radar/contracts run build && pnpm --filter @codebase-radar/core run build && pnpm --filter @codebase-radar/cli run build",
     "build:production": "pnpm --filter @codebase-radar/app run deploy",
-    "check": "pnpm --filter @codebase-radar/app check",
+    "check": "pnpm run build:libraries && node scripts/check-source-rules.mjs && pnpm --filter @codebase-radar/contracts check && pnpm --filter @codebase-radar/core check && pnpm --filter @codebase-radar/cli check && pnpm --filter @codebase-radar/testkit check && pnpm --filter @codebase-radar/app check",
     "dev": "pnpm --filter @codebase-radar/app dev",
-    "dogfood": "pnpm peers check && pnpm check && pnpm test && pnpm build",
+    "dogfood": "pnpm peers check && pnpm check && pnpm test && pnpm build && pnpm run build:production",
     "start": "node apps/radar/.output/index.js",
-    "test": "pnpm --filter @codebase-radar/app test",
-    "verify:runtime-tools": "node scripts/verify-runtime-tools.mjs"
+    "test": "pnpm run build:libraries && pnpm --filter @codebase-radar/contracts test && pnpm --filter @codebase-radar/core test && pnpm --filter @codebase-radar/cli test && pnpm --filter @codebase-radar/testkit test && pnpm --filter @codebase-radar/app test && pnpm --filter @codebase-radar/analyzer-runtime test",
+    "verify:runtime-tools": "/usr/bin/env -i HOME=/nonexistent LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/bin:/bin RADAR_RUNTIME_VERIFY_BOOTSTRAPPED=1 /bin/bash --noprofile --norc \"$PWD/scripts/verify-runtime-tools.sh\""
   }
 }

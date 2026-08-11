@@ -1,7 +1,6 @@
 import {
   Clock,
   Config,
-  Crypto,
   Effect,
   FileSystem,
   Option,
@@ -12,10 +11,21 @@ import stripJsonComments from 'strip-json-comments';
 import {
   AnalyzerCoverage,
   AnalyzerRun,
+  CanonicalAnalysisPolicy,
+  CanonicalRepositoryPathSet,
+  CompleteAnalyzerRun,
+  EmptyRepositoryPathSetDigest,
   Evidence,
   ExternalReference,
   FindingCategory,
-} from '../shared/domain';
+  IncompleteAnalyzerRun,
+  NotApplicableAnalyzerRun,
+  RepositoryPathSetDigest,
+  RequiredAnalyzer,
+} from '@codebase-radar/contracts';
+import {
+  digestCanonicalRepositoryPathSet,
+} from './analyzer-input';
 import { RepositoryInventory, repositoryRelative } from './inventory';
 import { boundedDiagnostic, runCommand } from './process';
 
@@ -23,13 +33,14 @@ export class FindingCandidate extends Schema.Class<FindingCandidate>(
   'FindingCandidate',
 )({
   fingerprintSeed: Schema.String,
+  mechanism: Schema.String,
   title: Schema.String,
   category: FindingCategory,
   summary: Schema.String,
   technicalSummary: Schema.String,
   recommendation: Schema.String,
-  evidence: Schema.Array(Evidence),
-  externalReferences: Schema.optional(Schema.Array(ExternalReference)),
+  evidence: Schema.Array(Evidence).check(Schema.isMinLength(1)),
+  externalReferences: Schema.Array(ExternalReference),
   tags: Schema.Array(Schema.String),
   consequence: Schema.Number,
   blastRadius: Schema.Number,
@@ -48,6 +59,253 @@ export class AnalyzerOutput extends Schema.Class<AnalyzerOutput>('AnalyzerOutput
     }),
   ),
 }) {}
+
+export type RequiredAnalyzerId = typeof RequiredAnalyzer.Type;
+
+export type IncompleteAnalyzerStatus =
+  | 'partial'
+  | 'failed'
+  | 'timed_out'
+  | 'truncated';
+
+type AnalyzerOutputContext = {
+  readonly duplicatePercentage?: number;
+  readonly duplicatedLines?: number;
+};
+
+/**
+ * A complete run needs an adapter-derived exact processed path set. The staged
+ * view supplies only the independently derived eligible digest.
+ */
+export type AnalyzerPathSetProof = {
+  readonly eligiblePathSetDigest: RepositoryPathSetDigest;
+  readonly analyzedPathSetDigest: RepositoryPathSetDigest;
+};
+
+const digestCanonicalPathSet = (paths: ReadonlyArray<string>) =>
+  Option.match(
+    Schema.decodeUnknownOption(CanonicalRepositoryPathSet)(paths),
+    {
+      onNone: () => undefined,
+      onSome: digestCanonicalRepositoryPathSet,
+    },
+  );
+
+/**
+ * Failed, timed-out, or otherwise unproven attempts still carry the exact
+ * audited eligible set. They deliberately prove an empty analyzed set.
+ */
+export const unprovenPathSetProof = (
+  inventory: RepositoryInventory,
+  eligiblePaths: ReadonlyArray<string>,
+): AnalyzerPathSetProof => {
+  const calculatedEligiblePathSetDigest = digestCanonicalPathSet(eligiblePaths);
+  const eligiblePathSetDigest =
+    calculatedEligiblePathSetDigest !== undefined &&
+    (inventory.eligiblePathSetDigest === undefined ||
+      inventory.eligiblePathSetDigest === calculatedEligiblePathSetDigest)
+      ? calculatedEligiblePathSetDigest
+      : EmptyRepositoryPathSetDigest;
+  return {
+    eligiblePathSetDigest,
+    analyzedPathSetDigest: EmptyRepositoryPathSetDigest,
+  };
+};
+
+/**
+ * Call this only after the adapter's own success evidence proves every staged
+ * path was processed. The digest is recomputed from the adapter's exact input
+ * set, rather than copied from the eligible digest.
+ */
+export const pathSetProofAfterExactToolCoverage = (
+  inventory: RepositoryInventory,
+  eligiblePaths: ReadonlyArray<string>,
+  analyzedPaths: ReadonlyArray<string>,
+): AnalyzerPathSetProof | undefined => {
+  const eligiblePathSetDigest = digestCanonicalPathSet(eligiblePaths);
+  const analyzedPathSetDigest = digestCanonicalPathSet(analyzedPaths);
+  return eligiblePathSetDigest === undefined ||
+    analyzedPathSetDigest === undefined ||
+    (inventory.eligiblePathSetDigest !== undefined &&
+      inventory.eligiblePathSetDigest !== eligiblePathSetDigest)
+    ? undefined
+    : { eligiblePathSetDigest, analyzedPathSetDigest };
+};
+
+const maximumExplicitAnalyzerPathBytes = 1 * 1024 * 1024;
+const osvOfflineDatabasePath = '/runtime/databases/osv';
+
+const explicitAnalyzerPathArguments = (
+  pathService: Path.Path,
+  repoRoot: string,
+  paths: ReadonlyArray<string>,
+) => {
+  const values = paths.map(path => pathService.resolve(repoRoot, path));
+  const byteLength = values.reduce(
+    (total, path) => total + new TextEncoder().encode(path).byteLength + 1,
+    0,
+  );
+  return { values, byteLength };
+};
+
+const canonicalStrings = (values: ReadonlyArray<string>) =>
+  [...new Set(values)].sort((left, right) =>
+    left < right ? -1 : left > right ? 1 : 0);
+
+const analyzerCoverage = (
+  eligibleFiles: number,
+  analyzedFiles: number,
+  warnings: ReadonlyArray<string>,
+  pathSetProof: AnalyzerPathSetProof,
+) =>
+  new AnalyzerCoverage({
+    eligibleFiles,
+    analyzedFiles,
+    eligiblePathSetDigest: pathSetProof.eligiblePathSetDigest,
+    analyzedPathSetDigest: pathSetProof.analyzedPathSetDigest,
+    omittedCapabilities: [],
+    warnings: canonicalStrings(warnings),
+  });
+
+export const incompleteAnalyzerOutput = (input: {
+  readonly analyzer: RequiredAnalyzerId;
+  readonly analyzerVersion: string;
+  readonly status: IncompleteAnalyzerStatus;
+  readonly durationMs: number;
+  readonly eligibleFiles: number;
+  readonly analyzedFiles: number;
+  readonly observationCount: number;
+  readonly diagnostic: string;
+  readonly candidates?: ReadonlyArray<FindingCandidate>;
+  readonly warnings?: ReadonlyArray<string>;
+  readonly context?: AnalyzerOutputContext;
+  readonly pathSetProof: AnalyzerPathSetProof;
+}) => {
+  const pathSetProof = {
+    eligiblePathSetDigest:
+      input.eligibleFiles === 0
+        ? EmptyRepositoryPathSetDigest
+        : input.pathSetProof.eligiblePathSetDigest,
+    analyzedPathSetDigest:
+      input.analyzedFiles === 0
+        ? EmptyRepositoryPathSetDigest
+        : input.pathSetProof.analyzedPathSetDigest,
+  } satisfies AnalyzerPathSetProof;
+  const eligibleFiles =
+    pathSetProof.eligiblePathSetDigest === EmptyRepositoryPathSetDigest
+      ? 0
+      : input.eligibleFiles;
+  const analyzedFiles =
+    pathSetProof.analyzedPathSetDigest === EmptyRepositoryPathSetDigest
+      ? 0
+      : input.analyzedFiles;
+  return new AnalyzerOutput({
+    run: new IncompleteAnalyzerRun({
+      analyzer: input.analyzer,
+      analyzerVersion: input.analyzerVersion,
+      profileVersion: CanonicalAnalysisPolicy,
+      status: input.status,
+      durationMs: input.durationMs,
+      coverage: analyzerCoverage(
+        eligibleFiles,
+        analyzedFiles,
+        input.warnings ?? [],
+        pathSetProof,
+      ),
+      observationCount: input.observationCount,
+      diagnostic: input.diagnostic,
+    }),
+    candidates: [...(input.candidates ?? [])],
+    ...(input.context === undefined ? {} : { context: input.context }),
+  });
+};
+
+export const completeAnalyzerOutput = (input: {
+  readonly analyzer: RequiredAnalyzerId;
+  readonly analyzerVersion: string;
+  readonly durationMs: number;
+  readonly eligibleFiles: number;
+  readonly analyzedFiles: number;
+  readonly observationCount: number;
+  readonly candidates: ReadonlyArray<FindingCandidate>;
+  readonly warnings?: ReadonlyArray<string>;
+  readonly context?: AnalyzerOutputContext;
+  readonly pathSetProof: AnalyzerPathSetProof;
+}) => {
+  const coverageDiagnostic =
+    input.eligibleFiles === 0
+      ? 'The analyzer had no eligible files to cover.'
+      : input.analyzedFiles !== input.eligibleFiles
+        ? 'The analyzer did not cover every eligible file.'
+        : input.pathSetProof.eligiblePathSetDigest !==
+            input.pathSetProof.analyzedPathSetDigest
+          ? 'The analyzer did not prove that it analyzed the exact audited path set.'
+          : undefined;
+  if (coverageDiagnostic !== undefined) {
+    return incompleteAnalyzerOutput({
+      analyzer: input.analyzer,
+      analyzerVersion: input.analyzerVersion,
+      status: 'partial',
+      durationMs: input.durationMs,
+      eligibleFiles:
+        input.pathSetProof.eligiblePathSetDigest === EmptyRepositoryPathSetDigest
+          ? 0
+          : input.eligibleFiles,
+      analyzedFiles:
+        input.pathSetProof.analyzedPathSetDigest === EmptyRepositoryPathSetDigest
+          ? 0
+          : input.analyzedFiles,
+      observationCount: input.observationCount,
+      diagnostic: coverageDiagnostic,
+      candidates: input.candidates,
+      pathSetProof: input.pathSetProof,
+      ...(input.warnings === undefined ? {} : { warnings: input.warnings }),
+      ...(input.context === undefined ? {} : { context: input.context }),
+    });
+  }
+  return new AnalyzerOutput({
+    run: new CompleteAnalyzerRun({
+      analyzer: input.analyzer,
+      analyzerVersion: input.analyzerVersion,
+      profileVersion: CanonicalAnalysisPolicy,
+      status: 'complete',
+      durationMs: input.durationMs,
+      coverage: analyzerCoverage(
+        input.eligibleFiles,
+        input.analyzedFiles,
+        input.warnings ?? [],
+        input.pathSetProof,
+      ),
+      observationCount: input.observationCount,
+    }),
+    candidates: [...input.candidates],
+    ...(input.context === undefined ? {} : { context: input.context }),
+  });
+};
+
+export const notApplicableAnalyzerOutput = (input: {
+  readonly analyzer: RequiredAnalyzerId;
+  readonly analyzerVersion: string;
+  readonly durationMs: number;
+  readonly code: 'no-eligible-input' | 'source-not-applicable';
+  readonly message: string;
+}) =>
+  new AnalyzerOutput({
+    run: new NotApplicableAnalyzerRun({
+      analyzer: input.analyzer,
+      analyzerVersion: input.analyzerVersion,
+      profileVersion: CanonicalAnalysisPolicy,
+      status: 'not_applicable',
+      durationMs: input.durationMs,
+      coverage: analyzerCoverage(0, 0, [], {
+        eligiblePathSetDigest: EmptyRepositoryPathSetDigest,
+        analyzedPathSetDigest: EmptyRepositoryPathSetDigest,
+      }),
+      observationCount: 0,
+      reason: { code: input.code, message: input.message },
+    }),
+    candidates: [],
+  });
 
 const OxlintReport = Schema.Struct({
   diagnostics: Schema.optional(
@@ -226,34 +484,32 @@ const decodeJson = <S extends Schema.Constraint>(schema: S, text: string) =>
   Schema.decodeEffect(Schema.fromJsonString(schema))(text || 'null');
 
 const unavailable = (
-  analyzer: string,
+  analyzer: RequiredAnalyzerId,
   version: string,
   inventory: RepositoryInventory,
   diagnostic: string,
-  status: typeof AnalyzerRun.fields.status.Type = 'partial',
+  status: IncompleteAnalyzerStatus | 'not_applicable' = 'partial',
 ) =>
-  new AnalyzerOutput({
-    run: new AnalyzerRun({
+  status === 'not_applicable'
+    ? notApplicableAnalyzerOutput({
       analyzer,
       analyzerVersion: version,
-      profileVersion: '2026-08-09',
+      durationMs: 0,
+      code: 'no-eligible-input',
+      message: diagnostic,
+    })
+    : incompleteAnalyzerOutput({
+      analyzer,
+      analyzerVersion: version,
       status,
       durationMs: 0,
-      coverage: new AnalyzerCoverage({
-        eligibleFiles: inventory.sourceFiles.length,
-        analyzedFiles: 0,
-        omittedCapabilities: [
-          status === 'not_applicable'
-            ? diagnostic
-            : `${analyzer} executable unavailable`,
-        ],
-        warnings: status === 'not_applicable' ? [] : [diagnostic],
-      }),
+      eligibleFiles: inventory.sourceFiles.length,
+      analyzedFiles: 0,
       observationCount: 0,
-      ...(status === 'not_applicable' ? {} : { diagnostic }),
-    }),
-    candidates: [],
-  });
+      diagnostic,
+      warnings: [diagnostic],
+      pathSetProof: unprovenPathSetProof(inventory, inventory.sourceFiles),
+    });
 
 const safeEnvironment = Effect.fn(function* (home: string) {
   const path = yield* Config.option(Config.string('PATH'));
@@ -265,22 +521,6 @@ const safeEnvironment = Effect.fn(function* (home: string) {
   };
 });
 
-export const analyzerRoot = Effect.fn('analyzerRoot')(function* () {
-  const fs = yield* FileSystem.FileSystem;
-  const pathService = yield* Path.Path;
-  const configured = yield* Config.option(Config.string('RADAR_ANALYZER_ROOT'));
-  const candidates = [
-    Option.getOrUndefined(configured),
-    pathService.resolve(process.cwd(), '.zerops/analyzer-runtime'),
-    pathService.resolve(process.cwd(), '../../packages/analyzer-runtime'),
-    pathService.resolve(process.cwd(), 'packages/analyzer-runtime'),
-  ].filter((value): value is string => value !== undefined);
-  for (const candidate of candidates) {
-    if (yield* fs.exists(candidate)) return candidate;
-  }
-  return candidates[0] ?? pathService.resolve(process.cwd(), 'packages/analyzer-runtime');
-});
-
 export const runStrictestComparator = Effect.fn('runStrictestComparator')(
   function* (repoRoot: string, inventory: RepositoryInventory) {
     const fs = yield* FileSystem.FileSystem;
@@ -288,6 +528,7 @@ export const runStrictestComparator = Effect.fn('runStrictestComparator')(
     const startedAt = yield* Clock.currentTimeMillis;
     const gaps = new Set<string>();
     const warnings: Array<string> = [];
+    const analyzedPaths = new Array<string>();
     let analyzed = 0;
     yield* Effect.forEach(
       inventory.tsconfigs,
@@ -325,6 +566,7 @@ export const runStrictestComparator = Effect.fn('runStrictestComparator')(
           Effect.tap(parsed =>
             Effect.sync(() => {
               analyzed += 1;
+              analyzedPaths.push(configPath);
               const bases =
                 typeof parsed.extends === 'string'
                   ? [parsed.extends]
@@ -383,6 +625,7 @@ export const runStrictestComparator = Effect.fn('runStrictestComparator')(
         ? [
             new FindingCandidate({
               fingerprintSeed: 'tsconfig/strictest:repository',
+              mechanism: 'TypeScript strictness configuration',
               title: `TypeScript safety baseline has ${options.length} gaps`,
               category: 'configuration',
               summary:
@@ -398,6 +641,7 @@ export const runStrictestComparator = Effect.fn('runStrictestComparator')(
                   path: inventory.tsconfigs[0],
                 }),
               ],
+              externalReferences: [],
               tags: ['typescript', 'strictness'],
               consequence: Math.min(72, 35 + options.length * 2),
               blastRadius: inventory.tsconfigs.length > 1 ? 68 : 52,
@@ -407,27 +651,52 @@ export const runStrictestComparator = Effect.fn('runStrictestComparator')(
             }),
           ]
         : [];
-    return new AnalyzerOutput({
-      run: new AnalyzerRun({
+    const durationMs = (yield* Clock.currentTimeMillis) - startedAt;
+    if (inventory.tsconfigs.length === 0) {
+      return notApplicableAnalyzerOutput({
         analyzer: 'strictest-comparator',
         analyzerVersion: '@tsconfig/strictest 2.0.8',
-        profileVersion: 'radar.tsconfig-gap/v1',
-        status:
-          inventory.tsconfigs.length === 0
-            ? 'not_applicable'
-            : warnings.length > 0
-              ? 'partial'
-              : 'complete',
-        durationMs: (yield* Clock.currentTimeMillis) - startedAt,
-        coverage: new AnalyzerCoverage({
-          eligibleFiles: inventory.tsconfigs.length,
-          analyzedFiles: analyzed,
-          omittedCapabilities: ['package-based TSConfig inheritance is not executed'],
-          warnings,
-        }),
+        durationMs,
+        code: 'no-eligible-input',
+        message: 'No TypeScript configuration files were found.',
+      });
+    }
+    if (analyzed !== inventory.tsconfigs.length) {
+      const pathSetProof =
+        pathSetProofAfterExactToolCoverage(
+          inventory,
+          inventory.tsconfigs,
+          analyzedPaths,
+        ) ?? unprovenPathSetProof(inventory, inventory.tsconfigs);
+      return incompleteAnalyzerOutput({
+        analyzer: 'strictest-comparator',
+        analyzerVersion: '@tsconfig/strictest 2.0.8',
+        status: 'partial',
+        durationMs,
+        eligibleFiles: inventory.tsconfigs.length,
+        analyzedFiles: analyzed,
         observationCount: options.length,
-      }),
+        diagnostic: 'The strictness comparison did not read every TSConfig file.',
+        candidates,
+        warnings,
+        pathSetProof,
+      });
+    }
+    const pathSetProof = pathSetProofAfterExactToolCoverage(
+      inventory,
+      inventory.tsconfigs,
+      analyzedPaths,
+    ) ?? unprovenPathSetProof(inventory, inventory.tsconfigs);
+    return completeAnalyzerOutput({
+      analyzer: 'strictest-comparator',
+      analyzerVersion: '@tsconfig/strictest 2.0.8',
+      durationMs,
+      eligibleFiles: inventory.tsconfigs.length,
+      analyzedFiles: analyzed,
+      observationCount: options.length,
       candidates,
+      warnings,
+      pathSetProof,
     });
   },
 );
@@ -439,7 +708,16 @@ export const runOxlint = Effect.fn('runOxlint')(function* (
 ) {
   const fs = yield* FileSystem.FileSystem;
   const pathService = yield* Path.Path;
-  const command = pathService.resolve(root, 'node_modules/.bin/oxlint');
+  if (inventory.sourceFiles.length === 0) {
+    return notApplicableAnalyzerOutput({
+      analyzer: 'Oxlint + Ultracite',
+      analyzerVersion: '1.77.0 + 7.10.2',
+      durationMs: 0,
+      code: 'no-eligible-input',
+      message: 'No supported source files were found.',
+    });
+  }
+  const command = pathService.resolve(root, 'node_modules/oxlint/bin/oxlint');
   if (!(yield* fs.exists(command))) {
     return unavailable(
       'Oxlint + Ultracite',
@@ -457,21 +735,89 @@ export const runOxlint = Effect.fn('runOxlint')(function* (
     : vue
       ? 'oxlint-vue.mjs'
       : 'oxlint-core.mjs';
+  const explicitInputs = explicitAnalyzerPathArguments(
+    pathService,
+    repoRoot,
+    inventory.sourceFiles,
+  );
+  const unprovenPathSet = unprovenPathSetProof(
+    inventory,
+    inventory.sourceFiles,
+  );
+  if (explicitInputs.byteLength > maximumExplicitAnalyzerPathBytes) {
+    return incompleteAnalyzerOutput({
+      analyzer: 'Oxlint + Ultracite',
+      analyzerVersion: '1.77.0 + 7.10.2',
+      status: 'partial',
+      durationMs: 0,
+      eligibleFiles: inventory.sourceFiles.length,
+      analyzedFiles: 0,
+      observationCount: 0,
+      diagnostic: 'The canonical Oxlint file-input list exceeded its bounded invocation envelope.',
+      warnings: [],
+      pathSetProof: unprovenPathSet,
+    });
+  }
   return yield* Effect.gen(function* () {
     const result = yield* runCommand({
-      command,
+      command: process.execPath,
       args: [
+        command,
         '--disable-nested-config',
         '--no-error-on-unmatched-pattern',
         `--config=${pathService.resolve(root, 'config', configName)}`,
         '--format=json',
         '--threads=1',
-        repoRoot,
+        ...explicitInputs.values,
       ],
-      cwd: pathService.dirname(repoRoot),
-      env: yield* safeEnvironment(pathService.dirname(repoRoot)),
+      cwd: repoRoot,
+      env: yield* safeEnvironment(repoRoot),
       timeoutMs: 55_000,
     });
+    if (result.timedOut) {
+      return incompleteAnalyzerOutput({
+        analyzer: 'Oxlint + Ultracite',
+        analyzerVersion: '1.77.0 + 7.10.2',
+        status: 'timed_out',
+        durationMs: result.durationMs,
+        eligibleFiles: inventory.sourceFiles.length,
+        analyzedFiles: 0,
+        observationCount: 0,
+        diagnostic: 'Oxlint exceeded its analysis envelope.',
+        warnings: [],
+        pathSetProof: unprovenPathSet,
+      });
+    }
+    if (result.truncated) {
+      return incompleteAnalyzerOutput({
+        analyzer: 'Oxlint + Ultracite',
+        analyzerVersion: '1.77.0 + 7.10.2',
+        status: 'truncated',
+        durationMs: result.durationMs,
+        eligibleFiles: inventory.sourceFiles.length,
+        analyzedFiles: 0,
+        observationCount: 0,
+        diagnostic: 'Oxlint output exceeded its analysis envelope.',
+        warnings: [],
+        pathSetProof: unprovenPathSet,
+      });
+    }
+    if (result.exitCode !== 0) {
+      return incompleteAnalyzerOutput({
+        analyzer: 'Oxlint + Ultracite',
+        analyzerVersion: '1.77.0 + 7.10.2',
+        status: 'failed',
+        durationMs: result.durationMs,
+        eligibleFiles: inventory.sourceFiles.length,
+        analyzedFiles: 0,
+        observationCount: 0,
+        diagnostic:
+          boundedDiagnostic(result.stderr || result.stdout) ||
+          `Oxlint exited with status ${String(result.exitCode)}.`,
+        warnings: [],
+        pathSetProof: unprovenPathSet,
+      });
+    }
     const parsed = yield* decodeJson(OxlintReport, result.stdout || '{}');
     const diagnostics = parsed.diagnostics ?? [];
     const grouped = new Map<string, Array<(typeof diagnostics)[number]>>();
@@ -510,6 +856,7 @@ export const runOxlint = Effect.fn('runOxlint')(function* (
             : 'Inspect representative locations, confirm the pattern matters, then address it within one bounded change.';
         return new FindingCandidate({
           fingerprintSeed: `oxlint:${code}:${path ?? 'repository'}`,
+          mechanism: 'Oxlint and Ultracite rule violation',
           title: `${matches.length} ${title}${matches.length === 1 ? '' : 's'}`,
           category,
           summary:
@@ -562,33 +909,38 @@ export const runOxlint = Effect.fn('runOxlint')(function* (
             : Math.min(75, 30 + matches.length * 3),
         });
       });
-    return new AnalyzerOutput({
-      run: new AnalyzerRun({
-        analyzer: 'Oxlint + Ultracite',
-        analyzerVersion: '1.77.0 + 7.10.2',
-        profileVersion: `radar/${configName}`,
-        status: result.timedOut
-          ? 'timed_out'
-          : result.truncated
-            ? 'truncated'
-            : 'complete',
-        durationMs: result.durationMs,
-        coverage: new AnalyzerCoverage({
-          eligibleFiles: inventory.sourceFiles.length,
-          analyzedFiles: parsed.number_of_files ?? inventory.sourceFiles.length,
-          omittedCapabilities: [
-            'type-aware rules (target dependencies are intentionally not installed)',
-            ...(inventory.frameworks.some(framework =>
-              ['angular', 'svelte', 'solid'].includes(framework),
-            )
-              ? ['Angular/Svelte/Solid template-specific semantic linting']
-              : []),
-          ],
-          warnings: result.stderr ? [boundedDiagnostic(result.stderr)] : [],
-        }),
-        observationCount: diagnostics.length,
-      }),
+    const warnings = [
+      'Type-aware rules do not execute target dependencies.',
+      ...(inventory.frameworks.some(framework =>
+        ['angular', 'svelte', 'solid'].includes(framework),
+      )
+        ? ['Angular, Svelte, and Solid template semantics are not covered.']
+        : []),
+      ...(result.stderr ? [boundedDiagnostic(result.stderr)] : []),
+    ];
+    const analyzedFiles =
+      Number.isSafeInteger(parsed.number_of_files) &&
+      (parsed.number_of_files ?? -1) >= 0
+        ? parsed.number_of_files ?? 0
+        : 0;
+    const pathSetProof =
+      analyzedFiles === inventory.sourceFiles.length
+        ? pathSetProofAfterExactToolCoverage(
+          inventory,
+          inventory.sourceFiles,
+          inventory.sourceFiles,
+        ) ?? unprovenPathSet
+        : unprovenPathSet;
+    return completeAnalyzerOutput({
+      analyzer: 'Oxlint + Ultracite',
+      analyzerVersion: '1.77.0 + 7.10.2',
+      durationMs: result.durationMs,
+      eligibleFiles: inventory.sourceFiles.length,
+      analyzedFiles,
+      observationCount: diagnostics.length,
       candidates,
+      warnings,
+      pathSetProof,
     });
   }).pipe(
     Effect.catch(error =>
@@ -612,16 +964,30 @@ export const runJscpd = Effect.fn('runJscpd')(function* (
 ) {
   const fs = yield* FileSystem.FileSystem;
   const pathService = yield* Path.Path;
-  const command = pathService.resolve(root, 'node_modules/.bin/jscpd');
+  if (inventory.sourceFiles.length === 0) {
+    return notApplicableAnalyzerOutput({
+      analyzer: 'JSCPD',
+      analyzerVersion: '5.0.14',
+      durationMs: 0,
+      code: 'no-eligible-input',
+      message: 'No supported source files were found.',
+    });
+  }
+  const command = pathService.resolve(root, 'node_modules/jscpd/run-jscpd.js');
   if (!(yield* fs.exists(command))) {
     return unavailable('JSCPD', '5.0.14', inventory, 'Pinned JSCPD binary was not found.');
   }
+  const unprovenPathSet = unprovenPathSetProof(
+    inventory,
+    inventory.sourceFiles,
+  );
   return yield* Effect.gen(function* () {
     const outputDirectory = pathService.resolve(scanRoot, 'jscpd-output');
     yield* fs.makeDirectory(outputDirectory, { recursive: true });
     const result = yield* runCommand({
-      command,
+      command: process.execPath,
       args: [
+        command,
         repoRoot,
         '--config',
         pathService.resolve(root, 'config/jscpd.json'),
@@ -660,6 +1026,7 @@ export const runJscpd = Effect.fn('runJscpd')(function* (
         );
         return new FindingCandidate({
           fingerprintSeed: `jscpd:${[firstPath, secondPath].sort().join(':')}`,
+          mechanism: 'Duplicate source region',
           title: `${duplicate.lines ?? 0} duplicated lines across two regions`,
           category: 'maintainability',
           summary:
@@ -684,6 +1051,7 @@ export const runJscpd = Effect.fn('runJscpd')(function* (
               line: duplicate.secondFile?.start,
             }),
           ],
+          externalReferences: [],
           tags: ['duplication', ...(generated ? ['generated-or-test'] : [])],
           consequence: generated ? 18 : Math.min(60, 25 + (duplicate.lines ?? 0)),
           blastRadius: generated ? 15 : 42,
@@ -692,32 +1060,85 @@ export const runJscpd = Effect.fn('runJscpd')(function* (
           changeExposure: generated ? 20 : 48,
         });
       });
-    return new AnalyzerOutput({
-      run: new AnalyzerRun({
+    const warnings = [
+      'Static duplication does not establish semantic equivalence or abstraction value.',
+      ...(diagnostic ? [boundedDiagnostic(diagnostic)] : []),
+    ];
+    const analyzedFiles =
+      Number.isSafeInteger(total?.sources) && (total?.sources ?? -1) >= 0
+        ? total?.sources ?? 0
+        : 0;
+    const context = {
+      duplicatePercentage: total?.percentage ?? 0,
+      duplicatedLines: total?.duplicatedLines ?? 0,
+    };
+    if (result.timedOut) {
+      return incompleteAnalyzerOutput({
         analyzer: 'JSCPD',
         analyzerVersion: '5.0.14',
-        profileVersion: 'radar-duplicates-max/v2',
-        status: result.timedOut
-          ? 'timed_out'
-          : result.truncated
-            ? 'truncated'
-            : 'complete',
+        status: 'timed_out',
         durationMs: result.durationMs,
-        coverage: new AnalyzerCoverage({
-          eligibleFiles: inventory.sourceFiles.length,
-          analyzedFiles: total?.sources ?? inventory.sourceFiles.length,
-          omittedCapabilities: [
-            'semantic equivalence and abstraction value are not established',
-          ],
-          warnings: diagnostic ? [boundedDiagnostic(diagnostic)] : [],
-        }),
+        eligibleFiles: inventory.sourceFiles.length,
+        analyzedFiles,
         observationCount: total?.clones ?? duplicates.length,
-      }),
+        diagnostic: 'JSCPD exceeded its analysis envelope.',
+        candidates,
+        warnings,
+        context,
+        pathSetProof: unprovenPathSet,
+      });
+    }
+    if (result.truncated) {
+      return incompleteAnalyzerOutput({
+        analyzer: 'JSCPD',
+        analyzerVersion: '5.0.14',
+        status: 'truncated',
+        durationMs: result.durationMs,
+        eligibleFiles: inventory.sourceFiles.length,
+        analyzedFiles,
+        observationCount: total?.clones ?? duplicates.length,
+        diagnostic: 'JSCPD output exceeded its analysis envelope.',
+        candidates,
+        warnings,
+        context,
+        pathSetProof: unprovenPathSet,
+      });
+    }
+    if (result.exitCode !== 0) {
+      return incompleteAnalyzerOutput({
+        analyzer: 'JSCPD',
+        analyzerVersion: '5.0.14',
+        status: 'failed',
+        durationMs: result.durationMs,
+        eligibleFiles: inventory.sourceFiles.length,
+        analyzedFiles,
+        observationCount: total?.clones ?? duplicates.length,
+        diagnostic: boundedDiagnostic(result.stderr || result.stdout),
+        candidates,
+        warnings,
+        context,
+        pathSetProof: unprovenPathSet,
+      });
+    }
+    const pathSetProof =
+      analyzedFiles === inventory.sourceFiles.length
+        ? pathSetProofAfterExactToolCoverage(
+          inventory,
+          inventory.sourceFiles,
+          inventory.sourceFiles,
+        ) ?? unprovenPathSet
+        : unprovenPathSet;
+    return completeAnalyzerOutput({
+      analyzer: 'JSCPD',
+      analyzerVersion: '5.0.14',
+      durationMs: result.durationMs,
+      eligibleFiles: inventory.sourceFiles.length,
+      analyzedFiles,
+      observationCount: total?.clones ?? duplicates.length,
       candidates,
-      context: {
-        duplicatePercentage: total?.percentage ?? 0,
-        duplicatedLines: total?.duplicatedLines ?? 0,
-      },
+      warnings,
+      context,
+      pathSetProof,
     });
   }).pipe(
     Effect.catch(error =>
@@ -748,6 +1169,29 @@ export const runZizmor = Effect.fn('runZizmor')(function* (
   if (!(yield* fs.exists(command))) {
     return unavailable('zizmor', '1.29.0', inventory, 'Pinned zizmor binary was not found.');
   }
+  const explicitInputs = explicitAnalyzerPathArguments(
+    pathService,
+    repoRoot,
+    inventory.workflowFiles,
+  );
+  const unprovenPathSet = unprovenPathSetProof(
+    inventory,
+    inventory.workflowFiles,
+  );
+  if (explicitInputs.byteLength > maximumExplicitAnalyzerPathBytes) {
+    return incompleteAnalyzerOutput({
+      analyzer: 'zizmor',
+      analyzerVersion: '1.29.0',
+      status: 'partial',
+      durationMs: 0,
+      eligibleFiles: inventory.workflowFiles.length,
+      analyzedFiles: 0,
+      observationCount: 0,
+      diagnostic: 'The canonical zizmor file-input list exceeded its bounded invocation envelope.',
+      warnings: [],
+      pathSetProof: unprovenPathSet,
+    });
+  }
   return yield* Effect.gen(function* () {
     const result = yield* runCommand({
       command,
@@ -760,10 +1204,10 @@ export const runZizmor = Effect.fn('runZizmor')(function* (
         '--format=json-v1',
         '--no-progress',
         '--color=never',
-        repoRoot,
+        ...explicitInputs.values,
       ],
-      cwd: pathService.dirname(repoRoot),
-      env: yield* safeEnvironment(pathService.dirname(repoRoot)),
+      cwd: repoRoot,
+      env: yield* safeEnvironment(repoRoot),
       timeoutMs: 18_000,
     });
     const findings = yield* decodeJson(ZizmorReport, result.stdout || '[]');
@@ -775,6 +1219,7 @@ export const runZizmor = Effect.fn('runZizmor')(function* (
       const findingPath = location?.concrete?.path ?? location?.symbolic?.path;
       return new FindingCandidate({
         fingerprintSeed: `zizmor:${finding.ident ?? 'unidentified'}:${findingPath ?? 'workflow'}`,
+        mechanism: 'GitHub Actions workflow risk',
         title: finding.ident
           ? `Workflow risk: ${finding.ident}`
           : 'GitHub Actions workflow risk',
@@ -817,22 +1262,69 @@ export const runZizmor = Effect.fn('runZizmor')(function* (
     const successfulExit =
       result.exitCode === 0 ||
       (result.exitCode !== null && result.exitCode >= 11 && result.exitCode <= 14);
-    return new AnalyzerOutput({
-      run: new AnalyzerRun({
+    const warnings = [
+      'Offline workflow analysis does not include identity or reputation checks.',
+      ...(result.stderr ? [boundedDiagnostic(result.stderr)] : []),
+    ];
+    if (result.timedOut) {
+      return incompleteAnalyzerOutput({
         analyzer: 'zizmor',
         analyzerVersion: '1.29.0',
-        profileVersion: 'offline-regular/v1',
-        status: result.timedOut ? 'timed_out' : successfulExit ? 'complete' : 'failed',
+        status: 'timed_out',
         durationMs: result.durationMs,
-        coverage: new AnalyzerCoverage({
-          eligibleFiles: inventory.workflowFiles.length,
-          analyzedFiles: inventory.workflowFiles.length,
-          omittedCapabilities: ['online identity/reputation audits'],
-          warnings: result.stderr ? [boundedDiagnostic(result.stderr)] : [],
-        }),
+        eligibleFiles: inventory.workflowFiles.length,
+        analyzedFiles: 0,
         observationCount: findings.length,
-      }),
+        diagnostic: 'zizmor exceeded its analysis envelope.',
+        candidates,
+        warnings,
+        pathSetProof: unprovenPathSet,
+      });
+    }
+    if (result.truncated) {
+      return incompleteAnalyzerOutput({
+        analyzer: 'zizmor',
+        analyzerVersion: '1.29.0',
+        status: 'truncated',
+        durationMs: result.durationMs,
+        eligibleFiles: inventory.workflowFiles.length,
+        analyzedFiles: 0,
+        observationCount: 0,
+        diagnostic: 'zizmor output exceeded its analysis envelope.',
+        warnings,
+        pathSetProof: unprovenPathSet,
+      });
+    }
+    if (!successfulExit) {
+      return incompleteAnalyzerOutput({
+        analyzer: 'zizmor',
+        analyzerVersion: '1.29.0',
+        status: 'failed',
+        durationMs: result.durationMs,
+        eligibleFiles: inventory.workflowFiles.length,
+        analyzedFiles: 0,
+        observationCount: findings.length,
+        diagnostic: boundedDiagnostic(result.stderr || result.stdout),
+        candidates,
+        warnings,
+        pathSetProof: unprovenPathSet,
+      });
+    }
+    const pathSetProof = pathSetProofAfterExactToolCoverage(
+      inventory,
+      inventory.workflowFiles,
+      inventory.workflowFiles,
+    ) ?? unprovenPathSet;
+    return completeAnalyzerOutput({
+      analyzer: 'zizmor',
+      analyzerVersion: '1.29.0',
+      durationMs: result.durationMs,
+      eligibleFiles: inventory.workflowFiles.length,
+      analyzedFiles: inventory.workflowFiles.length,
+      observationCount: findings.length,
       candidates,
+      warnings,
+      pathSetProof,
     });
   }).pipe(
     Effect.catch(error =>
@@ -869,20 +1361,46 @@ export const runOsv = Effect.fn('runOsv')(function* (
       'Pinned OSV-Scanner binary was not found.',
     );
   }
+  const explicitLockfiles = explicitAnalyzerPathArguments(
+    pathService,
+    repoRoot,
+    inventory.lockfiles,
+  );
+  const unprovenPathSet = unprovenPathSetProof(
+    inventory,
+    inventory.lockfiles,
+  );
+  if (explicitLockfiles.byteLength > maximumExplicitAnalyzerPathBytes) {
+    return incompleteAnalyzerOutput({
+      analyzer: 'OSV-Scanner',
+      analyzerVersion: '2.5.0',
+      status: 'partial',
+      durationMs: 0,
+      eligibleFiles: inventory.lockfiles.length,
+      analyzedFiles: 0,
+      observationCount: 0,
+      diagnostic: 'The canonical OSV lockfile-input list exceeded its bounded invocation envelope.',
+      warnings: [],
+      pathSetProof: unprovenPathSet,
+    });
+  }
   return yield* Effect.gen(function* () {
     const config = pathService.resolve(scanRoot, 'osv-scanner.toml');
+    const environment = {
+      ...(yield* safeEnvironment(scanRoot)),
+      OSV_SCALIBR_LOCAL_DB_CACHE_DIRECTORY: osvOfflineDatabasePath,
+    };
     yield* fs.writeFileString(config, '# Radar-owned empty configuration\n', {
       mode: 0o600,
     });
-    const lockfileArgs = inventory.lockfiles.flatMap(path => [
-      '-L',
-      pathService.resolve(repoRoot, path),
-    ]);
+    const lockfileArgs = explicitLockfiles.values.flatMap(path => ['-L', path]);
     const result = yield* runCommand({
       command,
       args: [
         'scan',
         'source',
+        '--offline',
+        `--local-db-path=${osvOfflineDatabasePath}`,
         '--format=json',
         '--verbosity=error',
         '--no-resolve',
@@ -890,11 +1408,17 @@ export const runOsv = Effect.fn('runOsv')(function* (
         ...lockfileArgs,
       ],
       cwd: scanRoot,
-      env: yield* safeEnvironment(scanRoot),
+      env: environment,
       timeoutMs: 48_000,
       maxOutputBytes: 8 * 1024 * 1024,
     });
     const parsed = yield* decodeJson(OsvReport, result.stdout || '{}');
+    const unexpectedReportedPath = (parsed.results ?? []).some(result => {
+      const reported = result.source?.path;
+      if (reported === undefined) return false;
+      const path = repositoryRelative(pathService, repoRoot, reported);
+      return path === undefined || !inventory.lockfiles.includes(path);
+    });
     const candidates: Array<FindingCandidate> = [];
     for (const source of parsed.results ?? []) {
       for (const pkg of source.packages ?? []) {
@@ -918,6 +1442,7 @@ export const runOsv = Effect.fn('runOsv')(function* (
           candidates.push(
             new FindingCandidate({
               fingerprintSeed: `osv:${pkg.package?.name}:${advisoryId}`,
+              mechanism: 'Published dependency vulnerability advisory',
               title: `${advisoryId} affects ${pkg.package?.name ?? 'a dependency'}`,
               category: 'security',
               summary:
@@ -967,35 +1492,76 @@ export const runOsv = Effect.fn('runOsv')(function* (
       }
     }
     const successfulExit = result.exitCode === 0 || result.exitCode === 1;
-    return new AnalyzerOutput({
-      run: new AnalyzerRun({
+    const warnings = [
+      'Dependency coordinates are matched against the pinned offline OSV npm advisory snapshot; no advisory API request is made.',
+      'Advisory matches do not establish runtime reachability or exploitability.',
+      ...(unexpectedReportedPath
+        ? ['OSV-Scanner reported a lockfile path outside the audited staged input.']
+        : []),
+      ...(result.stderr ? [boundedDiagnostic(result.stderr)] : []),
+    ];
+    if (result.timedOut) {
+      return incompleteAnalyzerOutput({
         analyzer: 'OSV-Scanner',
         analyzerVersion: '2.5.0',
-        profileVersion: 'js-lockfiles-online/v1',
-        status: result.timedOut
-          ? 'timed_out'
-          : result.truncated
-            ? 'truncated'
-            : successfulExit
-              ? 'complete'
-              : 'failed',
+        status: 'timed_out',
         durationMs: result.durationMs,
-        coverage: new AnalyzerCoverage({
-          eligibleFiles: inventory.lockfiles.length,
-          analyzedFiles: inventory.lockfiles.length,
-          omittedCapabilities: [
-            'runtime reachability',
-            'exploitability',
-            'native package ecosystems',
-          ],
-          warnings: [
-            'Dependency coordinates are queried against the public OSV advisory API.',
-            ...(result.stderr ? [boundedDiagnostic(result.stderr)] : []),
-          ],
-        }),
+        eligibleFiles: inventory.lockfiles.length,
+        analyzedFiles: 0,
         observationCount: candidates.length,
-      }),
+        diagnostic: 'OSV-Scanner exceeded its analysis envelope.',
+        candidates,
+        warnings,
+        pathSetProof: unprovenPathSet,
+      });
+    }
+    if (result.truncated) {
+      return incompleteAnalyzerOutput({
+        analyzer: 'OSV-Scanner',
+        analyzerVersion: '2.5.0',
+        status: 'truncated',
+        durationMs: result.durationMs,
+        eligibleFiles: inventory.lockfiles.length,
+        analyzedFiles: 0,
+        observationCount: candidates.length,
+        diagnostic: 'OSV-Scanner output exceeded its analysis envelope.',
+        candidates,
+        warnings,
+        pathSetProof: unprovenPathSet,
+      });
+    }
+    if (!successfulExit) {
+      return incompleteAnalyzerOutput({
+        analyzer: 'OSV-Scanner',
+        analyzerVersion: '2.5.0',
+        status: 'failed',
+        durationMs: result.durationMs,
+        eligibleFiles: inventory.lockfiles.length,
+        analyzedFiles: 0,
+        observationCount: candidates.length,
+        diagnostic: boundedDiagnostic(result.stderr || result.stdout),
+        candidates,
+        warnings,
+        pathSetProof: unprovenPathSet,
+      });
+    }
+    const pathSetProof = unexpectedReportedPath
+      ? unprovenPathSet
+      : pathSetProofAfterExactToolCoverage(
+        inventory,
+        inventory.lockfiles,
+        inventory.lockfiles,
+      ) ?? unprovenPathSet;
+    return completeAnalyzerOutput({
+      analyzer: 'OSV-Scanner',
+      analyzerVersion: '2.5.0',
+      durationMs: result.durationMs,
+      eligibleFiles: inventory.lockfiles.length,
+      analyzedFiles: inventory.lockfiles.length,
+      observationCount: candidates.length,
       candidates,
+      warnings,
+      pathSetProof,
     });
   }).pipe(
     Effect.catch(error =>
@@ -1009,13 +1575,4 @@ export const runOsv = Effect.fn('runOsv')(function* (
       ),
     ),
   );
-});
-
-export const candidateHash = Effect.fn('candidateHash')(function* (seed: string) {
-  const crypto = yield* Crypto.Crypto;
-  const digest = yield* crypto.digest('SHA-256', new TextEncoder().encode(seed));
-  return [...digest]
-    .map(byte => byte.toString(16).padStart(2, '0'))
-    .join('')
-    .slice(0, 20);
 });

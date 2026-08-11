@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "codebase-radar.cli-doctor/v1",
+  "status": "degraded",
+  "evidence": [
+    {
+      "id": "calldiff",
+      "status": "degraded",
+      "detail": "Calldiff 0.4.1 checksum differs from immutable manifest sha256:da777485716f9409b819e5d125d1836d0f2b92318428febf667a878e40780f3d",
+      "remediation": "Reinstall the reviewed Calldiff runtime before analysis."
+    },
+    {
+      "id": "jscpd",
+      "status": "unavailable",
+      "detail": "JSCPD 5.0.14 executable is unavailable under immutable manifest sha256:da777485716f9409b819e5d125d1836d0f2b92318428febf667a878e40780f3d.",
+      "remediation": "Install the reviewed JSCPD runtime before analysis."
+    },
+    {
+      "id": "manifest-digest",
+      "status": "ready",
+      "detail": "codebase-radar.analyzer-runtime/v1 manifest 1 sha256:da777485716f9409b819e5d125d1836d0f2b92318428febf667a878e40780f3d"
+    },
+    {
+      "id": "osv-scanner",
+      "status": "degraded",
+      "detail": "OSV-Scanner 2.5.0 bounded version probe timed out under immutable manifest sha256:da777485716f9409b819e5d125d1836d0f2b92318428febf667a878e40780f3d.",
+      "remediation": "Restore the reviewed OSV-Scanner binary and retry the bounded probe."
+    },
+    {
+      "id": "oxlint-ultracite",
+      "status": "ready",
+      "detail": "Oxlint + Ultracite 1.77.0 + 7.10.2; profiles radar/oxlint-core.mjs, radar/oxlint-react.mjs, radar/oxlint-vue.mjs, radar/oxlint-react-vue.mjs; manifest sha256:da777485716f9409b819e5d125d1836d0f2b92318428febf667a878e40780f3d"
+    },
+    {
+      "id": "strictest-comparator",
+      "status": "ready",
+      "detail": "strictest-comparator @tsconfig/strictest 2.0.8; profile radar.tsconfig-gap/v1; manifest sha256:da777485716f9409b819e5d125d1836d0f2b92318428febf667a878e40780f3d"
+    },
+    {
+      "id": "tracedecay",
+      "status": "ready",
+      "detail": "TraceDecay 0.0.73; profile structural-max/v2; manifest sha256:da777485716f9409b819e5d125d1836d0f2b92318428febf667a878e40780f3d"
+    },
+    {
+      "id": "zizmor",
+      "status": "ready",
+      "detail": "zizmor 1.29.0; profile offline-regular/v1; manifest sha256:da777485716f9409b819e5d125d1836d0f2b92318428febf667a878e40780f3d"
+    }
+  ]
+}

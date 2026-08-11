@@ -1,213 +1,234 @@
-import { maximalAnalysisViolations } from './analysis-policy';
 import {
   Cause,
-  Config,
+  Clock,
   Context,
   Effect,
-  FileSystem,
   Layer,
   Option,
-  Path,
   Queue,
   Ref,
   Schema,
 } from 'effect';
-import { ScanRecord } from '../shared/domain';
+import { RadarAnalysis } from '@codebase-radar/core';
 import {
-  analyzerRoot,
-  runJscpd,
-  runOsv,
-  runOxlint,
-  runStrictestComparator,
-  runZizmor,
-} from './analyzers';
-import { runCalldiff } from './calldiff';
-import { inventoryRepository } from './inventory';
-import { boundedDiagnostic, runCommand } from './process';
-import { buildScanResult } from './prioritize';
-import { RadarStore } from './store';
-import { runTraceDecay } from './tracedecay';
+  AnalysisRuntimeUnavailable,
+  AnalysisSourceRejected,
+  DefaultBranchRevision,
+  decodeAnalysisRequest,
+  decodeAnalysisSource,
+  SuccessfulScanResultSchema,
+  type AnalysisFailure,
+} from '@codebase-radar/contracts';
+import { ScanRecord } from '../shared/domain';
+import { RadarAnalysisObserverLive } from './analysis-observer';
+import {
+  RadarStore,
+  ScanClaim,
+  StorageError,
+} from './store';
 
-class ScanFailure extends Schema.TaggedErrorClass<ScanFailure>()('ScanFailure', {
-  message: Schema.String,
-}) {}
+export const scanLeaseMs = 2 * 60_000;
+export const scanLeaseHeartbeatMs = 20_000;
+export const scanRecoveryPollMs = 250;
 
-const performScan = Effect.fn('performScan')(function* (scan: ScanRecord) {
-  const fs = yield* FileSystem.FileSystem;
-  const pathService = yield* Path.Path;
-  const store = yield* RadarStore;
-  const scanRoot = yield* fs.makeTempDirectoryScoped({ prefix: 'codebase-radar-' });
-  const repoRoot = pathService.resolve(scanRoot, 'repository');
-  const configuredPath = yield* Config.option(Config.string('PATH'));
-  const gitEnvironment = {
-    PATH: Option.getOrUndefined(configuredPath),
-    LANG: 'C.UTF-8',
-    HOME: scanRoot,
-    GIT_TERMINAL_PROMPT: '0',
-    GIT_CONFIG_NOSYSTEM: '1',
-    GIT_CONFIG_GLOBAL: '/dev/null',
-    GIT_LFS_SKIP_SMUDGE: '1',
-    GIT_SSH_COMMAND: 'false',
-    NO_COLOR: '1',
-  };
+const nextScanLeaseExpiry = Clock.currentTimeMillis.pipe(
+  Effect.map(now => new Date(now + scanLeaseMs).toISOString()),
+);
 
-  yield* store.updateScan(scan.id, {
-    status: 'running',
-    progress: 7,
-    stage: 'Getting the latest version',
-  });
-  const clone = yield* runCommand({
-    command: 'git',
-    args: [
-      '-c',
-      'protocol.file.allow=never',
-      '-c',
-      'core.hooksPath=/dev/null',
-      'clone',
-      '--depth=1',
-      '--single-branch',
-      '--no-tags',
-      '--no-recurse-submodules',
-      '--filter=blob:none',
-      scan.githubUrl,
-      repoRoot,
-    ],
-    cwd: scanRoot,
-    env: gitEnvironment,
-    timeoutMs: 65_000,
-    maxOutputBytes: 1_000_000,
-  });
-  if (clone.exitCode !== 0 || clone.timedOut) {
-    return yield* new ScanFailure({
-      message: `GitHub snapshot could not be cloned: ${boundedDiagnostic(clone.stderr || clone.stdout)}`,
-    });
-  }
-  const [commit, branch] = yield* Effect.all(
-    [
-      runCommand({
-        command: 'git',
-        args: ['rev-parse', 'HEAD'],
-        cwd: repoRoot,
-        env: gitEnvironment,
-        timeoutMs: 5_000,
-      }),
-      runCommand({
-        command: 'git',
-        args: ['branch', '--show-current'],
-        cwd: repoRoot,
-        env: gitEnvironment,
-        timeoutMs: 5_000,
-      }),
-    ],
-    { concurrency: 'unbounded' },
-  );
-  if (commit.exitCode !== 0) {
-    return yield* new ScanFailure({
-      message: 'The cloned snapshot has no resolvable commit.',
-    });
-  }
-
-  yield* store.updateScan(scan.id, {
-    progress: 16,
-    stage: 'Reading the codebase',
-  });
-  const inventory = yield* inventoryRepository(repoRoot);
-  if (inventory.sourceFiles.length === 0) {
-    return yield* new ScanFailure({
-      message: 'No supported TypeScript or JavaScript files were found.',
-    });
-  }
-  const runtimeRoot = yield* analyzerRoot();
-  const outputs = [];
-
-  yield* store.updateScan(scan.id, {
-    progress: 24,
-    stage: 'Checking type safety',
-  });
-  outputs.push(yield* runStrictestComparator(repoRoot, inventory));
-
-  yield* store.updateScan(scan.id, {
-    progress: 34,
-    stage: 'Checking code quality',
-  });
-  outputs.push(yield* runOxlint(repoRoot, inventory, runtimeRoot));
-
-  yield* store.updateScan(scan.id, {
-    progress: 44,
-    stage: 'Looking for repeated code',
-  });
-  outputs.push(yield* runJscpd(scanRoot, repoRoot, inventory, runtimeRoot));
-
-  yield* store.updateScan(scan.id, {
-    progress: 53,
-    stage: 'Tracing repeated call-tree nodes',
-  });
-  outputs.push(yield* runCalldiff(repoRoot, inventory, runtimeRoot));
-
-  yield* store.updateScan(scan.id, {
-    progress: 62,
-    stage: 'Checking automation safety',
-  });
-  outputs.push(yield* runZizmor(repoRoot, inventory, runtimeRoot));
-
-  yield* store.updateScan(scan.id, {
-    progress: 70,
-    stage: 'Checking known dependency risks',
-  });
-  outputs.push(yield* runOsv(scanRoot, repoRoot, inventory, runtimeRoot));
-
-  yield* store.updateScan(scan.id, {
-    progress: 78,
-    stage: 'Mapping change impact',
-  });
-  outputs.push(
-    yield* runTraceDecay({
-      scanRoot,
-      repoRoot,
-      inventory,
-      analyzerRoot: runtimeRoot,
-    }),
-  );
-
-  const policyViolations = maximalAnalysisViolations({
-    inventoryTruncated: inventory.truncated,
-    analyzerRuns: outputs.map(output => output.run),
-  });
-  if (policyViolations.length > 0) {
-    return yield* new ScanFailure({
-      message: `dogfood:max analysis was incomplete: ${policyViolations.join('; ')}`,
-    });
-  }
-
-  yield* store.updateScan(scan.id, {
-    progress: 89,
-    stage: 'Deciding what matters most',
-  });
-  const previous = yield* store.getPreviousResult(
-    scan.owner,
-    scan.repository,
-    { createdAt: scan.createdAt, id: scan.id },
-  );
-  const result = yield* buildScanResult({
-    scanId: scan.id,
+const githubSourceFor = (scan: ScanRecord) =>
+  decodeAnalysisSource({
+    _tag: 'GitHubSource',
     owner: scan.owner,
     repository: scan.repository,
-    githubUrl: scan.githubUrl,
-    commitSha: commit.stdout.trim(),
-    defaultBranch: branch.stdout.trim() || 'default',
-    createdAt: scan.createdAt,
-    frameworks: inventory.frameworks,
-    candidates: outputs.flatMap(output => output.candidates),
-    analyzerRuns: outputs.map(output => output.run),
-    ...(Option.isSome(previous) ? { previous: previous.value } : {}),
-  });
-  yield* store.updateScan(scan.id, {
-    status: 'completed',
-    progress: 100,
-    stage: 'Your review is ready',
-    result,
-  });
+    revision: new DefaultBranchRevision({}),
+  }).pipe(
+    Effect.flatMap(source =>
+      source._tag === 'GitHubSource'
+        ? Effect.succeed(source)
+        : Effect.fail(
+            new AnalysisSourceRejected({
+              message: 'The scan source must be a public GitHub repository.',
+            }),
+          ),
+    ),
+    Effect.mapError(
+      () =>
+        new AnalysisSourceRejected({
+          message: 'The stored GitHub repository identity is invalid.',
+        }),
+    ),
+  );
+
+const analysisRequestFor = Effect.fn('analysisRequestFor')(function* (
+  claim: ScanClaim,
+) {
+  const source = yield* githubSourceFor(claim.scan);
+  return yield* decodeAnalysisRequest({
+    scanId: claim.scan.id,
+    source,
+    createdAt: claim.scan.createdAt,
+    ...(claim.baseline === undefined ? {} : { baseline: claim.baseline }),
+  }).pipe(
+    Effect.mapError(
+      () =>
+        new AnalysisSourceRejected({
+          message: 'The requested GitHub scan could not be validated.',
+        }),
+    ),
+  );
 });
+
+const safeFailureMessage = (failure: AnalysisFailure | StorageError) => {
+  switch (failure._tag) {
+    case 'StorageError':
+      return 'The scan worker could not persist its result safely.';
+    case 'AnalysisIncomplete':
+      return 'The required analysis policy could not complete safely.';
+    default:
+      return failure.message;
+  }
+};
+
+const decodeCanonicalResult = Schema.decodeUnknownEffect(
+  SuccessfulScanResultSchema,
+  { onExcessProperty: 'error' },
+);
+
+const isResultForClaim = (
+  claim: ScanClaim,
+  result: typeof SuccessfulScanResultSchema.Type,
+) => {
+  const scan = claim.scan;
+  return result.scanId === scan.id &&
+    result.createdAt === scan.createdAt &&
+    result.source._tag === 'GitHubSourceIdentity' &&
+    result.source.codebaseId ===
+      `github:${scan.owner.toLowerCase()}/${scan.repository.toLowerCase()}` &&
+    result.source.owner === scan.owner.toLowerCase() &&
+    result.source.repository === scan.repository.toLowerCase() &&
+    result.source.url ===
+      `https://github.com/${scan.owner.toLowerCase()}/${scan.repository.toLowerCase()}` &&
+    result.comparison.basisCodebaseId === result.source.codebaseId &&
+    result.comparison.basisPolicyId === result.analysisPolicy &&
+    result.comparison.previousScanId === claim.baseline?.scanId;
+};
+
+const runClaimedScan = (claim: ScanClaim) =>
+  Effect.gen(function* () {
+    const store = yield* RadarStore;
+    const analysis = yield* RadarAnalysis;
+    const firstRenewal = yield* nextScanLeaseExpiry.pipe(
+      Effect.flatMap(expiresAt =>
+        store.renewScanLease(claim.scan.id, claim.lease, expiresAt),
+      ),
+    );
+    if (Option.isNone(firstRenewal)) {
+      return yield* new StorageError({
+        message: 'The scan worker lease expired before analysis started.',
+      });
+    }
+    const protocol = Effect.gen(function* () {
+      yield* store.updateScan(
+        claim.scan.id,
+        {
+          status: 'running',
+          progress: 0,
+          stage: 'Preparing the canonical GitHub scan',
+        },
+        firstRenewal.value,
+      );
+      const request = yield* analysisRequestFor(claim);
+      const result = yield* analysis.analyze(request).pipe(
+        Effect.provide(RadarAnalysisObserverLive(claim.scan.id, firstRenewal.value)),
+      );
+      const canonical = yield* decodeCanonicalResult(result).pipe(
+        Effect.mapError(
+          () =>
+            new AnalysisRuntimeUnavailable({
+              message: 'The analysis runtime returned an invalid canonical result.',
+            }),
+        ),
+      );
+      if (!isResultForClaim(claim, canonical)) {
+        return yield* new AnalysisRuntimeUnavailable({
+          message: 'The analysis runtime returned a result for a different GitHub scan.',
+        });
+      }
+      yield* store.completeScan(claim.scan.id, canonical, firstRenewal.value);
+    });
+    const heartbeat = Effect.forever(
+      Effect.sleep(scanLeaseHeartbeatMs).pipe(
+        Effect.andThen(nextScanLeaseExpiry),
+        Effect.flatMap(expiresAt =>
+          store.renewScanLease(claim.scan.id, firstRenewal.value, expiresAt),
+        ),
+        Effect.flatMap(
+          Option.match({
+            onNone: () =>
+              Effect.fail(
+                new StorageError({
+                  message: 'The scan worker lease could not be renewed safely.',
+                }),
+              ),
+            onSome: () => Effect.void,
+          }),
+        ),
+      ),
+    );
+    return yield* Effect.raceFirst(protocol, heartbeat);
+  });
+
+const processClaim = (claim: ScanClaim) =>
+  runClaimedScan(claim).pipe(
+    Effect.catch(failure =>
+      Effect.uninterruptible(
+        RadarStore.use(store =>
+          store
+            .failScanIfActive(
+              claim.scan.id,
+              {
+                stage: 'Scan failed safely',
+                error: safeFailureMessage(failure),
+              },
+              claim.lease,
+            )
+            .pipe(Effect.ignore),
+        ),
+      ),
+    ),
+    Effect.catchCause(cause =>
+      Cause.hasInterruptsOnly(cause)
+        ? Effect.failCause(cause)
+        : Effect.uninterruptible(
+            RadarStore.use(store =>
+              store
+                .failScanIfActive(
+                  claim.scan.id,
+                  {
+                    stage: 'Scan failed safely',
+                    error: 'The scan worker stopped unexpectedly.',
+                  },
+                  claim.lease,
+                )
+                .pipe(Effect.ignore),
+            ),
+          ),
+    ),
+    Effect.ensuring(
+      RadarStore.use(store =>
+        store.storage === 'memory'
+          ? Effect.uninterruptible(
+              store
+                .failScanIfActive(claim.scan.id, {
+                  stage: 'Scan stopped before completion',
+                  error: 'The scan worker stopped before completion. Submit a new scan.',
+                })
+                .pipe(Effect.ignore),
+            )
+          : Effect.void,
+      ),
+    ),
+  );
 
 export class ScanCapacityUnavailable extends Schema.TaggedErrorClass<ScanCapacityUnavailable>()(
   'ScanCapacityUnavailable',
@@ -256,8 +277,9 @@ interface AdmissionState {
 }
 
 interface QueuedScan {
-  readonly admissionId: number;
   readonly scan: ScanRecord;
+  readonly admissionId?: number;
+  readonly claim?: ScanClaim;
 }
 
 type ReservationResult =
@@ -284,12 +306,14 @@ export const ScanCoordinatorLive = Layer.effect(
       nextId: 1,
       entries: new Map(),
     });
-    const finishAdmission = (admissionId: number) =>
-      Ref.update(admissions, current => {
-        const entries = new Map(current.entries);
-        entries.delete(admissionId);
-        return { ...current, entries };
-      });
+    const finishAdmission = (admissionId: number | undefined) =>
+      admissionId === undefined
+        ? Effect.void
+        : Ref.update(admissions, current => {
+            const entries = new Map(current.entries);
+            entries.delete(admissionId);
+            return { ...current, entries };
+          });
     const releaseReservation = (admissionId: number) =>
       Ref.update(admissions, current => {
         const entry = current.entries.get(admissionId);
@@ -298,50 +322,93 @@ export const ScanCoordinatorLive = Layer.effect(
         entries.delete(admissionId);
         return { ...current, entries };
       });
-    // Scope finalizers run last-in-first-out: the worker is interrupted before this
-    // finalizer terminalizes only the queued work admitted by this process. Safely
-    // reclaiming work after a hard crash requires durable leases and fenced writes.
-    yield* Effect.addFinalizer(() =>
-      Ref.getAndSet(admissions, { nextId: 1, entries: new Map() }).pipe(
-        Effect.flatMap(current =>
-          Effect.forEach(
-            current.entries.values(),
-            entry =>
-              entry.scan === undefined
+
+    const recoverOne =
+      store.storage === 'postgres'
+        ? Queue.isFull(queue).pipe(
+            Effect.flatMap(full =>
+              full
                 ? Effect.void
-                : store
-                    .failScanIfActive(entry.scan.id, {
-                      stage: 'Scan stopped before completion',
-                      error: 'The scan worker stopped before completion. Submit a new scan.',
-                    })
-                    .pipe(Effect.ignore),
-            { concurrency: 'unbounded', discard: true },
-          ),
-        ),
+                : nextScanLeaseExpiry.pipe(
+                    Effect.flatMap(expiresAt => store.claimNextScan(expiresAt)),
+                    Effect.flatMap(
+                      Option.match({
+                        onNone: () => Effect.void,
+                        onSome: claim =>
+                          Queue.offer(queue, { scan: claim.scan, claim }).pipe(
+                            Effect.filterOrFail(
+                              accepted => accepted,
+                              () =>
+                                new StorageError({
+                                  message: 'The recovered scan queue is unavailable.',
+                                }),
+                            ),
+                            Effect.asVoid,
+                          ),
+                      }),
+                    ),
+                  ),
+            ),
+          ).pipe(Effect.ignore)
+        : Effect.void;
+
+    if (store.storage === 'postgres') {
+      yield* recoverOne;
+      yield* Effect.forever(
+        Effect.sleep(scanRecoveryPollMs).pipe(Effect.andThen(recoverOne)),
+      ).pipe(Effect.forkScoped({ startImmediately: true }));
+    }
+
+    yield* Effect.addFinalizer(() =>
+      store.storage === 'memory'
+        ? Ref.getAndSet(admissions, { nextId: 1, entries: new Map() }).pipe(
+            Effect.flatMap(current =>
+              Effect.forEach(
+                current.entries.values(),
+                entry =>
+                  entry.scan === undefined
+                    ? Effect.void
+                    : store
+                        .failScanIfActive(entry.scan.id, {
+                          stage: 'Scan stopped before completion',
+                          error: 'The scan worker stopped before completion. Submit a new scan.',
+                        })
+                        .pipe(Effect.ignore),
+                { concurrency: 'unbounded', discard: true },
+              ),
+            ),
+          )
+        : Effect.void,
+    );
+
+    const worker = Effect.forever(
+      Queue.take(queue).pipe(
+        Effect.flatMap(queued => {
+          const claimed = queued.claim === undefined
+            ? nextScanLeaseExpiry.pipe(
+                Effect.flatMap(expiresAt => store.claimScan(queued.scan.id, expiresAt)),
+              )
+            : Effect.succeed(Option.some(queued.claim));
+          return claimed.pipe(
+            Effect.flatMap(
+              Option.match({
+                onNone: () => Effect.void,
+                onSome: processClaim,
+              }),
+            ),
+            Effect.ensuring(finishAdmission(queued.admissionId)),
+          );
+        }),
       ),
     );
-    yield* Effect.forever(
-      Queue.take(queue).pipe(
-        Effect.flatMap(({ admissionId, scan }) =>
-          performScan(scan).pipe(
-            Effect.scoped,
-            Effect.catchCause(cause =>
-              store
-                .failScanIfActive(scan.id, {
-                  stage: 'Scan failed safely',
-                  error: boundedDiagnostic(Cause.pretty(cause), 800),
-                })
-                .pipe(Effect.ignore),
-            ),
-            Effect.ensuring(finishAdmission(admissionId)),
-          ),
-        ),
-      ),
-    ).pipe(Effect.forkScoped);
+    yield* worker.pipe(Effect.forkScoped({ startImmediately: true }));
+
     return ScanCoordinator.of({
       reserve: (owner, repository) => {
         const key = repositoryKey(owner, repository);
-        return Ref.modify(admissions, (current): readonly [ReservationResult, AdmissionState] => {
+        return Ref.modify(
+          admissions,
+          (current): readonly [ReservationResult, AdmissionState] => {
           if (current.entries.size >= maximumActiveScans) {
             return [
               {
@@ -351,7 +418,7 @@ export const ScanCoordinatorLive = Layer.effect(
                 }),
               },
               current,
-            ];
+            ] satisfies readonly [ReservationResult, AdmissionState];
           }
           if (
             [...current.entries.values()].some(
@@ -366,7 +433,7 @@ export const ScanCoordinatorLive = Layer.effect(
                 }),
               },
               current,
-            ];
+            ] satisfies readonly [ReservationResult, AdmissionState];
           }
           const admissionId = current.nextId;
           const entries = new Map(current.entries).set(admissionId, {
@@ -375,8 +442,9 @@ export const ScanCoordinatorLive = Layer.effect(
           return [
             { _tag: 'Accepted', admissionId },
             { nextId: admissionId + 1, entries },
-          ];
-        }).pipe(
+          ] satisfies readonly [ReservationResult, AdmissionState];
+          },
+        ).pipe(
           Effect.flatMap(result =>
             result._tag === 'Rejected'
               ? Effect.fail(result.error)
@@ -389,45 +457,48 @@ export const ScanCoordinatorLive = Layer.effect(
                   Ref.modify(
                     admissions,
                     (current): readonly [EnqueueResult, AdmissionState] => {
-                      const entry = current.entries.get(admissionId);
-                      if (entry === undefined) {
-                        return [
-                          {
-                            _tag: 'Rejected',
-                            error: new ScanAdmissionInvalid({
-                              message: 'This scan admission is no longer active.',
-                            }),
-                          },
-                          current,
-                        ];
-                      }
-                      if (entry.scan !== undefined) {
-                        return [
-                          {
-                            _tag: 'Rejected',
-                            error: new ScanAdmissionInvalid({
-                              message: 'This scan admission has already been used.',
-                            }),
-                          },
-                          current,
-                        ];
-                      }
-                      if (repositoryKey(scan.owner, scan.repository) !== key) {
-                        return [
-                          {
-                            _tag: 'Rejected',
-                            error: new ScanAdmissionInvalid({
-                              message: 'The persisted scan does not match its admission.',
-                            }),
-                          },
-                          current,
-                        ];
-                      }
-                      const entries = new Map(current.entries).set(admissionId, {
-                        ...entry,
-                        scan,
-                      });
-                      return [{ _tag: 'Accepted' }, { ...current, entries }];
+                    const entry = current.entries.get(admissionId);
+                    if (entry === undefined) {
+                      return [
+                        {
+                          _tag: 'Rejected',
+                          error: new ScanAdmissionInvalid({
+                            message: 'This scan admission is no longer active.',
+                          }),
+                        },
+                        current,
+                      ] satisfies readonly [EnqueueResult, AdmissionState];
+                    }
+                    if (entry.scan !== undefined) {
+                      return [
+                        {
+                          _tag: 'Rejected',
+                          error: new ScanAdmissionInvalid({
+                            message: 'This scan admission has already been used.',
+                          }),
+                        },
+                        current,
+                      ] satisfies readonly [EnqueueResult, AdmissionState];
+                    }
+                    if (repositoryKey(scan.owner, scan.repository) !== key) {
+                      return [
+                        {
+                          _tag: 'Rejected',
+                          error: new ScanAdmissionInvalid({
+                            message: 'The persisted scan does not match its admission.',
+                          }),
+                        },
+                        current,
+                      ] satisfies readonly [EnqueueResult, AdmissionState];
+                    }
+                    const entries = new Map(current.entries).set(admissionId, {
+                      ...entry,
+                      scan,
+                    });
+                    return [
+                      { _tag: 'Accepted' },
+                      { ...current, entries },
+                    ] satisfies readonly [EnqueueResult, AdmissionState];
                     },
                   ).pipe(
                     Effect.flatMap(result =>

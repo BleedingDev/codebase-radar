@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "codebase-radar.osv-dataset-provenance/v1",
+  "artifact": {
+    "kind": "vulnerability-advisory-dataset",
+    "execution": "non-executable",
+    "ecosystem": "npm",
+    "installedPath": "databases/osv/osv-scalibr/npm/all.zip",
+    "sourceUrl": "https://storage.googleapis.com/osv-vulnerabilities/npm/all.zip?generation=1786418349414076",
+    "generation": "1786418349414076",
+    "sha256": "38cb4b8116671e4b0d4c12f2309f180d78c886d1593aef2cb04ff42055fd8e69",
+    "byteLength": 218758368,
+    "publishedAt": "2026-08-11T03:19:09Z",
+    "maximumAgeSeconds": 604800
+  },
+  "publisher": {
+    "name": "Open Source Vulnerabilities (OSV)",
+    "projectUrl": "https://osv.dev/",
+    "offlineDatabaseDocumentation": "https://google.github.io/osv-scanner/usage/offline-mode/",
+    "dataSourcesAndLicenses": "https://google.github.io/osv.dev/data/"
+  },
+  "integrityEvidence": {
+    "zipEntries": 226504,
+    "compressedByteLength": 185053654,
+    "uncompressedByteLength": 371036838,
+    "signedDataDescriptorEntries": 226504,
+    "dataDescriptorByteLength": 3624064,
+    "centralDirectoryOffset": 201905962,
+    "centralDirectoryByteLength": 16852308,
+    "structuralSha256": "2a16f1f093c7c48fabaa9beef512a2aa4a2786f0e08518ee8c5454b6f582eb05",
+    "maximumEntryByteLength": 73089,
+    "maximumEntryNameUtf8Bytes": 24,
+    "duplicateEntryNames": 0,
+    "unsafeEntryNames": 0,
+    "compressionMethods": [
+      "deflate"
+    ]
+  },
+  "licensing": {
+    "aggregateLicenseConclusion": "NOASSERTION",
+    "treatment": "mixed-upstream-licenses",
+    "scannerCodeLicense": {
+      "spdxExpression": "Apache-2.0",
+      "appliesToDataset": false
+    },
+    "recordPolicy": {
+      "preserveRecordsUnmodified": true,
+      "relicenseAggregate": false,
+      "retainUpstreamAttributionAndTerms": true
+    },
+    "catalogExamples": [
+      {
+        "source": "GitHub Advisory Database",
+        "spdxExpression": "CC-BY-4.0"
+      },
+      {
+        "source": "OpenSSF Malicious Packages",
+        "spdxExpression": "Apache-2.0"
+      }
+    ],
+    "catalogExamplesAreExhaustive": false,
+    "catalogExamplesProveSnapshotMembership": false,
+    "redistributionApproval": "required-before-public-release",
+    "releaseCaveat": "Attribution and preservation do not by themselves establish redistribution permission. Independent legal review and approval remains required before public redistribution of the aggregate snapshot."
+  }
+}

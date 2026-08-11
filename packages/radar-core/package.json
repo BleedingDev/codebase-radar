@@ -1,0 +1,35 @@
+{
+  "name": "@codebase-radar/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@codebase-radar/analyzer-runtime": "workspace:*",
+    "@codebase-radar/contracts": "workspace:*",
+    "effect": "4.0.0-beta.102"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
+  }
+}

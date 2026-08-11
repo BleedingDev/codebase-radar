@@ -3,13 +3,86 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "files": ["calldiff-analyzer.mjs", "config", "THIRD_PARTY_NOTICES.md"],
+  "exports": {
+    "./runtime-manifest": "./runtime-manifest.mjs",
+    "./runtime-verifier": {
+      "types": "./runtime-verifier.d.ts",
+      "import": "./runtime-verifier.mjs",
+      "default": "./runtime-verifier.mjs"
+    },
+    "./runtime-sealed-generation": {
+      "types": "./runtime-sealed-generation.d.ts",
+      "import": "./runtime-sealed-generation.mjs",
+      "default": "./runtime-sealed-generation.mjs"
+    },
+    "./osv-npm-snapshot-validator": {
+      "import": "./osv-npm-snapshot-validator.mjs",
+      "default": "./osv-npm-snapshot-validator.mjs"
+    },
+    "./resource-governance": {
+      "types": "./resource-governance.d.ts",
+      "import": "./resource-governance.mjs",
+      "default": "./resource-governance.mjs"
+    },
+    "./trust-anchor": {
+      "types": "./trust-anchor.d.ts",
+      "import": "./trust-anchor.mjs",
+      "default": "./trust-anchor.mjs"
+    }
+  },
+  "files": [
+    "bin",
+    "calldiff-analyzer.mjs",
+    "build-resource-governance-launcher.mjs",
+    "build-runtime-manifest.mjs",
+    "build-runtime-memfd-addon.mjs",
+    "config",
+    "licenses",
+    "osv-npm-snapshot-validator.mjs",
+    "pnpm-integrity-evidence.json",
+    "runtime-manifest.json",
+    "runtime-manifest.mjs",
+    "runtime-control-root.mjs",
+    "runtime-descriptor-proofs.mjs",
+    "runtime-memfd-addon.c",
+    "runtime-memfd-addon.node",
+    "runtime-sealed-generation.d.ts",
+    "runtime-sealed-generation.mjs",
+    "runtime-snapshot-codec.mjs",
+    "runtime-snapshot-loader.mjs",
+    "resource-governance.d.ts",
+    "resource-governance-launcher.mjs",
+    "control",
+    "resource-governance.mjs",
+    "runtime-verifier.d.ts",
+    "runtime-verifier.mjs",
+    "smoke",
+    "THIRD_PARTY_NOTICES.md",
+    "trust-anchor.d.ts",
+    "trust-anchor.mjs"
+  ],
+  "scripts": {
+    "build:runtime-memfd-addon": "node build-runtime-memfd-addon.mjs --write",
+    "check:runtime-memfd-addon": "node build-runtime-memfd-addon.mjs --check",
+    "build:resource-governance-launcher": "node build-resource-governance-launcher.mjs --write",
+    "check:resource-governance-launcher": "node build-resource-governance-launcher.mjs --check",
+    "build:runtime-manifest": "node build-runtime-manifest.mjs --write",
+    "check:runtime-manifest": "node build-runtime-manifest.mjs --check",
+    "build:semantic-runner": "node build-semantic-runner.mjs --write",
+    "check:semantic-runner": "node build-semantic-runner.mjs --check",
+    "test": "node build-semantic-runner.mjs --check && node build-runtime-memfd-addon.mjs --write && node build-resource-governance-launcher.mjs --check && node --test *.test.mjs",
+    "verify:runtime-tools": "/usr/bin/env -i HOME=/nonexistent LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/bin:/bin RADAR_RUNTIME_VERIFY_BOOTSTRAPPED=1 /bin/bash --noprofile --norc \"$PWD/../../scripts/verify-runtime-tools.sh\""
+  },
   "dependencies": {
     "@tsconfig/strictest": "2.0.8",
     "calldiff": "0.4.1",
     "jscpd": "5.0.14",
     "oxlint": "1.77.0",
+    "tree-sitter-javascript": "0.23.1",
     "typescript": "7.0.2",
     "ultracite": "7.10.2"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.1"
   }
 }

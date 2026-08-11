@@ -6,15 +6,18 @@
   "scripts": {
     "build": "modern build",
     "check": "node ../../scripts/check-source-rules.mjs && tsc --noEmit",
-    "deploy": "modern deploy",
+    "deploy": "modern deploy && node scripts/production-output-smoke.mjs --static",
     "dev": "modern dev",
+    "smoke:production-output": "node scripts/production-output-smoke.mjs",
     "start": "modern start",
-    "test": "vitest run shared/contracts.test.ts server/analysis-policy.test.ts server/calldiff.test.ts server/effect-machine.test.ts server/prioritize.test.ts server/agent-priority.test.ts server/agent-runtime.test.ts server/agent-store.test.ts server/store.test.ts"
+    "test": "vitest run"
   },
   "engines": {
     "node": ">=24"
   },
   "dependencies": {
+    "@codebase-radar/contracts": "workspace:*",
+    "@codebase-radar/core": "workspace:*",
     "@effect/atom-react": "4.0.0-beta.102",
     "@effect/platform-node": "4.0.0-beta.102",
     "@effect/sql-pg": "4.0.0-beta.102",
@@ -35,6 +38,7 @@
     "@types/node": "24.10.1",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
+    "happy-dom": "20.11.2",
     "typescript": "7.0.2",
     "vitest": "4.1.10"
   }

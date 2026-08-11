@@ -1,0 +1,157 @@
+{
+  "runtimeManifest": {
+    "schemaVersion": "codebase-radar.analyzer-runtime/v1",
+    "manifestVersion": 1,
+    "analysisPolicy": "dogfood:max/v1",
+    "digest": "da777485716f9409b819e5d125d1836d0f2b92318428febf667a878e40780f3d"
+  },
+  "failures": [
+    {
+      "_tag": "AnalysisSourceRejected",
+      "message": "The requested source violates the GitHub-only admission policy."
+    },
+    {
+      "_tag": "AnalysisSourceUnavailable",
+      "message": "The requested revision could not be materialized."
+    },
+    {
+      "_tag": "AnalysisRuntimeUnavailable",
+      "message": "The required analyzer runtime is unavailable."
+    },
+    {
+      "_tag": "AnalysisIncomplete",
+      "violations": [
+        {
+          "code": "analyzer_timed_out",
+          "analyzer": "TraceDecay"
+        }
+      ],
+      "analyzerRuns": [
+        {
+          "_tag": "AttemptedAnalyzerRun",
+          "analyzer": "strictest-comparator",
+          "analyzerVersion": "@tsconfig/strictest 2.0.8",
+          "profileVersion": "dogfood:max/v1",
+          "status": "complete",
+          "durationMs": 21,
+          "coverage": {
+            "eligibleFiles": 42,
+            "analyzedFiles": 42,
+            "eligiblePathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+            "analyzedPathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+            "omittedCapabilities": [],
+            "warnings": []
+          },
+          "observationCount": 14
+        },
+        {
+          "_tag": "AttemptedAnalyzerRun",
+          "analyzer": "Oxlint + Ultracite",
+          "analyzerVersion": "1.77.0 + 7.10.2",
+          "profileVersion": "dogfood:max/v1",
+          "status": "complete",
+          "durationMs": 32,
+          "coverage": {
+            "eligibleFiles": 42,
+            "analyzedFiles": 42,
+            "eligiblePathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+            "analyzedPathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+            "omittedCapabilities": [],
+            "warnings": []
+          },
+          "observationCount": 18
+        },
+        {
+          "_tag": "AttemptedAnalyzerRun",
+          "analyzer": "JSCPD",
+          "analyzerVersion": "5.0.14",
+          "profileVersion": "dogfood:max/v1",
+          "status": "complete",
+          "durationMs": 19,
+          "coverage": {
+            "eligibleFiles": 42,
+            "analyzedFiles": 42,
+            "eligiblePathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+            "analyzedPathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+            "omittedCapabilities": [],
+            "warnings": []
+          },
+          "observationCount": 7
+        },
+        {
+          "_tag": "AttemptedAnalyzerRun",
+          "analyzer": "Calldiff",
+          "analyzerVersion": "0.4.1",
+          "profileVersion": "dogfood:max/v1",
+          "status": "complete",
+          "durationMs": 27,
+          "coverage": {
+            "eligibleFiles": 42,
+            "analyzedFiles": 42,
+            "eligiblePathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+            "analyzedPathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+            "omittedCapabilities": [],
+            "warnings": []
+          },
+          "observationCount": 5
+        },
+        {
+          "_tag": "AttemptedAnalyzerRun",
+          "analyzer": "zizmor",
+          "analyzerVersion": "1.29.0",
+          "profileVersion": "dogfood:max/v1",
+          "status": "complete",
+          "durationMs": 14,
+          "coverage": {
+            "eligibleFiles": 42,
+            "analyzedFiles": 42,
+            "eligiblePathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+            "analyzedPathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+            "omittedCapabilities": [],
+            "warnings": []
+          },
+          "observationCount": 3
+        },
+        {
+          "_tag": "AttemptedAnalyzerRun",
+          "analyzer": "OSV-Scanner",
+          "analyzerVersion": "2.5.0",
+          "profileVersion": "dogfood:max/v1",
+          "status": "complete",
+          "durationMs": 11,
+          "coverage": {
+            "eligibleFiles": 42,
+            "analyzedFiles": 42,
+            "eligiblePathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+            "analyzedPathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+            "omittedCapabilities": [],
+            "warnings": []
+          },
+          "observationCount": 2
+        },
+        {
+          "_tag": "AttemptedAnalyzerRun",
+          "analyzer": "TraceDecay",
+          "analyzerVersion": "0.0.73",
+          "profileVersion": "dogfood:max/v1",
+          "status": "timed_out",
+          "durationMs": 60000,
+          "coverage": {
+            "eligibleFiles": 42,
+            "analyzedFiles": 42,
+            "eligiblePathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+            "analyzedPathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+            "omittedCapabilities": [],
+            "warnings": []
+          },
+          "observationCount": 9,
+          "diagnostic": "Analyzer reached its execution deadline."
+        }
+      ]
+    },
+    {
+      "_tag": "AnalysisInterrupted",
+      "message": "The analysis was cancelled before publication."
+    }
+  ]
+}

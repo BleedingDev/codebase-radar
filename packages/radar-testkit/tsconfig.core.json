@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/clock.test.ts",
+    "src/clock.ts",
+    "src/coverage-digest.test.ts",
+    "src/exports.test.ts",
+    "src/ids.test.ts",
+    "src/ids.ts",
+    "src/index.ts",
+    "src/normalize.test.ts",
+    "src/normalize.ts",
+    "src/progress.test.ts",
+    "src/progress.ts",
+    "src/temp.test.ts",
+    "src/temp.ts",
+    "vitest.core.config.ts",
+    "vitest.config.ts"
+  ]
+}

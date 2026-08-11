@@ -1,0 +1,2447 @@
+{
+  "schemaVersion": "codebase-radar.analyzer-runtime/v1",
+  "manifestVersion": 1,
+  "profile": "dogfood:max/v1",
+  "managedBinaryDirectory": "bin",
+  "controlFiles": [
+    {
+      "path": "package.json",
+      "sha256": "b73bf5d97fc0b31ac3216a8128d539df9b0da081ba060e98186dc386ed4c77ac"
+    },
+    {
+      "path": "osv-npm-snapshot-validator.mjs",
+      "sha256": "fc62792819e356b0c1718b6182745ffac2c66142005222f7c2d406cb446306c6"
+    },
+    {
+      "path": "licenses/osv-database/PROVENANCE.json",
+      "sha256": "8ef7b63835c459736655718190aa89e815d98a9f574554817ad713d7522c8f9a"
+    },
+    {
+      "path": "smoke/calldiff/javascript.js",
+      "sha256": "fd496ead072549626a6a9421d70896a229928dc527d6b27772faf0437dfe6d5b"
+    },
+    {
+      "path": "smoke/calldiff/typescript.ts",
+      "sha256": "e47b2dbf1c710978568377e13ebb0c13ebb6ec5630a22c75478f58bc8d3a2750"
+    },
+    {
+      "path": "smoke/calldiff/typescript.tsx",
+      "sha256": "b9a3a47728edb8d23fa19d641508517622237c992c81777a0697f913853651a3"
+    },
+    {
+      "path": "smoke/osv/osv-scanner.toml",
+      "sha256": "912c6c8d36a89752f241c99df88034e9d366d8ee22289dffb142ad86bc668e82"
+    },
+    {
+      "path": "smoke/osv/vulnerable/package-lock.json",
+      "sha256": "5a4d4c9090c069704f3db17bbb2ec801a54a65a02912d8ead7338e1c239521f2"
+    },
+    {
+      "path": "smoke/osv/clean/package-lock.json",
+      "sha256": "d19334aaa563fb5a395591b285cbe02bfe6dd2ef8c9d84dfdba5592992f4c937"
+    }
+  ],
+  "semanticRunner": {
+    "path": "bin/radar-semantic-analyzer.mjs",
+    "sha256": "483a580f586da6e206f95207b7e64231bd0668bea1a8a71aa0576f470034ec1f",
+    "bundledPackages": [
+      {
+        "name": "@effect/platform-node",
+        "version": "4.0.0-beta.102",
+        "sourceIntegrity": "sha512-wYVAU9jAePT+gouMr/EVz1CaW6yDLjPAgXYeEFLz7wugT5iZhFRag6mqajV/wwN3bzWP2fzZHokLuPmqD/rqeA==",
+        "license": "MIT",
+        "licenseFile": {
+          "path": "licenses/semantic-runner-effect/LICENSE",
+          "sha256": "774c3bc5924ad8ae6c5a75f1c53db13feb238ade15989625c513d07b60dedf30"
+        }
+      },
+      {
+        "name": "@effect/platform-node-shared",
+        "version": "4.0.0-beta.102",
+        "sourceIntegrity": "sha512-gVd793I72MrkX4dXo7eYtRKfNj0RW4eMRfVEKEJI16h2+mBDCzQ+gqMrog2hSTHQnaIbvbYShNQ4TVGuRCYZeQ==",
+        "license": "MIT",
+        "licenseFile": {
+          "path": "licenses/semantic-runner-effect/LICENSE",
+          "sha256": "774c3bc5924ad8ae6c5a75f1c53db13feb238ade15989625c513d07b60dedf30"
+        }
+      },
+      {
+        "name": "effect",
+        "version": "4.0.0-beta.102",
+        "sourceIntegrity": "sha512-z8Y+Q76Hh/kjLFZrXu8tGn6e+tDsg45R+UHhxd190pXxD53OGwf/G/zDxXTkse4HJ5mobNZfitLfUCp4fMvu6w==",
+        "license": "MIT",
+        "licenseFile": {
+          "path": "licenses/semantic-runner-effect/LICENSE",
+          "sha256": "774c3bc5924ad8ae6c5a75f1c53db13feb238ade15989625c513d07b60dedf30"
+        }
+      },
+      {
+        "name": "fast-check",
+        "version": "4.9.0",
+        "sourceIntegrity": "sha512-7ms6T7SybUev/PQITciI0yLM2pOSFy5zpG8Ty7tQofcVaQUvrMXp6CBwqF6fThLCLOrfBtuHAtwq6Yu4XPCllg==",
+        "license": "MIT",
+        "licenseFile": {
+          "path": "licenses/semantic-runner-fast-check/LICENSE",
+          "sha256": "b2bd24f5c975f659433271170b17e0a769b12ef8065bbca6dcd5511d57e94ce0"
+        }
+      },
+      {
+        "name": "pure-rand",
+        "version": "8.4.2",
+        "sourceIntegrity": "sha512-vvuOGgcuPJAirlHvuQw1TrOiw7ptaIXXmIbNuiNOY6lNGJJH49PQ1Kj4nd783nPdQhQdicgOjVI2yI/9BD6/Ng==",
+        "license": "MIT",
+        "licenseFile": {
+          "path": "licenses/semantic-runner-pure-rand/LICENSE",
+          "sha256": "e9d6a94ab01c6c9ab68c099d3ba8dd9f8aca60f2e2250c2302275405fca9e806"
+        }
+      },
+      {
+        "name": "strip-json-comments",
+        "version": "5.0.3",
+        "sourceIntegrity": "sha512-1tB5mhVo7U+ETBKNf92xT4hrQa3pm0MZ0PQvuDnWgAAGHDsfp4lPSpiS6psrSiet87wyGPh9ft6wmhOMQ0hDiw==",
+        "license": "MIT",
+        "licenseFile": {
+          "path": "licenses/semantic-runner-strip-json-comments/LICENSE",
+          "sha256": "5c932d88256b4ab958f64a856fa48e8bd1f55bc1d96b8149c65689e0c61789d3"
+        }
+      }
+    ]
+  },
+  "hostIsolation": {
+    "kind": "bubblewrap",
+    "path": "/usr/bin/bwrap",
+    "required": true,
+    "packageVersion": "0.9.0-1ubuntu0.1",
+    "versionOutput": "bubblewrap 0.9.0"
+  },
+  "pnpmIntegrityEvidence": {
+    "path": "pnpm-integrity-evidence.json",
+    "sha256": "507819d62e3e8fca6264f01912c33f81a90114bb800d5baba91b99c0645dda01"
+  },
+  "analyzers": [
+    {
+      "id": "strictest-comparator",
+      "analyzer": "strictest-comparator",
+      "version": "@tsconfig/strictest 2.0.8",
+      "profileVersions": [
+        "radar.tsconfig-gap/v1"
+      ],
+      "licenseNotice": {
+        "path": "THIRD_PARTY_NOTICES.md",
+        "sha256": "acde0f667b23a5f015165bb45ead0ebc1ba86c124b2f60677a55fbbe01b1fd0b",
+        "license": "MIT"
+      },
+      "legalFiles": [
+        {
+          "kind": "license",
+          "path": "licenses/strictest/LICENSE",
+          "sha256": "646f8936b8ddcd14e13e578ff6857e368780b0d1a4f6066bee89211923a373e2"
+        }
+      ],
+      "packages": [
+        {
+          "source": "npm",
+          "name": "@tsconfig/strictest",
+          "version": "2.0.8",
+          "packageJson": "node_modules/.pnpm/@tsconfig+strictest@2.0.8/node_modules/@tsconfig/strictest/package.json",
+          "sourceIntegrity": "sha512-XnQ7vNz5HRN0r88GYf1J9JJjqtZPiHt2woGJOo2dYqyHGGcd6OLGqSlBB6p1j9mpzja6Oe5BoPqWmeDx6X9rLw==",
+          "treeSha256": "25c8eee6ab5f8f600dd6c03d53f3871e9f1c4be954fc2edcaf261d6260ab43dd",
+          "resolutionPaths": [
+            "node_modules/.pnpm/@tsconfig+strictest@2.0.8/node_modules/@tsconfig/strictest/tsconfig.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "typescript",
+          "version": "7.0.2",
+          "packageJson": "node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/package.json",
+          "sourceIntegrity": "sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA==",
+          "treeSha256": "98d2a94e37b33c0c01e1799f3b4c0bd104a5d8d63aeaf4a0d9fcceb69504e598",
+          "resolutionPaths": [
+            "node_modules/typescript/lib/tsc.js"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "@typescript/typescript-linux-x64",
+          "version": "7.0.2",
+          "packageJson": "node_modules/.pnpm/@typescript+typescript-linux-x64@7.0.2/node_modules/@typescript/typescript-linux-x64/package.json",
+          "sourceIntegrity": "sha512-EYdf2cNg7rgCWJnxCdJ+F3V39O8ihb37eHAu1LK8oAFizgTQbPOK7zHHXbPt8rX24COqODXeI3sIf0fCXG7H/A==",
+          "treeSha256": "d784145344cbaaf6000f65ac01bbea970878a68fe4527149c51fdf356eacb2a4",
+          "resolutionPaths": [
+            "node_modules/.pnpm/@typescript+typescript-linux-x64@7.0.2/node_modules/@typescript/typescript-linux-x64/package.json"
+          ]
+        }
+      ],
+      "platforms": [
+        {
+          "os": "linux",
+          "architecture": "x64",
+          "libc": "glibc",
+          "entrypoint": "node_modules/@tsconfig/strictest/tsconfig.json",
+          "versionCommand": null,
+          "smoke": null,
+          "checksums": [
+            {
+              "path": "node_modules/@tsconfig/strictest/tsconfig.json",
+              "sha256": "47fdc98413c9546327cb3406a7781dcd2725d1592f80a64aa34ee03d59358c38"
+            }
+          ],
+          "nativeExecutables": [],
+          "launchers": [],
+          "download": null
+        }
+      ]
+    },
+    {
+      "id": "oxlint-ultracite",
+      "analyzer": "Oxlint + Ultracite",
+      "version": "1.77.0 + 7.10.2",
+      "profileVersions": [
+        "radar/oxlint-core.mjs",
+        "radar/oxlint-react.mjs",
+        "radar/oxlint-vue.mjs",
+        "radar/oxlint-react-vue.mjs"
+      ],
+      "licenseNotice": {
+        "path": "THIRD_PARTY_NOTICES.md",
+        "sha256": "acde0f667b23a5f015165bb45ead0ebc1ba86c124b2f60677a55fbbe01b1fd0b",
+        "license": "MIT"
+      },
+      "legalFiles": [
+        {
+          "kind": "license",
+          "path": "licenses/oxlint/LICENSE",
+          "sha256": "95ced5ecf1133fbf41d409b5555c86c344f83f3b019926057ddbc07cfdcc27b3"
+        },
+        {
+          "kind": "license",
+          "path": "licenses/ultracite/LICENSE",
+          "sha256": "1489f7f3f3a315714a5499c0edd932102db31228dfc17eebf4c89a620988a813"
+        }
+      ],
+      "packages": [
+        {
+          "source": "npm",
+          "name": "@clack/core",
+          "version": "1.4.3",
+          "packageJson": "node_modules/.pnpm/@clack+core@1.4.3/node_modules/@clack/core/package.json",
+          "sourceIntegrity": "sha512-/kr3UWNtdJfxZtPgDqUOmG2pvwlmcLGheex5yiZKdwbzZJxhV+HMNR9QNmyY5cGwTNV6LrR7Jtp+KjhUAP1qBQ==",
+          "treeSha256": "3aeb07a0dffac5c81bfdc4ab2a27232487cd588164ccf28fd26945c46c6cfbbc",
+          "resolutionPaths": [
+            "node_modules/.pnpm/@clack+core@1.4.3/node_modules/@clack/core/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "@clack/prompts",
+          "version": "1.7.0",
+          "packageJson": "node_modules/.pnpm/@clack+prompts@1.7.0/node_modules/@clack/prompts/package.json",
+          "sourceIntegrity": "sha512-y7/yvZ2TPAnR9+jnc00klvNNLkJiXFFrQA/hlLCcxA9a2A4zQIOimyFQ9XfwYKiGD1fb5GY8vbKIIgO8d5Tb2A==",
+          "treeSha256": "a500d9d39b89def1178333955ed424ccb84c3540b06759f782265e05086203b6",
+          "resolutionPaths": [
+            "node_modules/.pnpm/@clack+prompts@1.7.0/node_modules/@clack/prompts/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "@oxlint/binding-linux-x64-gnu",
+          "version": "1.77.0",
+          "packageJson": "node_modules/.pnpm/@oxlint+binding-linux-x64-gnu@1.77.0/node_modules/@oxlint/binding-linux-x64-gnu/package.json",
+          "sourceIntegrity": "sha512-1Oh2ssH2L7lwyvkdSqaMUfsGfwU2Wfvew+obBUYjRVqhpBcUpwnsPSEr1IzVi9XqkuY10geiLsNKecqaZC34Dw==",
+          "treeSha256": "2b1e647f191e01f3c2c1c9f0f885b58d4828c48bf0bd26f18d5b3967dbc87ce1",
+          "resolutionPaths": [
+            "node_modules/.pnpm/@oxlint+binding-linux-x64-gnu@1.77.0/node_modules/@oxlint/binding-linux-x64-gnu/oxlint.linux-x64-gnu.node"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "balanced-match",
+          "version": "4.0.4",
+          "packageJson": "node_modules/.pnpm/balanced-match@4.0.4/node_modules/balanced-match/package.json",
+          "sourceIntegrity": "sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA==",
+          "treeSha256": "2c14e0ae23504b40e6ce8e47bedd18d6dfb81099d5da80dee64aea8509dcd720",
+          "resolutionPaths": [
+            "node_modules/.pnpm/balanced-match@4.0.4/node_modules/balanced-match/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "brace-expansion",
+          "version": "5.0.9",
+          "packageJson": "node_modules/.pnpm/brace-expansion@5.0.9/node_modules/brace-expansion/package.json",
+          "sourceIntegrity": "sha512-ScQ4IuvIEF1TMlP7Zt+vjJ//9zlPb2SDcxWxM3bk8s6t6GGdJ7KO1dCcTidOPJKePW30LE/2cT7wCyPho9/Wxg==",
+          "treeSha256": "5ad61a5908f96ae0590540db9de828706719610b4e71eac917027ee5e9a772ef",
+          "resolutionPaths": [
+            "node_modules/.pnpm/brace-expansion@5.0.9/node_modules/brace-expansion/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "citty",
+          "version": "0.2.2",
+          "packageJson": "node_modules/.pnpm/citty@0.2.2/node_modules/citty/package.json",
+          "sourceIntegrity": "sha512-+6vJA3L98yv+IdfKGZHBNiGW5KHn22e/JwID0Strsz8h4S/csAu/OuICwxrg44k5MRiZHWIo8XXuJgQTriRP4w==",
+          "treeSha256": "d9d777f287dff356e4e80e9415a06991d9317c28d8c501b7f2b8d221178a585d",
+          "resolutionPaths": [
+            "node_modules/.pnpm/citty@0.2.2/node_modules/citty/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "commander",
+          "version": "10.0.1",
+          "packageJson": "node_modules/.pnpm/commander@10.0.1/node_modules/commander/package.json",
+          "sourceIntegrity": "sha512-y4Mg2tXshplEbSGzx7amzPwKKOCGuoSRP/CjEdwwk0FOGlUbq6lKuoyDZTNZkmxHdJtp54hdfY/JUrdL7Xfdug==",
+          "treeSha256": "ad0857b61bd8324f76987811758fc47170dabac98ec646bb47a4c682daa428af",
+          "resolutionPaths": [
+            "node_modules/.pnpm/commander@10.0.1/node_modules/commander/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "commander",
+          "version": "15.0.0",
+          "packageJson": "node_modules/.pnpm/commander@15.0.0/node_modules/commander/package.json",
+          "sourceIntegrity": "sha512-z67u4ZhzCL/Tydu1lJARtEZYWbWaN7oYLHbsuzocr6y4N6WZAagG3RQ4FW61V1/0+jImpj293XfrcYnd1qxtPg==",
+          "treeSha256": "8697fe13f61e214af4ac1b90a4f2301bbc5897e4b09a321d1dd4c04a0a19caee",
+          "resolutionPaths": [
+            "node_modules/.pnpm/commander@15.0.0/node_modules/commander/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "cross-spawn",
+          "version": "7.0.6",
+          "packageJson": "node_modules/.pnpm/cross-spawn@7.0.6/node_modules/cross-spawn/package.json",
+          "sourceIntegrity": "sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==",
+          "treeSha256": "e662cd27c44fe7f4b89df732a6d0c50eb4b33dd22073cefb5e2e48dbf6668af7",
+          "resolutionPaths": [
+            "node_modules/.pnpm/cross-spawn@7.0.6/node_modules/cross-spawn/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "deepmerge",
+          "version": "4.3.1",
+          "packageJson": "node_modules/.pnpm/deepmerge@4.3.1/node_modules/deepmerge/package.json",
+          "sourceIntegrity": "sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A==",
+          "treeSha256": "bf3a53fe94705e4e3882c3d85e3a726ea9c9801945c9fb22f2de85e609258b3b",
+          "resolutionPaths": [
+            "node_modules/.pnpm/deepmerge@4.3.1/node_modules/deepmerge/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "fast-string-truncated-width",
+          "version": "3.0.3",
+          "packageJson": "node_modules/.pnpm/fast-string-truncated-width@3.0.3/node_modules/fast-string-truncated-width/package.json",
+          "sourceIntegrity": "sha512-0jjjIEL6+0jag3l2XWWizO64/aZVtpiGE3t0Zgqxv0DPuxiMjvB3M24fCyhZUO4KomJQPj3LTSUnDP3GpdwC0g==",
+          "treeSha256": "00b647a20166879a1c6a7529204fbca593869574ec943bf25442f649f0c7c550",
+          "resolutionPaths": [
+            "node_modules/.pnpm/fast-string-truncated-width@3.0.3/node_modules/fast-string-truncated-width/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "fast-string-width",
+          "version": "3.0.2",
+          "packageJson": "node_modules/.pnpm/fast-string-width@3.0.2/node_modules/fast-string-width/package.json",
+          "sourceIntegrity": "sha512-gX8LrtNEI5hq8DVUfRQMbr5lpaS4nMIWV+7XEbXk2b8kiQIizgnlr12B4dA3ZEx3308ze0O4Q1R+cHts8kyUJg==",
+          "treeSha256": "e686cda32de86c160e18208e76056049cf17f15471dac5622ba08a7a9079d82d",
+          "resolutionPaths": [
+            "node_modules/.pnpm/fast-string-width@3.0.2/node_modules/fast-string-width/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "fast-wrap-ansi",
+          "version": "0.2.2",
+          "packageJson": "node_modules/.pnpm/fast-wrap-ansi@0.2.2/node_modules/fast-wrap-ansi/package.json",
+          "sourceIntegrity": "sha512-7F2Fl+TjRSenLqlU3UjSH0iyqopqoZIu7eZVpEirP2g1GtWa2G/ecEmBdgz31+Mxr+ELclgg6sokpSFIQiZ02Q==",
+          "treeSha256": "39fbaaae5954efb6db524a2c39e8156851874c5a2d791f42c1375f2e5a89a8d9",
+          "resolutionPaths": [
+            "node_modules/.pnpm/fast-wrap-ansi@0.2.2/node_modules/fast-wrap-ansi/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "glob",
+          "version": "13.0.6",
+          "packageJson": "node_modules/.pnpm/glob@13.0.6/node_modules/glob/package.json",
+          "sourceIntegrity": "sha512-Wjlyrolmm8uDpm/ogGyXZXb1Z+Ca2B8NbJwqBVg0axK9GbBeoS7yGV6vjXnYdGm6X53iehEuxxbyiKp8QmN4Vw==",
+          "treeSha256": "a5398c3dcd9df7e70c035c1a4498d9d0e33fc092721baa965e115819cfa9dcf0",
+          "resolutionPaths": [
+            "node_modules/.pnpm/glob@13.0.6/node_modules/glob/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "isexe",
+          "version": "2.0.0",
+          "packageJson": "node_modules/.pnpm/isexe@2.0.0/node_modules/isexe/package.json",
+          "sourceIntegrity": "sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==",
+          "treeSha256": "df688de648b0a2ef1292d98c9381978f0a9722ed13e823a297c8100343c21399",
+          "resolutionPaths": [
+            "node_modules/.pnpm/isexe@2.0.0/node_modules/isexe/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "jsonc-parser",
+          "version": "3.3.1",
+          "packageJson": "node_modules/.pnpm/jsonc-parser@3.3.1/node_modules/jsonc-parser/package.json",
+          "sourceIntegrity": "sha512-HUgH65KyejrUFPvHFPbqOY0rsFip3Bo5wb4ngvdi1EpCYWUQDC5V+Y7mZws+DLkr4M//zQJoanu1SP+87Dv1oQ==",
+          "treeSha256": "0de837d43ea3f207760fa1043448d2897195a1614de5323ab02e836577bb89a1",
+          "resolutionPaths": [
+            "node_modules/.pnpm/jsonc-parser@3.3.1/node_modules/jsonc-parser/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "lru-cache",
+          "version": "11.5.2",
+          "packageJson": "node_modules/.pnpm/lru-cache@11.5.2/node_modules/lru-cache/package.json",
+          "sourceIntegrity": "sha512-4pfM1Ff0x50o0tQwb5ucw/RzNyD0/YJME6IVcStalZuMWxdt3sR3huStTtxz4PUmvZfRguvDejasvQ2kifR11g==",
+          "treeSha256": "edc6520e5139df21ddefb1a945ebb8a8bec098e99c4de1eaabe29f68f092909e",
+          "resolutionPaths": [
+            "node_modules/.pnpm/lru-cache@11.5.2/node_modules/lru-cache/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "lru-cache",
+          "version": "5.1.1",
+          "packageJson": "node_modules/.pnpm/lru-cache@5.1.1/node_modules/lru-cache/package.json",
+          "sourceIntegrity": "sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==",
+          "treeSha256": "664532c05974650b036ab426b0420bdb920ed583418ca3df31e801cd039c7304",
+          "resolutionPaths": [
+            "node_modules/.pnpm/lru-cache@5.1.1/node_modules/lru-cache/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "minimatch",
+          "version": "10.2.6",
+          "packageJson": "node_modules/.pnpm/minimatch@10.2.6/node_modules/minimatch/package.json",
+          "sourceIntegrity": "sha512-vpLQEs+VLCr1nU0BXS07maYoFwlDAH0gngQuuttxIwutDFEMHq2blX+8vpgxDdK3J1PwjCJiep77OitTZ4Ll1A==",
+          "treeSha256": "6aecde4019d6efc9a4b72b08c2d2da5885d86ca08c02231184f45db7aac4d03d",
+          "resolutionPaths": [
+            "node_modules/.pnpm/minimatch@10.2.6/node_modules/minimatch/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "minipass",
+          "version": "7.1.3",
+          "packageJson": "node_modules/.pnpm/minipass@7.1.3/node_modules/minipass/package.json",
+          "sourceIntegrity": "sha512-tEBHqDnIoM/1rXME1zgka9g6Q2lcoCkxHLuc7ODJ5BxbP5d4c2Z5cGgtXAku59200Cx7diuHTOYfSBD8n6mm8A==",
+          "treeSha256": "91002f1ddd6bbf9f8a6cacb5981943c2ea4cc7ae266b29a93f07aba69bd05e00",
+          "resolutionPaths": [
+            "node_modules/.pnpm/minipass@7.1.3/node_modules/minipass/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "nypm",
+          "version": "0.6.9",
+          "packageJson": "node_modules/.pnpm/nypm@0.6.9/node_modules/nypm/package.json",
+          "sourceIntegrity": "sha512-zxlE2yvSWZWmHcNdT3+5zV2lrCogeE9YOklHrR3dFjqutq5wO7GFDYLFDRXLsYnJzwvy/im9fYoxePvS0VTW0w==",
+          "treeSha256": "fc1080115ed9e1ea454ab7e9e61987cc936f4a876af0617295f3059caad04827",
+          "resolutionPaths": [
+            "node_modules/.pnpm/nypm@0.6.9/node_modules/nypm/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "oxlint",
+          "version": "1.77.0",
+          "packageJson": "node_modules/.pnpm/oxlint@1.77.0/node_modules/oxlint/package.json",
+          "sourceIntegrity": "sha512-qnGh8XJHaQ0dprrDXNQZgS0FgjI6v+V3+X8DwmaV++5Aamy6jGKfDdQ1TUvhUxtmKFAbEf4/WeO5QZX+5WSngg==",
+          "treeSha256": "aab36212bba90bc1a710b0ea09443542720d7f1589ef562ff5dd4f987cbb0a42",
+          "resolutionPaths": [
+            "node_modules/.pnpm/oxlint@1.77.0/node_modules/oxlint/bin/oxlint",
+            "node_modules/.pnpm/oxlint@1.77.0/node_modules/oxlint/dist/cli.js",
+            "node_modules/.pnpm/oxlint@1.77.0/node_modules/oxlint/dist/bindings.js"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "path-key",
+          "version": "3.1.1",
+          "packageJson": "node_modules/.pnpm/path-key@3.1.1/node_modules/path-key/package.json",
+          "sourceIntegrity": "sha512-ojmeN0qd+y0jszEtoY48r0Peq5dwMEkIlCOu6Q5f41lfkswXuKtYrhgoTpLnyIcHm24Uhqx+5Tqm2InSwLhE6Q==",
+          "treeSha256": "99f781c8bbe7a0709c4ed3535c7211442fc05524f935f0e9c6c16487f60f2c6c",
+          "resolutionPaths": [
+            "node_modules/.pnpm/path-key@3.1.1/node_modules/path-key/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "path-scurry",
+          "version": "2.0.2",
+          "packageJson": "node_modules/.pnpm/path-scurry@2.0.2/node_modules/path-scurry/package.json",
+          "sourceIntegrity": "sha512-3O/iVVsJAPsOnpwWIeD+d6z/7PmqApyQePUtCndjatj/9I5LylHvt5qluFaBT3I5h3r1ejfR056c+FCv+NnNXg==",
+          "treeSha256": "13ab539763fee19d014a0f6c591a8e9061be807898ee5aec97711b8ee319919b",
+          "resolutionPaths": [
+            "node_modules/.pnpm/path-scurry@2.0.2/node_modules/path-scurry/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "pathe",
+          "version": "2.0.3",
+          "packageJson": "node_modules/.pnpm/pathe@2.0.3/node_modules/pathe/package.json",
+          "sourceIntegrity": "sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w==",
+          "treeSha256": "39a8ea56bb7a7e7932eda831af0ba8eeb81149131e2d5d4d83bf6b81ffe770f1",
+          "resolutionPaths": [
+            "node_modules/.pnpm/pathe@2.0.3/node_modules/pathe/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "shebang-command",
+          "version": "2.0.0",
+          "packageJson": "node_modules/.pnpm/shebang-command@2.0.0/node_modules/shebang-command/package.json",
+          "sourceIntegrity": "sha512-kHxr2zZpYtdmrN1qDjrrX/Z1rR1kG8Dx+gkpK1G4eXmvXswmcE1hTWBWYUzlraYw1/yZp6YuDY77YtvbN0dmDA==",
+          "treeSha256": "8ffec79a72982dedc48408f9921bd5c3fed909230ab226dbff6109f27430f5c7",
+          "resolutionPaths": [
+            "node_modules/.pnpm/shebang-command@2.0.0/node_modules/shebang-command/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "shebang-regex",
+          "version": "3.0.0",
+          "packageJson": "node_modules/.pnpm/shebang-regex@3.0.0/node_modules/shebang-regex/package.json",
+          "sourceIntegrity": "sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==",
+          "treeSha256": "d0e90f0294c6be84735b5b0421377f11fd0b1f8c28cfbea90387ead692e695e2",
+          "resolutionPaths": [
+            "node_modules/.pnpm/shebang-regex@3.0.0/node_modules/shebang-regex/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "sisteransi",
+          "version": "1.0.5",
+          "packageJson": "node_modules/.pnpm/sisteransi@1.0.5/node_modules/sisteransi/package.json",
+          "sourceIntegrity": "sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==",
+          "treeSha256": "e7f8130d40a429596fedef4e190aa439ab652572513398f6616fe9233a075363",
+          "resolutionPaths": [
+            "node_modules/.pnpm/sisteransi@1.0.5/node_modules/sisteransi/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "tinyexec",
+          "version": "1.3.0",
+          "packageJson": "node_modules/.pnpm/tinyexec@1.3.0/node_modules/tinyexec/package.json",
+          "sourceIntegrity": "sha512-QKAl9m8gWWGHV8jZcPeym6j+XULi6tOf1mT83WYJ4Lk2ytW/uwAWkrP0uFsdoYMdueVJ0qs26wZ+23xeB4ibNQ==",
+          "treeSha256": "825ab9baee496b0486db2ce7b1a2409cd3e143a9b5103eeb8ef1a6def589e873",
+          "resolutionPaths": [
+            "node_modules/.pnpm/tinyexec@1.3.0/node_modules/tinyexec/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "ultracite",
+          "version": "7.10.2",
+          "packageJson": "node_modules/.pnpm/ultracite@7.10.2_oxlint@1.77.0/node_modules/ultracite/package.json",
+          "sourceIntegrity": "sha512-WP1Hu/BKy/BDgntaiU33uq2Y8hKL2gEO5li2wfg7XFvmlyIkGDEy8qbWg7GHsxTEjEpWOAKpyFSF8aqc3JNEGQ==",
+          "treeSha256": "339b03004f818927a05b7f1e9a7532476654ccef46f8a7f9ba1e258a4fe26545",
+          "resolutionPaths": [
+            "node_modules/.pnpm/ultracite@7.10.2_oxlint@1.77.0/node_modules/ultracite/config/oxlint/core/index.mjs",
+            "node_modules/.pnpm/ultracite@7.10.2_oxlint@1.77.0/node_modules/ultracite/config/oxlint/react/index.mjs",
+            "node_modules/.pnpm/ultracite@7.10.2_oxlint@1.77.0/node_modules/ultracite/config/oxlint/vue/index.mjs"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "which",
+          "version": "2.0.2",
+          "packageJson": "node_modules/.pnpm/which@2.0.2/node_modules/which/package.json",
+          "sourceIntegrity": "sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==",
+          "treeSha256": "401ee5b1bb3081694d64dd72a6075112334b66182e886df9c5822f86ee76e9e0",
+          "resolutionPaths": [
+            "node_modules/.pnpm/which@2.0.2/node_modules/which/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "yallist",
+          "version": "3.1.1",
+          "packageJson": "node_modules/.pnpm/yallist@3.1.1/node_modules/yallist/package.json",
+          "sourceIntegrity": "sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g==",
+          "treeSha256": "e92ae4f5da991ebbeed5058cea20276151f4cfa58ffd3185a0857b2fa4415e17",
+          "resolutionPaths": [
+            "node_modules/.pnpm/yallist@3.1.1/node_modules/yallist/package.json"
+          ]
+        }
+      ],
+      "platforms": [
+        {
+          "os": "linux",
+          "architecture": "x64",
+          "libc": "glibc",
+          "entrypoint": "node_modules/oxlint/bin/oxlint",
+          "versionCommand": {
+            "runner": "node",
+            "path": "node_modules/oxlint/bin/oxlint",
+            "args": [
+              "--version"
+            ],
+            "expectedVersion": "1.77.0",
+            "expectedOutput": "oxlint 1.77.0",
+            "timeoutMs": 15000,
+            "maxOutputBytes": 16384,
+            "expectedStatus": 0,
+            "expectedSignal": null
+          },
+          "smoke": null,
+          "checksums": [
+            {
+              "path": "node_modules/oxlint/bin/oxlint",
+              "sha256": "ecab4e2f1bebaab1a3306620bee562ec16e8cb83dd5fb739b94a5aae3c9e34bd"
+            },
+            {
+              "path": "node_modules/oxlint/dist/cli.js",
+              "sha256": "d07f5e241742b952d436bac99ba2b22010ce56fcc6b47f22a70d3317d8d78400"
+            },
+            {
+              "path": "node_modules/oxlint/dist/bindings.js",
+              "sha256": "ed9e000a5e31e2ec3fb617b768bd297765ae87f42dc669ce8ba204fba323baf0"
+            },
+            {
+              "path": "node_modules/.pnpm/@oxlint+binding-linux-x64-gnu@1.77.0/node_modules/@oxlint/binding-linux-x64-gnu/oxlint.linux-x64-gnu.node",
+              "sha256": "186bd92a624e05e0a3db6678eba454eacd580cb36277c43ae5155fae669eb10d"
+            },
+            {
+              "path": "node_modules/ultracite/config/oxlint/core/index.mjs",
+              "sha256": "59a771b03cf7d015793ccdf41e74b649e72a0d472af6a7ce96affca1190ba57c"
+            },
+            {
+              "path": "node_modules/ultracite/config/oxlint/react/index.mjs",
+              "sha256": "51fefe52c3cc363f5d77c8f9830537423d7e6715f89b6c3667f7834dd6912635"
+            },
+            {
+              "path": "node_modules/ultracite/config/oxlint/vue/index.mjs",
+              "sha256": "5fac7471a3a131bb9d44ca56b6251de72d6580e471417c059dda87d35ad19ea9"
+            },
+            {
+              "path": "config/oxlint-core.mjs",
+              "sha256": "ed4e48a89fc369b7c1f4169355e0983b49ecbf7d740ca9568891f759e3a108f6"
+            },
+            {
+              "path": "config/oxlint-react.mjs",
+              "sha256": "d2886114ba5e07f340b104c9044919293f9b20dda744ad2df453fd0252f73b1f"
+            },
+            {
+              "path": "config/oxlint-vue.mjs",
+              "sha256": "64382b542e98ff2ac4599ada4700224618640ea5eb10788ae28c0058b84bec78"
+            },
+            {
+              "path": "config/oxlint-react-vue.mjs",
+              "sha256": "f1f385014b3871d4954d5a144f7da1682ee601b4dfa820014d4b6916f02b6b03"
+            }
+          ],
+          "nativeExecutables": [],
+          "launchers": [
+            {
+              "path": "node_modules/.bin/oxlint",
+              "target": "node_modules/oxlint/bin/oxlint"
+            }
+          ],
+          "download": null
+        }
+      ]
+    },
+    {
+      "id": "jscpd",
+      "analyzer": "JSCPD",
+      "version": "5.0.14",
+      "profileVersions": [
+        "radar-duplicates-max/v2"
+      ],
+      "licenseNotice": {
+        "path": "THIRD_PARTY_NOTICES.md",
+        "sha256": "acde0f667b23a5f015165bb45ead0ebc1ba86c124b2f60677a55fbbe01b1fd0b",
+        "license": "MIT"
+      },
+      "legalFiles": [
+        {
+          "kind": "license",
+          "path": "licenses/jscpd/LICENSE",
+          "sha256": "5e6e0182b05c6b9a1d2a120dc788717267b30e4aa1c52658912ce99418a33ce7"
+        }
+      ],
+      "packages": [
+        {
+          "source": "npm",
+          "name": "jscpd-linux-x64-gnu",
+          "version": "5.0.14",
+          "packageJson": "node_modules/.pnpm/jscpd-linux-x64-gnu@5.0.14/node_modules/jscpd-linux-x64-gnu/package.json",
+          "sourceIntegrity": "sha512-dFTbyyrm+Z9pcXIVzJQCw8QAgiNqIiO69sm4AfA7/wFdPoizoVzjhaXsYXcSV4bs0aoPiWbNazg0J0HgslT/5A==",
+          "treeSha256": "385012a1bc448d29e6c3023a061557c8d059de67732f0255f22be28510448477",
+          "resolutionPaths": [
+            "node_modules/.pnpm/jscpd-linux-x64-gnu@5.0.14/node_modules/jscpd-linux-x64-gnu/bin/jscpd"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "jscpd",
+          "version": "5.0.14",
+          "packageJson": "node_modules/.pnpm/jscpd@5.0.14/node_modules/jscpd/package.json",
+          "sourceIntegrity": "sha512-zge+FPZZAymt2Do5Z0+QHyIn4/XcUhrO/W7of9HcHZfx2AK8++dYhLA1uWtwXj47ml3Of8PbcUW4wUWvYMCc3w==",
+          "treeSha256": "c27811cc5d92bd4e2ce1cf2bcb3fcd2838ab8ffa7f2bb863eb445bc28ae22efe",
+          "resolutionPaths": [
+            "node_modules/.pnpm/jscpd@5.0.14/node_modules/jscpd/run-jscpd.js",
+            "node_modules/.pnpm/jscpd@5.0.14/node_modules/jscpd/platform-map.js"
+          ]
+        }
+      ],
+      "platforms": [
+        {
+          "os": "linux",
+          "architecture": "x64",
+          "libc": "glibc",
+          "entrypoint": "node_modules/jscpd/run-jscpd.js",
+          "versionCommand": {
+            "runner": "node",
+            "path": "node_modules/jscpd/run-jscpd.js",
+            "args": [
+              "--version"
+            ],
+            "expectedVersion": "5.0.14",
+            "expectedOutput": "jscpd 5.0.14",
+            "timeoutMs": 15000,
+            "maxOutputBytes": 16384,
+            "expectedStatus": 0,
+            "expectedSignal": null
+          },
+          "smoke": null,
+          "checksums": [
+            {
+              "path": "node_modules/jscpd/run-jscpd.js",
+              "sha256": "5e0067677b5c0e55506f59a74611b9fc85cccd19cc4fe98d4139e864d36799c4"
+            },
+            {
+              "path": "node_modules/jscpd/platform-map.js",
+              "sha256": "414ec9bf7cde3c145260beee2ccc58dae53ce9503cc1a6bfcb96e3d9dae5417c"
+            },
+            {
+              "path": "node_modules/.pnpm/jscpd-linux-x64-gnu@5.0.14/node_modules/jscpd-linux-x64-gnu/bin/jscpd",
+              "sha256": "68bcc626307e5fa567a57846eed9e32d02a9f52f55ed0fff13c9910af56f25d7"
+            },
+            {
+              "path": "config/jscpd.json",
+              "sha256": "6cf8396792e7e472170ee442cff34a0e830bf0ea8f23dbd8363bf98b9ae2d1ad"
+            }
+          ],
+          "nativeExecutables": [
+            "node_modules/.pnpm/jscpd-linux-x64-gnu@5.0.14/node_modules/jscpd-linux-x64-gnu/bin/jscpd"
+          ],
+          "launchers": [
+            {
+              "path": "node_modules/.bin/jscpd",
+              "target": "node_modules/jscpd/run-jscpd.js"
+            }
+          ],
+          "download": null
+        }
+      ]
+    },
+    {
+      "id": "calldiff",
+      "analyzer": "Calldiff",
+      "version": "0.4.1",
+      "profileVersions": [
+        "all-root-call-trees-max/v2"
+      ],
+      "licenseNotice": {
+        "path": "THIRD_PARTY_NOTICES.md",
+        "sha256": "acde0f667b23a5f015165bb45ead0ebc1ba86c124b2f60677a55fbbe01b1fd0b",
+        "license": "MIT"
+      },
+      "legalFiles": [
+        {
+          "kind": "license",
+          "path": "licenses/calldiff/LICENSE",
+          "sha256": "f28db1ec9f6974646572a0f3d08b3758b5cc31a13f7793bb90a75a5f934ae40f"
+        },
+        {
+          "kind": "license",
+          "path": "licenses/tree-sitter/LICENSE",
+          "sha256": "643777e2f45bf75541992f0a13de595ba41dc842d12c4879fba916cf06a4efe5"
+        },
+        {
+          "kind": "license",
+          "path": "licenses/tree-sitter-javascript/LICENSE",
+          "sha256": "2e0110e07abef7c2548b26ec9d6969775617ca539a0dc8dbeeb14d6452c711d1"
+        },
+        {
+          "kind": "license",
+          "path": "licenses/tree-sitter-typescript/LICENSE",
+          "sha256": "49bf33cf78ef5897e4e161ce1517df7de1ae5042a65b6bcfd44401e0fc606559"
+        }
+      ],
+      "packages": [
+        {
+          "source": "npm",
+          "name": "@cfworker/json-schema",
+          "version": "4.1.1",
+          "packageJson": "node_modules/.pnpm/@cfworker+json-schema@4.1.1/node_modules/@cfworker/json-schema/package.json",
+          "sourceIntegrity": "sha512-gAmrUZSGtKc3AiBL71iNWxDsyUC5uMaKKGdvzYsBoTW/xi42JQHl7eKV2OYzCUqvc+D2RCcf7EXY2iCyFIk6og==",
+          "treeSha256": "3ac862378cded97d0be65ce8049fb9f87ce9d9d0d6210800a83a1cfe703550be",
+          "resolutionPaths": [
+            "node_modules/.pnpm/@cfworker+json-schema@4.1.1/node_modules/@cfworker/json-schema/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "@modelcontextprotocol/server",
+          "version": "2.0.0-alpha.4",
+          "packageJson": "node_modules/.pnpm/@modelcontextprotocol+server@2.0.0-alpha.4/node_modules/@modelcontextprotocol/server/package.json",
+          "sourceIntegrity": "sha512-/KEo3ZJ50HlagHp0lz2vPgfBZFtXHu6zTBXT9XqPc+4O9i4+IbBVWKq/a9yAfv/ifp0u3+mRo8SUk5kMKzhN8A==",
+          "treeSha256": "a0ff59a08d28aec3e23c1a67b2615d4ffd71e653a2b79f35b4a20eb217903231",
+          "resolutionPaths": [
+            "node_modules/.pnpm/@modelcontextprotocol+server@2.0.0-alpha.4/node_modules/@modelcontextprotocol/server/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "@scalar/openapi-types",
+          "version": "0.8.0",
+          "packageJson": "node_modules/.pnpm/@scalar+openapi-types@0.8.0/node_modules/@scalar/openapi-types/package.json",
+          "sourceIntegrity": "sha512-WmaxVSfvY5K/TwcG2B2TU1WOe1As1uc2s7myswtP6dBlcjU3hM08SApxv/jmyGaCE8t4gO5BBhmHY4pDUfmr2g==",
+          "treeSha256": "3c1c5c0a961f7d44a9e1f51c439a13632f1aa9b3de29d8f73ad57789a75db073",
+          "resolutionPaths": [
+            "node_modules/.pnpm/@scalar+openapi-types@0.8.0/node_modules/@scalar/openapi-types/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "@toon-format/toon",
+          "version": "2.3.1",
+          "packageJson": "node_modules/.pnpm/@toon-format+toon@2.3.1/node_modules/@toon-format/toon/package.json",
+          "sourceIntegrity": "sha512-sWqEMeAJGMda9qRrfPKrX3C4c33CO9SJuvJzzrcBEn5sbDB+k6pSLkDsfN0rVnLQwR97MV3sDgVbcxQNsq8xVw==",
+          "treeSha256": "ab14306d186d4f92fd436362d27c2ed92f5ddf30917c514d5985ba028a1d0cb3",
+          "resolutionPaths": [
+            "node_modules/.pnpm/@toon-format+toon@2.3.1/node_modules/@toon-format/toon/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "calldiff",
+          "version": "0.4.1",
+          "packageJson": "node_modules/.pnpm/calldiff@0.4.1/node_modules/calldiff/package.json",
+          "sourceIntegrity": "sha512-Kh+psFVMYdiHNwGuQszni/oIn1Hr9BcQg6JaSdl5GtRhZ1/G/bLbzE9vCUxKM/9vAh7JOqTSYxd1okl+QJXrlg==",
+          "treeSha256": "d3c4caa3912c560a4ae48a9d639adae89fac39d96113990a36bb1a4546551df1",
+          "resolutionPaths": [
+            "node_modules/.pnpm/calldiff@0.4.1/node_modules/calldiff/dist/calltree.js",
+            "node_modules/.pnpm/calldiff@0.4.1/node_modules/calldiff/dist/extract.js",
+            "node_modules/.pnpm/calldiff@0.4.1/node_modules/calldiff/dist/languages/grammars.js"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "incur",
+          "version": "0.4.26",
+          "packageJson": "node_modules/.pnpm/incur@0.4.26/node_modules/incur/package.json",
+          "sourceIntegrity": "sha512-63lwOc8+o1VeFkIW3sWWMrDSP5Dd1NsvucUWyxLUk+DoNRiNl7cj481nlLdlboXkq+tqYPBSlV/7XbylS2S4BA==",
+          "treeSha256": "18656b14732c2480ec5a18c7b1e866864ad94a5e267186c7c39e7c9c68776e43",
+          "resolutionPaths": [
+            "node_modules/.pnpm/incur@0.4.26/node_modules/incur/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "node-addon-api",
+          "version": "8.9.1",
+          "packageJson": "node_modules/.pnpm/node-addon-api@8.9.1/node_modules/node-addon-api/package.json",
+          "sourceIntegrity": "sha512-4eUQWVPCUUUiBjLnHS3cXWeC6ryoPUc0U3rP7IuzapoGbzMqd/r6KKO0clr0b+snQhsrueFEhCZDdK+LK7hxKg==",
+          "treeSha256": "95c68fa139f05a480e0a057d0871ec68e31ad0e64394f5e3ea79bb2563b44cd1",
+          "resolutionPaths": [
+            "node_modules/.pnpm/node-addon-api@8.9.1/node_modules/node-addon-api/index.js"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "node-gyp-build",
+          "version": "4.8.4",
+          "packageJson": "node_modules/.pnpm/node-gyp-build@4.8.4/node_modules/node-gyp-build/package.json",
+          "sourceIntegrity": "sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ==",
+          "treeSha256": "1e50b493dc04e006b91b3f7687b18ce66ddbbb99753f233219f9d9233fa88965",
+          "resolutionPaths": [
+            "node_modules/.pnpm/node-gyp-build@4.8.4/node_modules/node-gyp-build/index.js"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "picocolors",
+          "version": "1.1.1",
+          "packageJson": "node_modules/.pnpm/picocolors@1.1.1/node_modules/picocolors/package.json",
+          "sourceIntegrity": "sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==",
+          "treeSha256": "1f49580c6c0ef4161bb6f64990b42fab3b472e7c50ecbbf0b4d738d352b4efe7",
+          "resolutionPaths": [
+            "node_modules/.pnpm/picocolors@1.1.1/node_modules/picocolors/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "tokenx",
+          "version": "1.6.0",
+          "packageJson": "node_modules/.pnpm/tokenx@1.6.0/node_modules/tokenx/package.json",
+          "sourceIntegrity": "sha512-CKTjk345ajvBAUp5xUI9a5KKN0zU0lBueVHQbCskH1Hp6WkUKsPW2qGCYNs0pxNyfzxfo+IIjdt2W4sMbw/qBw==",
+          "treeSha256": "c75c8f4736a2ac4736eab0db388078edcc74d3fc77efca6a124c268c1c645a96",
+          "resolutionPaths": [
+            "node_modules/.pnpm/tokenx@1.6.0/node_modules/tokenx/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "tree-sitter-javascript",
+          "version": "0.23.1",
+          "packageJson": "node_modules/.pnpm/tree-sitter-javascript@0.23.1_tree-sitter@0.25.1/node_modules/tree-sitter-javascript/package.json",
+          "sourceIntegrity": "sha512-/bnhbrTD9frUYHQTiYnPcxyHORIw157ERBa6dqzaKxvR/x3PC4Yzd+D1pZIMS6zNg2v3a8BZ0oK7jHqsQo9fWA==",
+          "treeSha256": "80ed7b291b5b1e8d05b5da02c047a1277920848224de012b3cc561453aa55bd1",
+          "resolutionPaths": [
+            "node_modules/.pnpm/tree-sitter-javascript@0.23.1_tree-sitter@0.25.1/node_modules/tree-sitter-javascript/bindings/node/index.js",
+            "node_modules/.pnpm/tree-sitter-javascript@0.23.1_tree-sitter@0.25.1/node_modules/tree-sitter-javascript/prebuilds/linux-x64/tree-sitter-javascript.node"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "tree-sitter-typescript",
+          "version": "0.23.2",
+          "packageJson": "node_modules/.pnpm/tree-sitter-typescript@0.23.2_tree-sitter@0.25.1/node_modules/tree-sitter-typescript/package.json",
+          "sourceIntegrity": "sha512-e04JUUKxTT53/x3Uq1zIL45DoYKVfHH4CZqwgZhPg5qYROl5nQjV+85ruFzFGZxu+QeFVbRTPDRnqL9UbU4VeA==",
+          "treeSha256": "6747883035f23e30be221da5875ae7adf3871f6fd2a869f90d000140374d9ec6",
+          "resolutionPaths": [
+            "node_modules/.pnpm/tree-sitter-typescript@0.23.2_tree-sitter@0.25.1/node_modules/tree-sitter-typescript/bindings/node/index.js",
+            "node_modules/.pnpm/tree-sitter-typescript@0.23.2_tree-sitter@0.25.1/node_modules/tree-sitter-typescript/prebuilds/linux-x64/tree-sitter-typescript.node"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "tree-sitter",
+          "version": "0.25.1",
+          "packageJson": "node_modules/.pnpm/tree-sitter@0.25.1/node_modules/tree-sitter/package.json",
+          "sourceIntegrity": "sha512-mrcEdkYtHfrK1A6fs3O6FxkBo0Qig5XUXqHhxUOQu0bmPo00QF4XaSx4edpazdHwxnSCjlGKGgIqWdaN4dvTLA==",
+          "treeSha256": "1f8eeee6690bb132e6ae77c563bc2135caf68b66d2fb3efad63156b741af526b",
+          "resolutionPaths": [
+            "node_modules/.pnpm/tree-sitter@0.25.1/node_modules/tree-sitter/index.js",
+            "node_modules/.pnpm/tree-sitter@0.25.1/node_modules/tree-sitter/prebuilds/linux-x64/tree-sitter.node"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "yaml",
+          "version": "2.9.0",
+          "packageJson": "node_modules/.pnpm/yaml@2.9.0/node_modules/yaml/package.json",
+          "sourceIntegrity": "sha512-2AvhNX3mb8zd6Zy7INTtSpl1F15HW6Wnqj0srWlkKLcpYl/gMIMJiyuGq2KeI2YFxUPjdlB+3Lc10seMLtL4cA==",
+          "treeSha256": "1728e86eaa65fb1759ea9aba116a064be8c54025c31e6a96e82d310e87132160",
+          "resolutionPaths": [
+            "node_modules/.pnpm/yaml@2.9.0/node_modules/yaml/package.json"
+          ]
+        },
+        {
+          "source": "npm",
+          "name": "zod",
+          "version": "4.4.3",
+          "packageJson": "node_modules/.pnpm/zod@4.4.3/node_modules/zod/package.json",
+          "sourceIntegrity": "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==",
+          "treeSha256": "c73258d1d3017fd274ab84b80c03c02d111fc8b1bfcf7923c06999a6d8fa395b",
+          "resolutionPaths": [
+            "node_modules/.pnpm/zod@4.4.3/node_modules/zod/package.json"
+          ]
+        }
+      ],
+      "platforms": [
+        {
+          "os": "linux",
+          "architecture": "x64",
+          "libc": "glibc",
+          "entrypoint": "calldiff-analyzer.mjs",
+          "versionCommand": null,
+          "smoke": {
+            "runner": "node",
+            "path": "calldiff-analyzer.mjs",
+            "fixture": "smoke/calldiff",
+            "args": [],
+            "timeoutMs": 15000,
+            "maxOutputBytes": 32768,
+            "expectedStatus": 0,
+            "expectedSignal": null,
+            "expected": {
+              "schemaVersion": "codebase-radar.calldiff-report/v1",
+              "analyzerVersion": "0.4.1",
+              "eligibleFiles": 3,
+              "analyzedFiles": 3,
+              "failedFiles": 0,
+              "minimumFunctions": 6
+            },
+            "kind": "calldiff-report/v1"
+          },
+          "checksums": [
+            {
+              "path": "calldiff-analyzer.mjs",
+              "sha256": "264d0c26ba222c857ee3eb6cbbf268f58907b507c441e89c1e5fa8e0a59e0b6a"
+            },
+            {
+              "path": "node_modules/calldiff/dist/index.js",
+              "sha256": "375577db5cd8576ec0aa3eb48cec07324b5792bbd35de75dbfb01e0e49e854ba"
+            },
+            {
+              "path": "node_modules/calldiff/dist/extract.js",
+              "sha256": "932473d110129293c04fc99402e82bb878336bfd51a1cf75f29c93098a993aeb"
+            },
+            {
+              "path": "node_modules/calldiff/dist/languages/grammars.js",
+              "sha256": "6037438f715fb8a10701306c4a3d5f79568cbacf8c6812e4cbc9410b0c8971ef"
+            },
+            {
+              "path": "node_modules/.pnpm/node_modules/tree-sitter/prebuilds/linux-x64/tree-sitter.node",
+              "sha256": "8bac0eef8899dd6e2feda111df061cb6bdbe92c0b3672ca3c7fe4df5cb176ea6"
+            },
+            {
+              "path": "node_modules/.pnpm/node_modules/tree-sitter-typescript/bindings/node/index.js",
+              "sha256": "b3bdc95667c309b13ffde9165aa27d3e1436ab957e99c7e5defa1eda699b0a1d"
+            },
+            {
+              "path": "node_modules/.pnpm/node_modules/tree-sitter-typescript/prebuilds/linux-x64/tree-sitter-typescript.node",
+              "sha256": "1391b8935c1d5ad55f25c39ab1ef7b4d5524ca627e06b8ff6a693b851b5c67e2"
+            },
+            {
+              "path": "node_modules/.pnpm/node_modules/tree-sitter-javascript/bindings/node/index.js",
+              "sha256": "c26ab19beade70208be359018210766beab412d96da0530afd060598a6432e9e"
+            },
+            {
+              "path": "node_modules/.pnpm/node_modules/tree-sitter-javascript/prebuilds/linux-x64/tree-sitter-javascript.node",
+              "sha256": "5177478409fbed4776351919838b42addb636c5d89da8040e53de204c67f9c72"
+            },
+            {
+              "path": "smoke/calldiff/javascript.js",
+              "sha256": "fd496ead072549626a6a9421d70896a229928dc527d6b27772faf0437dfe6d5b"
+            },
+            {
+              "path": "smoke/calldiff/typescript.ts",
+              "sha256": "e47b2dbf1c710978568377e13ebb0c13ebb6ec5630a22c75478f58bc8d3a2750"
+            },
+            {
+              "path": "smoke/calldiff/typescript.tsx",
+              "sha256": "b9a3a47728edb8d23fa19d641508517622237c992c81777a0697f913853651a3"
+            }
+          ],
+          "nativeExecutables": [],
+          "launchers": [],
+          "download": null
+        }
+      ]
+    },
+    {
+      "id": "zizmor",
+      "analyzer": "zizmor",
+      "version": "1.29.0",
+      "profileVersions": [
+        "offline-regular/v1"
+      ],
+      "licenseNotice": {
+        "path": "THIRD_PARTY_NOTICES.md",
+        "sha256": "acde0f667b23a5f015165bb45ead0ebc1ba86c124b2f60677a55fbbe01b1fd0b",
+        "license": "MIT"
+      },
+      "legalFiles": [
+        {
+          "kind": "license",
+          "path": "licenses/zizmor/LICENSE",
+          "sha256": "a6fd1bd18da7cec8284639d5b0d351b90934317be1b9f9ea94a077621c6f35af"
+        }
+      ],
+      "packages": [
+        {
+          "source": "release",
+          "name": "zizmor",
+          "version": "1.29.0",
+          "sourceSha256": "dd96df044a6e8538d5f423790f453bdd03d49e5b2bcc38214acc41a2f1297839"
+        }
+      ],
+      "platforms": [
+        {
+          "os": "linux",
+          "architecture": "x64",
+          "libc": "glibc",
+          "entrypoint": "bin/zizmor",
+          "versionCommand": {
+            "runner": "direct",
+            "path": "bin/zizmor",
+            "args": [
+              "--version"
+            ],
+            "expectedVersion": "1.29.0",
+            "expectedOutput": "zizmor 1.29.0",
+            "timeoutMs": 15000,
+            "maxOutputBytes": 16384,
+            "expectedStatus": 0,
+            "expectedSignal": null
+          },
+          "smoke": null,
+          "checksums": [
+            {
+              "path": "bin/zizmor",
+              "sha256": "a3331b0a69fc0d8bf8087b0d74d5424602c5a0f2fc2770afe2e908a1295692b5"
+            }
+          ],
+          "nativeExecutables": [
+            "bin/zizmor"
+          ],
+          "launchers": [],
+          "download": {
+            "url": "https://github.com/zizmorcore/zizmor/releases/download/v1.29.0/zizmor-x86_64-unknown-linux-gnu.tar.gz",
+            "sourceSha256": "dd96df044a6e8538d5f423790f453bdd03d49e5b2bcc38214acc41a2f1297839",
+            "format": "tar.gz",
+            "archiveMember": "zizmor",
+            "output": "bin/zizmor",
+            "installedSha256": "a3331b0a69fc0d8bf8087b0d74d5424602c5a0f2fc2770afe2e908a1295692b5"
+          }
+        }
+      ]
+    },
+    {
+      "id": "osv-scanner",
+      "analyzer": "OSV-Scanner",
+      "version": "2.5.0",
+      "profileVersions": [
+        "js-lockfiles-offline-pinned/v1"
+      ],
+      "licenseNotice": {
+        "path": "THIRD_PARTY_NOTICES.md",
+        "sha256": "acde0f667b23a5f015165bb45ead0ebc1ba86c124b2f60677a55fbbe01b1fd0b",
+        "license": "Apache-2.0"
+      },
+      "legalFiles": [
+        {
+          "kind": "license",
+          "path": "licenses/osv-scanner/LICENSE",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+        },
+        {
+          "kind": "notice",
+          "path": "licenses/osv-database/PROVENANCE.json",
+          "sha256": "8ef7b63835c459736655718190aa89e815d98a9f574554817ad713d7522c8f9a"
+        }
+      ],
+      "packages": [
+        {
+          "source": "release",
+          "name": "osv-scanner",
+          "version": "2.5.0",
+          "sourceSha256": "edcfc41d257db36148f065055655fe3fcfc434b0b423ea67468a84c207524e0c"
+        }
+      ],
+      "platforms": [
+        {
+          "os": "linux",
+          "architecture": "x64",
+          "libc": "glibc",
+          "entrypoint": "bin/osv-scanner",
+          "versionCommand": {
+            "runner": "direct",
+            "path": "bin/osv-scanner",
+            "args": [
+              "--version"
+            ],
+            "expectedVersion": "2.5.0",
+            "expectedOutput": "osv-scanner version: 2.5.0",
+            "timeoutMs": 15000,
+            "maxOutputBytes": 16384,
+            "expectedStatus": 0,
+            "expectedSignal": null
+          },
+          "smoke": {
+            "kind": "osv-offline-lockfiles/v1",
+            "runner": "direct",
+            "path": "bin/osv-scanner",
+            "fixture": "smoke/osv",
+            "args": [],
+            "timeoutMs": 30000,
+            "maxOutputBytes": 65536,
+            "expectedStatus": 0,
+            "expectedSignal": null,
+            "expected": {
+              "analyzerVersion": "2.5.0",
+              "vulnerableLockfile": "vulnerable/package-lock.json",
+              "cleanLockfile": "clean/package-lock.json",
+              "requiredVulnerabilityId": "GHSA-29mw-wpgm-hmr9"
+            }
+          },
+          "checksums": [
+            {
+              "path": "bin/osv-scanner",
+              "sha256": "edcfc41d257db36148f065055655fe3fcfc434b0b423ea67468a84c207524e0c"
+            }
+          ],
+          "nativeExecutables": [
+            "bin/osv-scanner"
+          ],
+          "launchers": [],
+          "download": {
+            "url": "https://github.com/google/osv-scanner/releases/download/v2.5.0/osv-scanner_linux_amd64",
+            "sourceSha256": "edcfc41d257db36148f065055655fe3fcfc434b0b423ea67468a84c207524e0c",
+            "format": "raw",
+            "archiveMember": "-",
+            "output": "bin/osv-scanner",
+            "installedSha256": "edcfc41d257db36148f065055655fe3fcfc434b0b423ea67468a84c207524e0c"
+          }
+        }
+      ]
+    },
+    {
+      "id": "tracedecay",
+      "analyzer": "TraceDecay",
+      "version": "0.0.73",
+      "profileVersions": [
+        "structural-max/v2"
+      ],
+      "licenseNotice": {
+        "path": "THIRD_PARTY_NOTICES.md",
+        "sha256": "acde0f667b23a5f015165bb45ead0ebc1ba86c124b2f60677a55fbbe01b1fd0b",
+        "license": "MIT"
+      },
+      "legalFiles": [
+        {
+          "kind": "license",
+          "path": "licenses/tracedecay/LICENSE",
+          "sha256": "08e7979abf9173c207753df084b5d94fa0cbe583a7cb6cbc20de5f973ee22aa0"
+        },
+        {
+          "kind": "notice",
+          "path": "licenses/tracedecay/NOTICE",
+          "sha256": "6f278d1c4df17f84373e55bb8b8a97049acc8c000bf4ad92ad6a6f42833b07ad"
+        }
+      ],
+      "packages": [
+        {
+          "source": "release",
+          "name": "tracedecay",
+          "version": "0.0.73",
+          "sourceSha256": "6a05fee84f503816f50bd1a48d6c7b755c0ded36ac5870561ca95ae7b05a675d"
+        }
+      ],
+      "platforms": [
+        {
+          "os": "linux",
+          "architecture": "x64",
+          "libc": "glibc",
+          "entrypoint": "bin/tracedecay",
+          "versionCommand": {
+            "runner": "direct",
+            "path": "bin/tracedecay",
+            "args": [
+              "--version"
+            ],
+            "expectedVersion": "0.0.73",
+            "expectedOutput": "tracedecay 0.0.73",
+            "timeoutMs": 15000,
+            "maxOutputBytes": 16384,
+            "expectedStatus": 0,
+            "expectedSignal": null
+          },
+          "smoke": null,
+          "checksums": [
+            {
+              "path": "bin/tracedecay",
+              "sha256": "628515c31b4e74105c1fa17a6bcec2aa07eb35c88ad1d93a7bec525734584587"
+            }
+          ],
+          "nativeExecutables": [
+            "bin/tracedecay"
+          ],
+          "launchers": [],
+          "download": {
+            "url": "https://github.com/ScriptedAlchemy/tracedecay/releases/download/v0.0.73/tracedecay-v0.0.73-x86_64-linux.tar.gz",
+            "sourceSha256": "6a05fee84f503816f50bd1a48d6c7b755c0ded36ac5870561ca95ae7b05a675d",
+            "format": "tar.gz",
+            "archiveMember": "tracedecay",
+            "output": "bin/tracedecay",
+            "installedSha256": "628515c31b4e74105c1fa17a6bcec2aa07eb35c88ad1d93a7bec525734584587"
+          }
+        }
+      ]
+    }
+  ],
+  "pnpmFallbackNamespace": {
+    "path": "node_modules/.pnpm/node_modules",
+    "state": "absent"
+  },
+  "pnpmImporters": [
+    {
+      "id": "runtime-root",
+      "packageJson": "package.json",
+      "namespace": "node_modules",
+      "edges": [
+        {
+          "specifier": "@tsconfig/strictest",
+          "requested": "dependencies:2.0.8",
+          "state": "present",
+          "target": "@tsconfig/strictest@2.0.8",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "calldiff",
+          "requested": "dependencies:0.4.1",
+          "state": "present",
+          "target": "calldiff@0.4.1",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "jscpd",
+          "requested": "dependencies:5.0.14",
+          "state": "present",
+          "target": "jscpd@5.0.14",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "oxlint",
+          "requested": "dependencies:1.77.0",
+          "state": "present",
+          "target": "oxlint@1.77.0",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "tree-sitter-javascript",
+          "requested": "dependencies:0.23.1",
+          "state": "present",
+          "target": "tree-sitter-javascript@0.23.1",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "typescript",
+          "requested": "dependencies:7.0.2",
+          "state": "present",
+          "target": "typescript@7.0.2",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "ultracite",
+          "requested": "dependencies:7.10.2",
+          "state": "present",
+          "target": "ultracite@7.10.2",
+          "resolver": "pnpm-link-import-only"
+        }
+      ]
+    },
+    {
+      "id": "@cfworker/json-schema@4.1.1",
+      "packageJson": "node_modules/.pnpm/@cfworker+json-schema@4.1.1/node_modules/@cfworker/json-schema/package.json",
+      "namespace": "node_modules/.pnpm/@cfworker+json-schema@4.1.1/node_modules",
+      "edges": []
+    },
+    {
+      "id": "@clack/core@1.4.3",
+      "packageJson": "node_modules/.pnpm/@clack+core@1.4.3/node_modules/@clack/core/package.json",
+      "namespace": "node_modules/.pnpm/@clack+core@1.4.3/node_modules",
+      "edges": [
+        {
+          "specifier": "fast-wrap-ansi",
+          "requested": "dependencies:^0.2.0",
+          "state": "present",
+          "target": "fast-wrap-ansi@0.2.2",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "sisteransi",
+          "requested": "dependencies:^1.0.5",
+          "state": "present",
+          "target": "sisteransi@1.0.5",
+          "resolver": "create-require"
+        }
+      ]
+    },
+    {
+      "id": "@clack/prompts@1.7.0",
+      "packageJson": "node_modules/.pnpm/@clack+prompts@1.7.0/node_modules/@clack/prompts/package.json",
+      "namespace": "node_modules/.pnpm/@clack+prompts@1.7.0/node_modules",
+      "edges": [
+        {
+          "specifier": "@clack/core",
+          "requested": "dependencies:1.4.3",
+          "state": "present",
+          "target": "@clack/core@1.4.3",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "fast-string-width",
+          "requested": "dependencies:^3.0.2",
+          "state": "present",
+          "target": "fast-string-width@3.0.2",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "fast-wrap-ansi",
+          "requested": "dependencies:^0.2.0",
+          "state": "present",
+          "target": "fast-wrap-ansi@0.2.2",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "sisteransi",
+          "requested": "dependencies:^1.0.5",
+          "state": "present",
+          "target": "sisteransi@1.0.5",
+          "resolver": "create-require"
+        }
+      ]
+    },
+    {
+      "id": "@modelcontextprotocol/server@2.0.0-alpha.4",
+      "packageJson": "node_modules/.pnpm/@modelcontextprotocol+server@2.0.0-alpha.4/node_modules/@modelcontextprotocol/server/package.json",
+      "namespace": "node_modules/.pnpm/@modelcontextprotocol+server@2.0.0-alpha.4/node_modules",
+      "edges": [
+        {
+          "specifier": "zod",
+          "requested": "dependencies:^4.2.0",
+          "state": "present",
+          "target": "zod@4.4.3",
+          "resolver": "create-require"
+        }
+      ]
+    },
+    {
+      "id": "@oxlint/binding-linux-x64-gnu@1.77.0",
+      "packageJson": "node_modules/.pnpm/@oxlint+binding-linux-x64-gnu@1.77.0/node_modules/@oxlint/binding-linux-x64-gnu/package.json",
+      "namespace": "node_modules/.pnpm/@oxlint+binding-linux-x64-gnu@1.77.0/node_modules",
+      "edges": []
+    },
+    {
+      "id": "@scalar/openapi-types@0.8.0",
+      "packageJson": "node_modules/.pnpm/@scalar+openapi-types@0.8.0/node_modules/@scalar/openapi-types/package.json",
+      "namespace": "node_modules/.pnpm/@scalar+openapi-types@0.8.0/node_modules",
+      "edges": []
+    },
+    {
+      "id": "@toon-format/toon@2.3.1",
+      "packageJson": "node_modules/.pnpm/@toon-format+toon@2.3.1/node_modules/@toon-format/toon/package.json",
+      "namespace": "node_modules/.pnpm/@toon-format+toon@2.3.1/node_modules",
+      "edges": []
+    },
+    {
+      "id": "@tsconfig/strictest@2.0.8",
+      "packageJson": "node_modules/.pnpm/@tsconfig+strictest@2.0.8/node_modules/@tsconfig/strictest/package.json",
+      "namespace": "node_modules/.pnpm/@tsconfig+strictest@2.0.8/node_modules",
+      "edges": []
+    },
+    {
+      "id": "@typescript/typescript-linux-x64@7.0.2",
+      "packageJson": "node_modules/.pnpm/@typescript+typescript-linux-x64@7.0.2/node_modules/@typescript/typescript-linux-x64/package.json",
+      "namespace": "node_modules/.pnpm/@typescript+typescript-linux-x64@7.0.2/node_modules",
+      "edges": []
+    },
+    {
+      "id": "balanced-match@4.0.4",
+      "packageJson": "node_modules/.pnpm/balanced-match@4.0.4/node_modules/balanced-match/package.json",
+      "namespace": "node_modules/.pnpm/balanced-match@4.0.4/node_modules",
+      "edges": []
+    },
+    {
+      "id": "brace-expansion@5.0.9",
+      "packageJson": "node_modules/.pnpm/brace-expansion@5.0.9/node_modules/brace-expansion/package.json",
+      "namespace": "node_modules/.pnpm/brace-expansion@5.0.9/node_modules",
+      "edges": [
+        {
+          "specifier": "balanced-match",
+          "requested": "dependencies:^4.0.2",
+          "state": "present",
+          "target": "balanced-match@4.0.4",
+          "resolver": "create-require"
+        }
+      ]
+    },
+    {
+      "id": "calldiff@0.4.1",
+      "packageJson": "node_modules/.pnpm/calldiff@0.4.1/node_modules/calldiff/package.json",
+      "namespace": "node_modules/.pnpm/calldiff@0.4.1/node_modules",
+      "edges": [
+        {
+          "specifier": "incur",
+          "requested": "dependencies:^0.4.26",
+          "state": "present",
+          "target": "incur@0.4.26",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "picocolors",
+          "requested": "dependencies:^1.1.1",
+          "state": "present",
+          "target": "picocolors@1.1.1",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "tree-sitter",
+          "requested": "dependencies:^0.25.1",
+          "state": "present",
+          "target": "tree-sitter@0.25.1",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "tree-sitter-typescript",
+          "requested": "dependencies:^0.23.2",
+          "state": "present",
+          "target": "tree-sitter-typescript@0.23.2",
+          "resolver": "create-require"
+        }
+      ]
+    },
+    {
+      "id": "citty@0.2.2",
+      "packageJson": "node_modules/.pnpm/citty@0.2.2/node_modules/citty/package.json",
+      "namespace": "node_modules/.pnpm/citty@0.2.2/node_modules",
+      "edges": []
+    },
+    {
+      "id": "commander@10.0.1",
+      "packageJson": "node_modules/.pnpm/commander@10.0.1/node_modules/commander/package.json",
+      "namespace": "node_modules/.pnpm/commander@10.0.1/node_modules",
+      "edges": []
+    },
+    {
+      "id": "commander@15.0.0",
+      "packageJson": "node_modules/.pnpm/commander@15.0.0/node_modules/commander/package.json",
+      "namespace": "node_modules/.pnpm/commander@15.0.0/node_modules",
+      "edges": []
+    },
+    {
+      "id": "cross-spawn@7.0.6",
+      "packageJson": "node_modules/.pnpm/cross-spawn@7.0.6/node_modules/cross-spawn/package.json",
+      "namespace": "node_modules/.pnpm/cross-spawn@7.0.6/node_modules",
+      "edges": [
+        {
+          "specifier": "path-key",
+          "requested": "dependencies:^3.1.0",
+          "state": "present",
+          "target": "path-key@3.1.1",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "shebang-command",
+          "requested": "dependencies:^2.0.0",
+          "state": "present",
+          "target": "shebang-command@2.0.0",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "which",
+          "requested": "dependencies:^2.0.1",
+          "state": "present",
+          "target": "which@2.0.2",
+          "resolver": "create-require"
+        }
+      ]
+    },
+    {
+      "id": "deepmerge@4.3.1",
+      "packageJson": "node_modules/.pnpm/deepmerge@4.3.1/node_modules/deepmerge/package.json",
+      "namespace": "node_modules/.pnpm/deepmerge@4.3.1/node_modules",
+      "edges": []
+    },
+    {
+      "id": "fast-string-truncated-width@3.0.3",
+      "packageJson": "node_modules/.pnpm/fast-string-truncated-width@3.0.3/node_modules/fast-string-truncated-width/package.json",
+      "namespace": "node_modules/.pnpm/fast-string-truncated-width@3.0.3/node_modules",
+      "edges": []
+    },
+    {
+      "id": "fast-string-width@3.0.2",
+      "packageJson": "node_modules/.pnpm/fast-string-width@3.0.2/node_modules/fast-string-width/package.json",
+      "namespace": "node_modules/.pnpm/fast-string-width@3.0.2/node_modules",
+      "edges": [
+        {
+          "specifier": "fast-string-truncated-width",
+          "requested": "dependencies:^3.0.2",
+          "state": "present",
+          "target": "fast-string-truncated-width@3.0.3",
+          "resolver": "create-require"
+        }
+      ]
+    },
+    {
+      "id": "fast-wrap-ansi@0.2.2",
+      "packageJson": "node_modules/.pnpm/fast-wrap-ansi@0.2.2/node_modules/fast-wrap-ansi/package.json",
+      "namespace": "node_modules/.pnpm/fast-wrap-ansi@0.2.2/node_modules",
+      "edges": [
+        {
+          "specifier": "fast-string-width",
+          "requested": "dependencies:^3.0.2",
+          "state": "present",
+          "target": "fast-string-width@3.0.2",
+          "resolver": "create-require"
+        }
+      ]
+    },
+    {
+      "id": "glob@13.0.6",
+      "packageJson": "node_modules/.pnpm/glob@13.0.6/node_modules/glob/package.json",
+      "namespace": "node_modules/.pnpm/glob@13.0.6/node_modules",
+      "edges": [
+        {
+          "specifier": "minimatch",
+          "requested": "dependencies:^10.2.2",
+          "state": "present",
+          "target": "minimatch@10.2.6",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "minipass",
+          "requested": "dependencies:^7.1.3",
+          "state": "present",
+          "target": "minipass@7.1.3",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "path-scurry",
+          "requested": "dependencies:^2.0.2",
+          "state": "present",
+          "target": "path-scurry@2.0.2",
+          "resolver": "create-require"
+        }
+      ]
+    },
+    {
+      "id": "incur@0.4.26",
+      "packageJson": "node_modules/.pnpm/incur@0.4.26/node_modules/incur/package.json",
+      "namespace": "node_modules/.pnpm/incur@0.4.26/node_modules",
+      "edges": [
+        {
+          "specifier": "@cfworker/json-schema",
+          "requested": "dependencies:^4.1.1",
+          "state": "present",
+          "target": "@cfworker/json-schema@4.1.1",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "@modelcontextprotocol/server",
+          "requested": "dependencies:2.0.0-alpha.4",
+          "state": "present",
+          "target": "@modelcontextprotocol/server@2.0.0-alpha.4",
+          "resolver": "pnpm-link-import-only"
+        },
+        {
+          "specifier": "@scalar/openapi-types",
+          "requested": "dependencies:^0.8.0",
+          "state": "present",
+          "target": "@scalar/openapi-types@0.8.0",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "@toon-format/toon",
+          "requested": "dependencies:^2.1.0",
+          "state": "present",
+          "target": "@toon-format/toon@2.3.1",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "tokenx",
+          "requested": "dependencies:^1.3.0",
+          "state": "present",
+          "target": "tokenx@1.6.0",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "yaml",
+          "requested": "dependencies:^2.8.2",
+          "state": "present",
+          "target": "yaml@2.9.0",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "zod",
+          "requested": "dependencies:^4.3.6",
+          "state": "present",
+          "target": "zod@4.4.3",
+          "resolver": "create-require"
+        }
+      ]
+    },
+    {
+      "id": "isexe@2.0.0",
+      "packageJson": "node_modules/.pnpm/isexe@2.0.0/node_modules/isexe/package.json",
+      "namespace": "node_modules/.pnpm/isexe@2.0.0/node_modules",
+      "edges": []
+    },
+    {
+      "id": "jscpd-linux-x64-gnu@5.0.14",
+      "packageJson": "node_modules/.pnpm/jscpd-linux-x64-gnu@5.0.14/node_modules/jscpd-linux-x64-gnu/package.json",
+      "namespace": "node_modules/.pnpm/jscpd-linux-x64-gnu@5.0.14/node_modules",
+      "edges": []
+    },
+    {
+      "id": "jscpd@5.0.14",
+      "packageJson": "node_modules/.pnpm/jscpd@5.0.14/node_modules/jscpd/package.json",
+      "namespace": "node_modules/.pnpm/jscpd@5.0.14/node_modules",
+      "edges": [
+        {
+          "specifier": "jscpd-darwin-arm64",
+          "requested": "optionalDependencies:5.0.14",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "jscpd-darwin-x64",
+          "requested": "optionalDependencies:5.0.14",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "jscpd-linux-arm64-gnu",
+          "requested": "optionalDependencies:5.0.14",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "jscpd-linux-x64-gnu",
+          "requested": "optionalDependencies:5.0.14",
+          "state": "present",
+          "target": "jscpd-linux-x64-gnu@5.0.14",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "jscpd-linux-x64-musl",
+          "requested": "optionalDependencies:5.0.14",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "jscpd-windows-x64-msvc",
+          "requested": "optionalDependencies:5.0.14",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        }
+      ]
+    },
+    {
+      "id": "jsonc-parser@3.3.1",
+      "packageJson": "node_modules/.pnpm/jsonc-parser@3.3.1/node_modules/jsonc-parser/package.json",
+      "namespace": "node_modules/.pnpm/jsonc-parser@3.3.1/node_modules",
+      "edges": []
+    },
+    {
+      "id": "lru-cache@11.5.2",
+      "packageJson": "node_modules/.pnpm/lru-cache@11.5.2/node_modules/lru-cache/package.json",
+      "namespace": "node_modules/.pnpm/lru-cache@11.5.2/node_modules",
+      "edges": []
+    },
+    {
+      "id": "lru-cache@5.1.1",
+      "packageJson": "node_modules/.pnpm/lru-cache@5.1.1/node_modules/lru-cache/package.json",
+      "namespace": "node_modules/.pnpm/lru-cache@5.1.1/node_modules",
+      "edges": [
+        {
+          "specifier": "yallist",
+          "requested": "dependencies:^3.0.2",
+          "state": "present",
+          "target": "yallist@3.1.1",
+          "resolver": "create-require"
+        }
+      ]
+    },
+    {
+      "id": "minimatch@10.2.6",
+      "packageJson": "node_modules/.pnpm/minimatch@10.2.6/node_modules/minimatch/package.json",
+      "namespace": "node_modules/.pnpm/minimatch@10.2.6/node_modules",
+      "edges": [
+        {
+          "specifier": "brace-expansion",
+          "requested": "dependencies:^5.0.8",
+          "state": "present",
+          "target": "brace-expansion@5.0.9",
+          "resolver": "create-require"
+        }
+      ]
+    },
+    {
+      "id": "minipass@7.1.3",
+      "packageJson": "node_modules/.pnpm/minipass@7.1.3/node_modules/minipass/package.json",
+      "namespace": "node_modules/.pnpm/minipass@7.1.3/node_modules",
+      "edges": []
+    },
+    {
+      "id": "node-addon-api@8.9.1",
+      "packageJson": "node_modules/.pnpm/node-addon-api@8.9.1/node_modules/node-addon-api/package.json",
+      "namespace": "node_modules/.pnpm/node-addon-api@8.9.1/node_modules",
+      "edges": []
+    },
+    {
+      "id": "node-gyp-build@4.8.4",
+      "packageJson": "node_modules/.pnpm/node-gyp-build@4.8.4/node_modules/node-gyp-build/package.json",
+      "namespace": "node_modules/.pnpm/node-gyp-build@4.8.4/node_modules",
+      "edges": []
+    },
+    {
+      "id": "nypm@0.6.9",
+      "packageJson": "node_modules/.pnpm/nypm@0.6.9/node_modules/nypm/package.json",
+      "namespace": "node_modules/.pnpm/nypm@0.6.9/node_modules",
+      "edges": [
+        {
+          "specifier": "citty",
+          "requested": "dependencies:^0.2.2",
+          "state": "present",
+          "target": "citty@0.2.2",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "pathe",
+          "requested": "dependencies:^2.0.3",
+          "state": "present",
+          "target": "pathe@2.0.3",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "tinyexec",
+          "requested": "dependencies:^1.2.4",
+          "state": "present",
+          "target": "tinyexec@1.3.0",
+          "resolver": "create-require"
+        }
+      ]
+    },
+    {
+      "id": "oxlint@1.77.0",
+      "packageJson": "node_modules/.pnpm/oxlint@1.77.0/node_modules/oxlint/package.json",
+      "namespace": "node_modules/.pnpm/oxlint@1.77.0/node_modules",
+      "edges": [
+        {
+          "specifier": "@oxlint/binding-android-arm-eabi",
+          "requested": "optionalDependencies:1.77.0",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@oxlint/binding-android-arm64",
+          "requested": "optionalDependencies:1.77.0",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@oxlint/binding-darwin-arm64",
+          "requested": "optionalDependencies:1.77.0",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@oxlint/binding-darwin-x64",
+          "requested": "optionalDependencies:1.77.0",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@oxlint/binding-freebsd-x64",
+          "requested": "optionalDependencies:1.77.0",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@oxlint/binding-linux-arm-gnueabihf",
+          "requested": "optionalDependencies:1.77.0",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@oxlint/binding-linux-arm-musleabihf",
+          "requested": "optionalDependencies:1.77.0",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@oxlint/binding-linux-arm64-gnu",
+          "requested": "optionalDependencies:1.77.0",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@oxlint/binding-linux-arm64-musl",
+          "requested": "optionalDependencies:1.77.0",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@oxlint/binding-linux-ppc64-gnu",
+          "requested": "optionalDependencies:1.77.0",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@oxlint/binding-linux-riscv64-gnu",
+          "requested": "optionalDependencies:1.77.0",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@oxlint/binding-linux-riscv64-musl",
+          "requested": "optionalDependencies:1.77.0",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@oxlint/binding-linux-s390x-gnu",
+          "requested": "optionalDependencies:1.77.0",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@oxlint/binding-linux-x64-gnu",
+          "requested": "optionalDependencies:1.77.0",
+          "state": "present",
+          "target": "@oxlint/binding-linux-x64-gnu@1.77.0",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "@oxlint/binding-linux-x64-musl",
+          "requested": "optionalDependencies:1.77.0",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@oxlint/binding-openharmony-arm64",
+          "requested": "optionalDependencies:1.77.0",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@oxlint/binding-win32-arm64-msvc",
+          "requested": "optionalDependencies:1.77.0",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@oxlint/binding-win32-ia32-msvc",
+          "requested": "optionalDependencies:1.77.0",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@oxlint/binding-win32-x64-msvc",
+          "requested": "optionalDependencies:1.77.0",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "oxlint-tsgolint",
+          "requested": "peerDependencies:>=7.0.2001",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "vite-plus",
+          "requested": "peerDependencies:*",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        }
+      ]
+    },
+    {
+      "id": "path-key@3.1.1",
+      "packageJson": "node_modules/.pnpm/path-key@3.1.1/node_modules/path-key/package.json",
+      "namespace": "node_modules/.pnpm/path-key@3.1.1/node_modules",
+      "edges": []
+    },
+    {
+      "id": "path-scurry@2.0.2",
+      "packageJson": "node_modules/.pnpm/path-scurry@2.0.2/node_modules/path-scurry/package.json",
+      "namespace": "node_modules/.pnpm/path-scurry@2.0.2/node_modules",
+      "edges": [
+        {
+          "specifier": "lru-cache",
+          "requested": "dependencies:^11.0.0",
+          "state": "present",
+          "target": "lru-cache@11.5.2",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "minipass",
+          "requested": "dependencies:^7.1.2",
+          "state": "present",
+          "target": "minipass@7.1.3",
+          "resolver": "create-require"
+        }
+      ]
+    },
+    {
+      "id": "pathe@2.0.3",
+      "packageJson": "node_modules/.pnpm/pathe@2.0.3/node_modules/pathe/package.json",
+      "namespace": "node_modules/.pnpm/pathe@2.0.3/node_modules",
+      "edges": []
+    },
+    {
+      "id": "picocolors@1.1.1",
+      "packageJson": "node_modules/.pnpm/picocolors@1.1.1/node_modules/picocolors/package.json",
+      "namespace": "node_modules/.pnpm/picocolors@1.1.1/node_modules",
+      "edges": []
+    },
+    {
+      "id": "shebang-command@2.0.0",
+      "packageJson": "node_modules/.pnpm/shebang-command@2.0.0/node_modules/shebang-command/package.json",
+      "namespace": "node_modules/.pnpm/shebang-command@2.0.0/node_modules",
+      "edges": [
+        {
+          "specifier": "shebang-regex",
+          "requested": "dependencies:^3.0.0",
+          "state": "present",
+          "target": "shebang-regex@3.0.0",
+          "resolver": "create-require"
+        }
+      ]
+    },
+    {
+      "id": "shebang-regex@3.0.0",
+      "packageJson": "node_modules/.pnpm/shebang-regex@3.0.0/node_modules/shebang-regex/package.json",
+      "namespace": "node_modules/.pnpm/shebang-regex@3.0.0/node_modules",
+      "edges": []
+    },
+    {
+      "id": "sisteransi@1.0.5",
+      "packageJson": "node_modules/.pnpm/sisteransi@1.0.5/node_modules/sisteransi/package.json",
+      "namespace": "node_modules/.pnpm/sisteransi@1.0.5/node_modules",
+      "edges": []
+    },
+    {
+      "id": "tinyexec@1.3.0",
+      "packageJson": "node_modules/.pnpm/tinyexec@1.3.0/node_modules/tinyexec/package.json",
+      "namespace": "node_modules/.pnpm/tinyexec@1.3.0/node_modules",
+      "edges": []
+    },
+    {
+      "id": "tokenx@1.6.0",
+      "packageJson": "node_modules/.pnpm/tokenx@1.6.0/node_modules/tokenx/package.json",
+      "namespace": "node_modules/.pnpm/tokenx@1.6.0/node_modules",
+      "edges": []
+    },
+    {
+      "id": "tree-sitter-javascript@0.23.1",
+      "packageJson": "node_modules/.pnpm/tree-sitter-javascript@0.23.1_tree-sitter@0.25.1/node_modules/tree-sitter-javascript/package.json",
+      "namespace": "node_modules/.pnpm/tree-sitter-javascript@0.23.1_tree-sitter@0.25.1/node_modules",
+      "edges": [
+        {
+          "specifier": "node-addon-api",
+          "requested": "dependencies:^8.2.2",
+          "state": "present",
+          "target": "node-addon-api@8.9.1",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "node-gyp-build",
+          "requested": "dependencies:^4.8.2",
+          "state": "present",
+          "target": "node-gyp-build@4.8.4",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "tree-sitter",
+          "requested": "peerDependencies:^0.21.1",
+          "state": "present",
+          "target": "tree-sitter@0.25.1",
+          "resolver": "create-require"
+        }
+      ]
+    },
+    {
+      "id": "tree-sitter-typescript@0.23.2",
+      "packageJson": "node_modules/.pnpm/tree-sitter-typescript@0.23.2_tree-sitter@0.25.1/node_modules/tree-sitter-typescript/package.json",
+      "namespace": "node_modules/.pnpm/tree-sitter-typescript@0.23.2_tree-sitter@0.25.1/node_modules",
+      "edges": [
+        {
+          "specifier": "node-addon-api",
+          "requested": "dependencies:^8.2.2",
+          "state": "present",
+          "target": "node-addon-api@8.9.1",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "node-gyp-build",
+          "requested": "dependencies:^4.8.2",
+          "state": "present",
+          "target": "node-gyp-build@4.8.4",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "tree-sitter",
+          "requested": "peerDependencies:^0.21.0",
+          "state": "present",
+          "target": "tree-sitter@0.25.1",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "tree-sitter-javascript",
+          "requested": "dependencies:^0.23.1",
+          "state": "present",
+          "target": "tree-sitter-javascript@0.23.1",
+          "resolver": "create-require"
+        }
+      ]
+    },
+    {
+      "id": "tree-sitter@0.25.1",
+      "packageJson": "node_modules/.pnpm/tree-sitter@0.25.1/node_modules/tree-sitter/package.json",
+      "namespace": "node_modules/.pnpm/tree-sitter@0.25.1/node_modules",
+      "edges": [
+        {
+          "specifier": "node-addon-api",
+          "requested": "dependencies:^8.5.0",
+          "state": "present",
+          "target": "node-addon-api@8.9.1",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "node-gyp-build",
+          "requested": "dependencies:^4.8.4",
+          "state": "present",
+          "target": "node-gyp-build@4.8.4",
+          "resolver": "create-require"
+        }
+      ]
+    },
+    {
+      "id": "typescript@7.0.2",
+      "packageJson": "node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/package.json",
+      "namespace": "node_modules/.pnpm/typescript@7.0.2/node_modules",
+      "edges": [
+        {
+          "specifier": "@typescript/typescript-aix-ppc64",
+          "requested": "optionalDependencies:7.0.2",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@typescript/typescript-darwin-arm64",
+          "requested": "optionalDependencies:7.0.2",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@typescript/typescript-darwin-x64",
+          "requested": "optionalDependencies:7.0.2",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@typescript/typescript-freebsd-arm64",
+          "requested": "optionalDependencies:7.0.2",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@typescript/typescript-freebsd-x64",
+          "requested": "optionalDependencies:7.0.2",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@typescript/typescript-linux-arm",
+          "requested": "optionalDependencies:7.0.2",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@typescript/typescript-linux-arm64",
+          "requested": "optionalDependencies:7.0.2",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@typescript/typescript-linux-loong64",
+          "requested": "optionalDependencies:7.0.2",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@typescript/typescript-linux-mips64el",
+          "requested": "optionalDependencies:7.0.2",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@typescript/typescript-linux-ppc64",
+          "requested": "optionalDependencies:7.0.2",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@typescript/typescript-linux-riscv64",
+          "requested": "optionalDependencies:7.0.2",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@typescript/typescript-linux-s390x",
+          "requested": "optionalDependencies:7.0.2",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@typescript/typescript-linux-x64",
+          "requested": "optionalDependencies:7.0.2",
+          "state": "present",
+          "target": "@typescript/typescript-linux-x64@7.0.2",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "@typescript/typescript-netbsd-arm64",
+          "requested": "optionalDependencies:7.0.2",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@typescript/typescript-netbsd-x64",
+          "requested": "optionalDependencies:7.0.2",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@typescript/typescript-openbsd-arm64",
+          "requested": "optionalDependencies:7.0.2",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@typescript/typescript-openbsd-x64",
+          "requested": "optionalDependencies:7.0.2",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@typescript/typescript-sunos-x64",
+          "requested": "optionalDependencies:7.0.2",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@typescript/typescript-win32-arm64",
+          "requested": "optionalDependencies:7.0.2",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "@typescript/typescript-win32-x64",
+          "requested": "optionalDependencies:7.0.2",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        }
+      ]
+    },
+    {
+      "id": "ultracite@7.10.2",
+      "packageJson": "node_modules/.pnpm/ultracite@7.10.2_oxlint@1.77.0/node_modules/ultracite/package.json",
+      "namespace": "node_modules/.pnpm/ultracite@7.10.2_oxlint@1.77.0/node_modules",
+      "edges": [
+        {
+          "specifier": "@clack/prompts",
+          "requested": "dependencies:^1.5.1",
+          "state": "present",
+          "target": "@clack/prompts@1.7.0",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "commander",
+          "requested": "dependencies:^15.0.0",
+          "state": "present",
+          "target": "commander@15.0.0",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "cross-spawn",
+          "requested": "dependencies:^7.0.6",
+          "state": "present",
+          "target": "cross-spawn@7.0.6",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "deepmerge",
+          "requested": "dependencies:^4.3.1",
+          "state": "present",
+          "target": "deepmerge@4.3.1",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "glob",
+          "requested": "dependencies:^13.0.6",
+          "state": "present",
+          "target": "glob@13.0.6",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "jsonc-parser",
+          "requested": "dependencies:^3.3.1",
+          "state": "present",
+          "target": "jsonc-parser@3.3.1",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "nypm",
+          "requested": "dependencies:^0.6.6",
+          "state": "present",
+          "target": "nypm@0.6.9",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "oxfmt",
+          "requested": "peerDependencies:>=0.1.0",
+          "state": "absent",
+          "target": null,
+          "resolver": "absent"
+        },
+        {
+          "specifier": "oxlint",
+          "requested": "peerDependencies:^1.0.0",
+          "state": "present",
+          "target": "oxlint@1.77.0",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "yaml",
+          "requested": "dependencies:^2.9.0",
+          "state": "present",
+          "target": "yaml@2.9.0",
+          "resolver": "create-require"
+        },
+        {
+          "specifier": "zod",
+          "requested": "dependencies:^4.4.3",
+          "state": "present",
+          "target": "zod@4.4.3",
+          "resolver": "create-require"
+        }
+      ]
+    },
+    {
+      "id": "which@2.0.2",
+      "packageJson": "node_modules/.pnpm/which@2.0.2/node_modules/which/package.json",
+      "namespace": "node_modules/.pnpm/which@2.0.2/node_modules",
+      "edges": [
+        {
+          "specifier": "isexe",
+          "requested": "dependencies:^2.0.0",
+          "state": "present",
+          "target": "isexe@2.0.0",
+          "resolver": "create-require"
+        }
+      ]
+    },
+    {
+      "id": "yallist@3.1.1",
+      "packageJson": "node_modules/.pnpm/yallist@3.1.1/node_modules/yallist/package.json",
+      "namespace": "node_modules/.pnpm/yallist@3.1.1/node_modules",
+      "edges": []
+    },
+    {
+      "id": "yaml@2.9.0",
+      "packageJson": "node_modules/.pnpm/yaml@2.9.0/node_modules/yaml/package.json",
+      "namespace": "node_modules/.pnpm/yaml@2.9.0/node_modules",
+      "edges": []
+    },
+    {
+      "id": "zod@4.4.3",
+      "packageJson": "node_modules/.pnpm/zod@4.4.3/node_modules/zod/package.json",
+      "namespace": "node_modules/.pnpm/zod@4.4.3/node_modules",
+      "edges": []
+    }
+  ],
+  "runtimeNode": {
+    "path": "bin/node",
+    "versionOutput": "v24.18.1",
+    "sha256": "f3432a45b03b2da0d270095fdd8813dc34cbea73f5fc8b18c7a384b7cf9b333a",
+    "archive": {
+      "url": "https://nodejs.org/dist/v24.18.1/node-v24.18.1-linux-x64.tar.xz",
+      "sha256": "d6c664df3f3f61458e8c277585571328522d705166723a7c7823a9253a4d15a0",
+      "member": "node-v24.18.1-linux-x64/bin/node"
+    }
+  },
+  "offlineOsvDatabase": {
+    "path": "databases/osv/osv-scalibr/npm/all.zip",
+    "url": "https://storage.googleapis.com/osv-vulnerabilities/npm/all.zip?generation=1786418349414076",
+    "generation": "1786418349414076",
+    "sha256": "38cb4b8116671e4b0d4c12f2309f180d78c886d1593aef2cb04ff42055fd8e69",
+    "size": 218758368,
+    "entries": 226504,
+    "uncompressedBytes": 371036838,
+    "signedDataDescriptorEntries": 226504,
+    "dataDescriptorBytes": 3624064,
+    "publishedAt": "2026-08-11T03:19:09Z",
+    "maxAgeDays": 7,
+    "validationEvidence": {
+      "schemaVersion": "codebase-radar.osv-npm-snapshot-evidence/v1",
+      "source": {
+        "url": "https://storage.googleapis.com/osv-vulnerabilities/npm/all.zip?generation=1786418349414076",
+        "generation": "1786418349414076",
+        "publishedAt": "2026-08-11T03:19:09Z",
+        "maxAge": 604800
+      },
+      "archive": {
+        "size": 218758368,
+        "sha256": "38cb4b8116671e4b0d4c12f2309f180d78c886d1593aef2cb04ff42055fd8e69",
+        "format": "zip",
+        "zip64": true,
+        "entryCount": 226504,
+        "compressedBytes": 185053654,
+        "uncompressedBytes": 371036838,
+        "storedEntries": 0,
+        "deflatedEntries": 226504,
+        "signedDataDescriptorEntries": 226504,
+        "dataDescriptorBytes": 3624064,
+        "compressionMethods": [
+          "deflate"
+        ],
+        "centralDirectoryOffset": 201905962,
+        "centralDirectoryBytes": 16852308,
+        "structuralSha256": "2a16f1f093c7c48fabaa9beef512a2aa4a2786f0e08518ee8c5454b6f582eb05"
+      }
+    },
+    "validator": {
+      "schemaVersion": "codebase-radar.osv-npm-snapshot-validator/v1",
+      "path": "osv-npm-snapshot-validator.mjs",
+      "byteLength": 40586,
+      "sha256": "fc62792819e356b0c1718b6182745ffac2c66142005222f7c2d406cb446306c6"
+    }
+  }
+}

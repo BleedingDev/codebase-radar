@@ -1,0 +1,54 @@
+{
+  "name": "@codebase-radar/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./analysis": {
+      "types": "./dist/analysis.d.ts",
+      "import": "./dist/analysis.js"
+    },
+    "./primitives": {
+      "types": "./dist/primitives.d.ts",
+      "import": "./dist/primitives.js"
+    },
+    "./report": {
+      "types": "./dist/report.d.ts",
+      "import": "./dist/report.js"
+    },
+    "./runtime": {
+      "types": "./dist/runtime.d.ts",
+      "import": "./dist/runtime.js"
+    },
+    "./source": {
+      "types": "./dist/source.d.ts",
+      "import": "./dist/source.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "effect": "4.0.0-beta.102"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "esbuild": "0.28.1",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
+  }
+}

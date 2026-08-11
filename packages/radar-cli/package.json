@@ -1,0 +1,40 @@
+{
+  "name": "@codebase-radar/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "radar": "./bin/radar.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "bin",
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@codebase-radar/contracts": "workspace:*",
+    "@codebase-radar/core": "workspace:*",
+    "@effect/platform-node": "4.0.0-beta.102",
+    "effect": "4.0.0-beta.102"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
+  }
+}

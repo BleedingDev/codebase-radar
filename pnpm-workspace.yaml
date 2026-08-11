@@ -55,3 +55,6 @@ minimumReleaseAgeExclude:
 
 onlyBuiltDependencies:
   - oxlint
+
+patchedDependencies:
+  '@bleedingdev/modern-js-app-tools@3.5.0-ultramodern.102': patches/@bleedingdev__modern-js-app-tools@3.5.0-ultramodern.102.patch

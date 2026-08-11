@@ -1,0 +1,484 @@
+{
+  "schemaVersion": "codebase-radar.scan-result/v2",
+  "resultKind": "complete",
+  "analysisPolicy": "dogfood:max/v1",
+  "scanId": "scan-golden-001",
+  "source": {
+    "_tag": "GitHubSourceIdentity",
+    "codebaseId": "github:acme/radar-sample",
+    "owner": "Acme",
+    "repository": "radar-sample",
+    "url": "https://github.com/Acme/radar-sample",
+    "commitSha": "0123456789abcdef0123456789abcdef01234567",
+    "defaultBranch": "main",
+    "snapshotDigest": "git:0123456789abcdef0123456789abcdef01234567"
+  },
+  "createdAt": "2026-08-11T10:00:00.000Z",
+  "completedAt": "2026-08-11T10:07:00.000Z",
+  "profile": {
+    "frameworks": [
+      "react",
+      "vue"
+    ],
+    "languageCoverage": [
+      "JavaScript",
+      "TypeScript"
+    ],
+    "limitations": [
+      "Generated files are excluded from source findings.",
+      "Immutable analyzer runtime manifest: codebase-radar.analyzer-runtime/v1 sha256:da777485716f9409b819e5d125d1836d0f2b92318428febf667a878e40780f3d"
+    ]
+  },
+  "summary": {
+    "headline": "Two urgent fixes lead a complete seven-analyzer improvement backlog.",
+    "healthScore": 71,
+    "fixNow": 2,
+    "investigate": 2,
+    "monitor": 2,
+    "doNotFix": 1
+  },
+  "findings": [
+    {
+      "id": "finding-001",
+      "fingerprint": "fingerprint-001",
+      "mechanism": "A known vulnerable dependency remains reachable through the production lockfile.",
+      "title": "Reachable vulnerable dependency",
+      "category": "security",
+      "action": "fix now",
+      "summary": "A dependency advisory applies to a package present in the production dependency graph.",
+      "technicalSummary": "The resolved package version matches an advisory range and is reachable from the service build.",
+      "recommendation": "Upgrade the affected dependency and retain the advisory reference in the change review.",
+      "scores": {
+        "consequence": 98,
+        "blastRadius": 91,
+        "confidence": 96,
+        "effort": 35,
+        "changeExposure": 86,
+        "priority": 97
+      },
+      "evidence": [
+        {
+          "analyzer": "OSV-Scanner",
+          "kind": "direct",
+          "message": "Resolved dependency matches a published vulnerability advisory.",
+          "ruleId": "OSV-2026-0001",
+          "path": "package-lock.json",
+          "line": 128,
+          "excerpt": "\"version\": \"1.2.3\""
+        }
+      ],
+      "externalReferences": [
+        {
+          "label": "OSV advisory",
+          "url": "https://osv.dev/",
+          "relationship": "advisory",
+          "applicability": "established"
+        }
+      ],
+      "tags": [
+        "dependency",
+        "security"
+      ],
+      "statusComparedToPrevious": "new"
+    },
+    {
+      "id": "finding-002",
+      "fingerprint": "fingerprint-002",
+      "mechanism": "A workflow permission grants a token broader authority than the job requires.",
+      "title": "Overbroad workflow token permission",
+      "category": "configuration",
+      "action": "fix now",
+      "summary": "A CI workflow declares write permission where read-only access is sufficient.",
+      "technicalSummary": "The workflow token can modify repository state from a job that only reads metadata.",
+      "recommendation": "Scope the job token to read-only permissions and grant write access only to the required step.",
+      "scores": {
+        "consequence": 93,
+        "blastRadius": 82,
+        "confidence": 95,
+        "effort": 27,
+        "changeExposure": 74,
+        "priority": 91
+      },
+      "evidence": [
+        {
+          "analyzer": "zizmor",
+          "kind": "direct",
+          "message": "Workflow job declares write permissions for an otherwise read-only task.",
+          "ruleId": "zizmor:excessive-permissions",
+          "path": ".github/workflows/release.yml",
+          "line": 14,
+          "excerpt": "permissions: write-all"
+        }
+      ],
+      "externalReferences": [
+        {
+          "label": "GitHub Actions hardening",
+          "url": "https://docs.github.com/actions/security-for-github-actions/security-guides/automatic-token-authentication",
+          "relationship": "background",
+          "applicability": "established"
+        }
+      ],
+      "tags": [
+        "ci",
+        "security"
+      ],
+      "statusComparedToPrevious": "new"
+    },
+    {
+      "id": "finding-003",
+      "fingerprint": "fingerprint-003",
+      "mechanism": "The configured TypeScript strictness leaves unsafe indexed access unchecked.",
+      "title": "Unchecked indexed access",
+      "category": "reliability",
+      "action": "investigate",
+      "summary": "The compiler configuration permits an indexed lookup to be treated as always present.",
+      "technicalSummary": "A collection lookup can produce an absent value without a compile-time guard.",
+      "recommendation": "Enable the strict indexed-access option and address each resulting absence explicitly.",
+      "scores": {
+        "consequence": 76,
+        "blastRadius": 72,
+        "confidence": 92,
+        "effort": 54,
+        "changeExposure": 69,
+        "priority": 85
+      },
+      "evidence": [
+        {
+          "analyzer": "strictest-comparator",
+          "kind": "direct",
+          "message": "The strict comparator found an unchecked indexed access gap.",
+          "ruleId": "noUncheckedIndexedAccess",
+          "path": "tsconfig.json",
+          "line": 9,
+          "excerpt": "\"noUncheckedIndexedAccess\": false"
+        }
+      ],
+      "externalReferences": [
+        {
+          "label": "TypeScript strictness",
+          "url": "https://www.typescriptlang.org/tsconfig/noUncheckedIndexedAccess.html",
+          "relationship": "background",
+          "applicability": "established"
+        }
+      ],
+      "tags": [
+        "reliability",
+        "typescript"
+      ],
+      "statusComparedToPrevious": "persistent"
+    },
+    {
+      "id": "finding-004",
+      "fingerprint": "fingerprint-004",
+      "mechanism": "A request handler suppresses a lint rule that protects an awaited error boundary.",
+      "title": "Suppressed asynchronous error boundary",
+      "category": "reliability",
+      "action": "investigate",
+      "summary": "A handler suppresses a rule that would require an explicit asynchronous failure boundary.",
+      "technicalSummary": "An awaited operation can reject outside the request-specific recovery path.",
+      "recommendation": "Restore the lint rule and handle the rejected operation at the request boundary.",
+      "scores": {
+        "consequence": 74,
+        "blastRadius": 67,
+        "confidence": 89,
+        "effort": 48,
+        "changeExposure": 64,
+        "priority": 79
+      },
+      "evidence": [
+        {
+          "analyzer": "Oxlint + Ultracite",
+          "kind": "direct",
+          "message": "Suppression hides an asynchronous error-boundary rule violation.",
+          "ruleId": "promise-function-async",
+          "path": "src/server/submit-review.ts",
+          "line": 47,
+          "excerpt": "eslint-disable-next-line"
+        }
+      ],
+      "externalReferences": [
+        {
+          "label": "Error handling guidance",
+          "url": "https://developer.mozilla.org/docs/Web/JavaScript/Reference/Statements/try...catch",
+          "relationship": "background",
+          "applicability": "unverified"
+        }
+      ],
+      "tags": [
+        "async",
+        "reliability"
+      ],
+      "statusComparedToPrevious": "persistent"
+    },
+    {
+      "id": "finding-005",
+      "fingerprint": "fingerprint-005",
+      "mechanism": "Two domain modules depend on each other across a boundary intended to remain one-way.",
+      "title": "Circular domain dependency",
+      "category": "architecture",
+      "action": "monitor",
+      "summary": "A bidirectional import couples modules that should communicate through a boundary.",
+      "technicalSummary": "The dependency graph contains a cycle spanning the billing and reporting domains.",
+      "recommendation": "Extract the shared contract or invert one dependency through a narrow interface.",
+      "scores": {
+        "consequence": 62,
+        "blastRadius": 58,
+        "confidence": 93,
+        "effort": 66,
+        "changeExposure": 58,
+        "priority": 68
+      },
+      "evidence": [
+        {
+          "analyzer": "TraceDecay",
+          "kind": "direct",
+          "message": "A cycle crosses the billing and reporting domain boundary.",
+          "ruleId": "dependency-cycle",
+          "path": "src/domain/billing.ts",
+          "line": 3,
+          "excerpt": "import { report } from \"../reporting/report\""
+        }
+      ],
+      "externalReferences": [
+        {
+          "label": "Dependency inversion",
+          "url": "https://martinfowler.com/articles/injection.html",
+          "relationship": "similar_case",
+          "applicability": "unverified"
+        }
+      ],
+      "tags": [
+        "architecture",
+        "coupling"
+      ],
+      "statusComparedToPrevious": "regressed"
+    },
+    {
+      "id": "finding-006",
+      "fingerprint": "fingerprint-006",
+      "mechanism": "Two request mappers duplicate the same validation and normalization sequence.",
+      "title": "Duplicated request mapping",
+      "category": "maintainability",
+      "action": "monitor",
+      "summary": "Two modules carry substantially identical request-mapping logic.",
+      "technicalSummary": "The duplicate blocks normalize the same fields and branch on the same validation outcome.",
+      "recommendation": "Extract the shared mapping rule while preserving the distinct caller-specific behavior.",
+      "scores": {
+        "consequence": 48,
+        "blastRadius": 51,
+        "confidence": 88,
+        "effort": 41,
+        "changeExposure": 43,
+        "priority": 54
+      },
+      "evidence": [
+        {
+          "analyzer": "JSCPD",
+          "kind": "direct",
+          "message": "A duplicate block matches the mapper in the adjacent request module.",
+          "ruleId": "jscpd:clone",
+          "path": "src/http/map-review-request.ts",
+          "line": 22,
+          "excerpt": "const normalized = normalizeInput(request)"
+        }
+      ],
+      "externalReferences": [
+        {
+          "label": "Refactoring duplicate code",
+          "url": "https://refactoring.guru/smells/duplicate-code",
+          "relationship": "background",
+          "applicability": "established"
+        }
+      ],
+      "tags": [
+        "duplication",
+        "maintainability"
+      ],
+      "statusComparedToPrevious": "improved"
+    },
+    {
+      "id": "finding-007",
+      "fingerprint": "fingerprint-007",
+      "mechanism": "A public call path increased fan-out across an API boundary.",
+      "title": "Expanded public call fan-out",
+      "category": "performance",
+      "action": "do not fix",
+      "summary": "A reviewed call path now reaches more downstream functions than its baseline.",
+      "technicalSummary": "The additional fan-out is bounded to cacheable metadata reads and has no observed latency regression.",
+      "recommendation": "Retain the observation for future comparison and revisit if latency or invalidation costs increase.",
+      "scores": {
+        "consequence": 31,
+        "blastRadius": 39,
+        "confidence": 81,
+        "effort": 72,
+        "changeExposure": 31,
+        "priority": 31
+      },
+      "evidence": [
+        {
+          "analyzer": "Calldiff",
+          "kind": "direct",
+          "message": "The public endpoint reaches two additional downstream calls.",
+          "ruleId": "calldiff:fanout",
+          "path": "src/api/get-review.ts",
+          "line": 31,
+          "excerpt": "return loadReviewWithMetadata(id)"
+        }
+      ],
+      "externalReferences": [
+        {
+          "label": "Call graph analysis",
+          "url": "https://en.wikipedia.org/wiki/Call_graph",
+          "relationship": "background",
+          "applicability": "unverified"
+        }
+      ],
+      "tags": [
+        "api",
+        "performance"
+      ],
+      "statusComparedToPrevious": "new"
+    }
+  ],
+  "analyzerRuns": [
+    {
+      "_tag": "CompleteAnalyzerRun",
+      "status": "complete",
+      "analyzer": "strictest-comparator",
+      "analyzerVersion": "@tsconfig/strictest 2.0.8",
+      "profileVersion": "dogfood:max/v1",
+      "durationMs": 21,
+      "coverage": {
+        "eligibleFiles": 42,
+        "analyzedFiles": 42,
+        "eligiblePathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+        "analyzedPathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+        "omittedCapabilities": [],
+        "warnings": []
+      },
+      "observationCount": 14
+    },
+    {
+      "_tag": "CompleteAnalyzerRun",
+      "status": "complete",
+      "analyzer": "Oxlint + Ultracite",
+      "analyzerVersion": "1.77.0 + 7.10.2",
+      "profileVersion": "dogfood:max/v1",
+      "durationMs": 32,
+      "coverage": {
+        "eligibleFiles": 42,
+        "analyzedFiles": 42,
+        "eligiblePathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+        "analyzedPathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+        "omittedCapabilities": [],
+        "warnings": []
+      },
+      "observationCount": 18
+    },
+    {
+      "_tag": "CompleteAnalyzerRun",
+      "status": "complete",
+      "analyzer": "JSCPD",
+      "analyzerVersion": "5.0.14",
+      "profileVersion": "dogfood:max/v1",
+      "durationMs": 19,
+      "coverage": {
+        "eligibleFiles": 42,
+        "analyzedFiles": 42,
+        "eligiblePathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+        "analyzedPathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+        "omittedCapabilities": [],
+        "warnings": []
+      },
+      "observationCount": 7
+    },
+    {
+      "_tag": "CompleteAnalyzerRun",
+      "status": "complete",
+      "analyzer": "Calldiff",
+      "analyzerVersion": "0.4.1",
+      "profileVersion": "dogfood:max/v1",
+      "durationMs": 27,
+      "coverage": {
+        "eligibleFiles": 42,
+        "analyzedFiles": 42,
+        "eligiblePathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+        "analyzedPathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+        "omittedCapabilities": [],
+        "warnings": []
+      },
+      "observationCount": 5
+    },
+    {
+      "_tag": "CompleteAnalyzerRun",
+      "status": "complete",
+      "analyzer": "zizmor",
+      "analyzerVersion": "1.29.0",
+      "profileVersion": "dogfood:max/v1",
+      "durationMs": 14,
+      "coverage": {
+        "eligibleFiles": 42,
+        "analyzedFiles": 42,
+        "eligiblePathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+        "analyzedPathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+        "omittedCapabilities": [],
+        "warnings": []
+      },
+      "observationCount": 3
+    },
+    {
+      "_tag": "CompleteAnalyzerRun",
+      "status": "complete",
+      "analyzer": "OSV-Scanner",
+      "analyzerVersion": "2.5.0",
+      "profileVersion": "dogfood:max/v1",
+      "durationMs": 11,
+      "coverage": {
+        "eligibleFiles": 42,
+        "analyzedFiles": 42,
+        "eligiblePathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+        "analyzedPathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+        "omittedCapabilities": [],
+        "warnings": []
+      },
+      "observationCount": 2
+    },
+    {
+      "_tag": "CompleteAnalyzerRun",
+      "status": "complete",
+      "analyzer": "TraceDecay",
+      "analyzerVersion": "0.0.73",
+      "profileVersion": "dogfood:max/v1",
+      "durationMs": 25,
+      "coverage": {
+        "eligibleFiles": 42,
+        "analyzedFiles": 42,
+        "eligiblePathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+        "analyzedPathSetDigest": "sha256:31bdbfc5a2d20db6f333dba7dde0452711697f27612077afd910cef406507c25",
+        "omittedCapabilities": [],
+        "warnings": []
+      },
+      "observationCount": 9
+    }
+  ],
+  "comparison": {
+    "basisCodebaseId": "github:acme/radar-sample",
+    "basisPolicyId": "dogfood:max/v1",
+    "previousScanId": "scan-golden-000",
+    "newFingerprints": [
+      "fingerprint-001",
+      "fingerprint-002",
+      "fingerprint-007"
+    ],
+    "resolvedFingerprints": [
+      "fingerprint-000"
+    ],
+    "persistentFingerprints": [
+      "fingerprint-003",
+      "fingerprint-004",
+      "fingerprint-005",
+      "fingerprint-006"
+    ],
+    "priorityDelta": 7
+  }
+}

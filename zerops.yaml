@@ -1,22 +1,210 @@
+# yaml-language-server: $schema=https://api.app-prg1.zerops.io/api/rest/public/settings/zerops-yml-json-schema.json
 zerops:
   - setup: radar
     build:
-      os: ubuntu
-      base: nodejs@24
+      # `ubuntu@24.04` is an explicit Zerops base, unlike the deprecated
+      # unversioned `os: ubuntu` switch. Node itself is the separately pinned
+      # archive installed below; do not reintroduce a floating Node base.
+      base: ubuntu@24.04
       prepareCommands:
-        - npm install --global --prefix /home/zerops/.local pnpm@11.17.0
+        # The explicit `ubuntu@24.04` base is rechecked here so a platform
+        # image mismatch cannot silently select another Bubblewrap ABI or
+        # package revision.
+        # This deployment is intentionally Linux x64/glibc-only; do not add
+        # macOS or ARM targets unless their complete runtime artifacts are
+        # separately reviewed and supported.
+        - test "$(. /etc/os-release && printf '%s' "$ID")" = ubuntu
+        - test "$(. /etc/os-release && printf '%s' "$VERSION_ID")" = 24.04
+        - test "$(/usr/bin/uname -s)" = Linux
+        - test "$(/usr/bin/uname -m)" = x86_64
+        - test "$(/usr/bin/dpkg --print-architecture)" = amd64
+        - sudo apt-get update
+        # `util-linux` supplies the fixed /usr/bin/prlimit launcher used to
+        # apply the analyzer's hard RLIMIT envelope before Bubblewrap. The
+        # exact Noble amd64 revision is build provenance only; runtime trust
+        # is the independently deployed doctor's raw-hash anchor and probe.
+        # These are the exact Noble amd64 bootstrap prerequisites for the
+        # archive verifier and atomic runtime generator. They are build
+        # provenance; runtime identity remains raw-hash/behavioral evidence.
+        - sudo apt-get install -y --no-install-recommends bubblewrap=0.9.0-1ubuntu0.1 util-linux=2.39.3-9ubuntu6.5 coreutils=9.4-3ubuntu6.2 curl=8.5.0-2ubuntu10.11 ca-certificates=20260601~24.04.1 tar=1.35+dfsg-3ubuntu0.4 xz-utils=5.6.1+really5.4.5-1ubuntu0.3 python3=3.12.3-0ubuntu2.1 build-essential=12.10ubuntu1
+        - test -f /usr/bin/dpkg-query
+        - test -x /usr/bin/dpkg-query
+        - test ! -L /usr/bin/dpkg-query
+        - test "$(/usr/bin/realpath /usr/bin/dpkg-query)" = /usr/bin/dpkg-query
+        - test "$(/usr/bin/stat -c '%u:%g:%a:%h' /usr/bin/dpkg-query)" = 0:0:755:1
+        - test "$(/usr/bin/dpkg-query --showformat='${db:Status-Status}:${Version}:${Architecture}' --show util-linux)" = installed:2.39.3-9ubuntu6.5:amd64
+        - test "$(/usr/bin/dpkg-query --search /usr/bin/prlimit)" = util-linux:\ /usr/bin/prlimit
+        # sha256sum is the minimal host bootstrap TCB used before the first
+        # host Node execution. Its exact package provenance is image-only;
+        # runtime trust still requires independently pinned raw host evidence.
+        - test "$(/usr/bin/dpkg-query --showformat='${db:Status-Status}:${Version}:${Architecture}' --show coreutils)" = installed:9.4-3ubuntu6.2:amd64
+        - test "$(/usr/bin/dpkg-query --search /usr/bin/sha256sum)" = coreutils:\ /usr/bin/sha256sum
+        - test -f /usr/bin/sha256sum
+        - test -x /usr/bin/sha256sum
+        - test ! -L /usr/bin/sha256sum
+        - test "$(/usr/bin/realpath /usr/bin/sha256sum)" = /usr/bin/sha256sum
+        - test "$(/usr/bin/stat -c '%u:%g:%a:%h' /usr/bin/sha256sum)" = 0:0:755:1
+        # The Linux-only memfd bridge is compiled from the declared Noble
+        # build-essential metapackage before either deployment package is
+        # assembled. Its deployed API/seal probe below is the acceptance gate.
+        - test "$(/usr/bin/dpkg-query --showformat='${db:Status-Status}:${Version}:${Architecture}' --show build-essential)" = installed:12.10ubuntu1:amd64
+        - test -x /usr/bin/gcc
+        - test "$(/usr/bin/dpkg-query --showformat='${db:Status-Status}:${Version}:${Architecture}' --show curl)" = installed:8.5.0-2ubuntu10.11:amd64
+        - test "$(/usr/bin/dpkg-query --showformat='${db:Status-Status}:${Version}:${Architecture}' --show tar)" = installed:1.35+dfsg-3ubuntu0.4:amd64
+        - test "$(/usr/bin/dpkg-query --showformat='${db:Status-Status}:${Version}:${Architecture}' --show xz-utils)" = installed:5.6.1+really5.4.5-1ubuntu0.3:amd64
+        - test "$(/usr/bin/dpkg-query --showformat='${db:Status-Status}:${Version}:${Architecture}' --show python3)" = installed:3.12.3-0ubuntu2.1:amd64
+        - test "$(/usr/bin/dpkg-query --showformat='${db:Status-Status}:${Version}:${Architecture}' --show ca-certificates)" = installed:20260601~24.04.1:all
+        - test -x /usr/bin/curl
+        - test -x /usr/bin/tar
+        - test -x /usr/bin/xz
+        - test -x /usr/bin/python3
+        - test -f /usr/bin/prlimit
+        - test -x /usr/bin/prlimit
+        - test ! -L /usr/bin/prlimit
+        - test "$(/usr/bin/realpath /usr/bin/prlimit)" = /usr/bin/prlimit
+        - test "$(/usr/bin/stat -c '%u:%g:%a:%h' /usr/bin/prlimit)" = 0:0:755:1
+        - test "$(/usr/bin/sha256sum /usr/bin/prlimit)" = 'f27cfd8c1512a4cc6541b59b80cb4cdfd6ef28c34aa21db4299b48264cd0d128  /usr/bin/prlimit'
+        - test "$(/usr/bin/prlimit --version)" = 'prlimit from util-linux 2.39.3'
+        - test -f /usr/bin/bwrap
+        - test -x /usr/bin/bwrap
+        - test ! -L /usr/bin/bwrap
+        - test "$(/usr/bin/realpath /usr/bin/bwrap)" = /usr/bin/bwrap
+        - test "$(/usr/bin/stat -c '%u:%g:%a:%h' /usr/bin/bwrap)" = 0:0:755:1
+        - test "$(/usr/bin/sha256sum /usr/bin/bwrap)" = '52231e1caf55bcbc667b269f49c63599a6f7db4767ae6a039580d0ff853db712  /usr/bin/bwrap'
+        - test "$(/usr/bin/dpkg-query --showformat='${Version}' --show bubblewrap)" = 0.9.0-1ubuntu0.1
+        - test "$(/usr/bin/dpkg-query --search /usr/bin/bwrap)" = bubblewrap:\ /usr/bin/bwrap
+        # Bootstrap Node is an independently pinned official v24.18.1 Linux
+        # x64 archive. It is installed at a dedicated immutable location, not
+        # through the moving nodejs@24 /usr/local/bin/node convenience path.
+        # The archive hash is verified before extraction and the exact ELF
+        # hash is verified before any Node code runs.
+        - |-
+          set -eu
+          node_root=/usr/local/lib/radar-node-v24.18.1
+          node_archive_name=node-v24.18.1-linux-x64.tar.xz
+          node_archive_sha256=d6c664df3f3f61458e8c277585571328522d705166723a7c7823a9253a4d15a0
+          node_elf_sha256=f3432a45b03b2da0d270095fdd8813dc34cbea73f5fc8b18c7a384b7cf9b333a
+          test -x /usr/bin/curl
+          test -x /usr/bin/tar
+          test -d /usr/local/lib
+          test ! -L /usr/local/lib
+          test "$(/usr/bin/realpath /usr/local/lib)" = /usr/local/lib
+          test ! -e "$node_root"
+          test ! -L "$node_root"
+          stage="$(/usr/bin/mktemp -d /tmp/radar-node-v24.18.1-linux-x64.XXXXXX)"
+          case "$stage" in /tmp/radar-node-v24.18.1-linux-x64.*) ;; *) exit 1 ;; esac
+          cleanup() { /bin/rm -rf -- "$stage"; }
+          trap cleanup EXIT HUP INT TERM
+          archive="$stage/$node_archive_name"
+          /usr/bin/curl --disable --fail --silent --show-error --location --proto '=https' --tlsv1.2 --connect-timeout 15 --max-time 120 --retry 0 --output "$archive" -- https://nodejs.org/dist/v24.18.1/$node_archive_name
+          test -f "$archive"
+          test ! -L "$archive"
+          test "$(/usr/bin/sha256sum "$archive")" = "$node_archive_sha256  $archive"
+          /usr/bin/tar -xJf "$archive" --no-same-owner --no-same-permissions -C "$stage"
+          extracted="$stage/node-v24.18.1-linux-x64"
+          test -d "$extracted"
+          test ! -L "$extracted"
+          test -f "$extracted/bin/node"
+          test ! -L "$extracted/bin/node"
+          test -f "$extracted/include/node/node_api.h"
+          sudo /bin/mv -- "$extracted" "$node_root"
+          sudo /bin/chown -R root:root -- "$node_root"
+          sudo /bin/chmod -R go-w -- "$node_root"
+          sudo /bin/chmod 0755 -- "$node_root" "$node_root/bin" "$node_root/bin/node"
+          test -d "$node_root"
+          test ! -L "$node_root"
+          test -f "$node_root/bin/node"
+          test -x "$node_root/bin/node"
+          test ! -L "$node_root/bin/node"
+          test "$(/usr/bin/realpath "$node_root/bin/node")" = "$node_root/bin/node"
+          test "$(/usr/bin/stat -c '%u:%g:%a:%h' "$node_root/bin/node")" = 0:0:755:1
+          test "$(/usr/bin/sha256sum "$node_root/bin/node")" = "$node_elf_sha256  $node_root/bin/node"
+          test "$("$node_root/bin/node" --version)" = v24.18.1
+        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /usr/local/lib/radar-node-v24.18.1/bin/npm install --global --prefix /home/zerops/.local pnpm@11.17.0
       buildCommands:
-        - /home/zerops/.local/bin/pnpm install --frozen-lockfile --store-dir .pnpm-store
-        - /home/zerops/.local/bin/pnpm dogfood
-        - /home/zerops/.local/bin/pnpm --filter @codebase-radar/app run deploy
-        - /home/zerops/.local/bin/pnpm --filter @codebase-radar/analyzer-runtime deploy --prod .zerops/analyzer-runtime
-        - /home/zerops/.local/bin/pnpm --filter @codebase-radar/agent-runtime deploy --prod .zerops/agent-runtime
-        - bash scripts/prepare-runtime-tools.sh .zerops/analyzer-runtime/bin
-        - /home/zerops/.local/bin/pnpm run verify:runtime-tools
-        - test -x .zerops/agent-runtime/node_modules/.bin/claude
-        - test -x .zerops/agent-runtime/node_modules/.bin/codex
+        # The frozen lockfile is the deployment authority for Effect 4 and the
+        # UltraModern aliases. Do not substitute a floating installer command.
+        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm install --frozen-lockfile --store-dir .pnpm-store
+        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm dogfood
+        # Build commands run in /build/source. Recreate this deployment-only
+        # root on every candidate so a cached/stale .zerops runtime can never
+        # satisfy the prepare, verifier, or launch path.
+        - test "$PWD" = /build/source
+        - /bin/rm -rf -- /build/source/.zerops
+        - /bin/mkdir -p -- /build/source/.zerops
+        # Build and behaviorally verify the Linux x64 native memfd bridge
+        # before Modern packages the app, or either CLI/analyzer closure is
+        # copied. The runtime manifest later seals the target copy; the CLI
+        # assertion checks its independently deployed dependency copy.
+        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/analyzer-runtime build:runtime-memfd-addon
+        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/analyzer-runtime check:runtime-memfd-addon
+        # The separate governance launcher is a reproducible standalone
+        # control-root artifact, not a Modern-bundled import. Build it before
+        # app packaging and reject a non-reproducible checked-in bundle.
+        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/analyzer-runtime build:resource-governance-launcher
+        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/analyzer-runtime check:resource-governance-launcher
+        # Modern may inline application dependencies, so never rely on an
+        # import.meta.url sibling of the bundled core. Stage the exact minimal
+        # independently deployed control bundle now; runtime init establishes
+        # its root-owned metadata and doctor verifies the compiled anchor.
+        - |-
+          set -eu
+          control_root=/build/source/.zerops/analyzer-control
+          test ! -e "$control_root"
+          test ! -L "$control_root"
+          /bin/mkdir -m 0755 -- "$control_root"
+          for source_target in \
+            'packages/analyzer-runtime/runtime-snapshot-loader.mjs:runtime-snapshot-loader.mjs' \
+            'packages/analyzer-runtime/control/resource-governance-launcher.mjs:resource-governance-launcher.mjs' \
+            'packages/analyzer-runtime/runtime-memfd-addon.node:runtime-memfd-addon.node'; do
+            source=${source_target%%:*}
+            target=${source_target#*:}
+            test -f "/build/source/$source"
+            test ! -L "/build/source/$source"
+            /bin/cp --no-dereference --preserve=mode -- "/build/source/$source" "$control_root/$target"
+            test -f "$control_root/$target"
+            test ! -L "$control_root/$target"
+            case "$target" in
+              runtime-snapshot-loader.mjs|resource-governance-launcher.mjs) expected_mode=444 ;;
+              runtime-memfd-addon.node) expected_mode=555 ;;
+              *) exit 1 ;;
+            esac
+            /bin/chmod "$expected_mode" -- "$control_root/$target"
+            test "$(/usr/bin/stat -c '%a:%h' "$control_root/$target")" = "$expected_mode:1"
+          done
+          set -- "$control_root"/*
+          test "$#" = 3
+          test "$1" = "$control_root/resource-governance-launcher.mjs"
+          test "$2" = "$control_root/runtime-memfd-addon.node"
+          test "$3" = "$control_root/runtime-snapshot-loader.mjs"
+        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/app run deploy
+        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/cli deploy --prod /build/source/.zerops/radar-cli
+        # Resolve the verifier from the separately deployed CLI dependency
+        # tree. The target analyzer root must never be an import location.
+        - >-
+          cd /build/source/.zerops/radar-cli &&
+          /usr/bin/env -i HOME=/nonexistent LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/bin:/bin
+          /usr/local/lib/radar-node-v24.18.1/bin/node --input-type=module --eval
+          'import { closeSync, fchmodSync, fstatSync, fsyncSync, lstatSync, openSync, readSync, readdirSync, realpathSync, writeSync } from "node:fs"; import { spawnSync } from "node:child_process"; import { createHash } from "node:crypto"; import { createRequire } from "node:module"; import { dirname, resolve } from "node:path"; import { fileURLToPath } from "node:url"; const cliRoot = "/build/source/.zerops/radar-cli"; const controlRoot = "/build/source/.zerops/analyzer-control"; const targetRoot = "/build/source/.zerops/analyzer-runtime"; const nodePath = "/usr/local/lib/radar-node-v24.18.1/bin/node"; const inside = (root, candidate) => candidate === root || candidate.startsWith(`${root}/`); const expectedControl = [["resource-governance-launcher.mjs", 0o444], ["runtime-memfd-addon.node", 0o555], ["runtime-snapshot-loader.mjs", 0o444]]; if (JSON.stringify(readdirSync(controlRoot).sort()) !== JSON.stringify(expectedControl.map(([name]) => name).sort())) throw new Error("Analyzer control root has an unexpected inventory."); for (const [name, expectedMode] of expectedControl) { const candidate = `${controlRoot}/${name}`; const metadata = lstatSync(candidate, { bigint: true }); if (realpathSync(candidate) !== candidate || !metadata.isFile() || metadata.isSymbolicLink() || metadata.nlink !== 1n || (metadata.mode & 0o7777n) !== BigInt(expectedMode)) throw new Error(`Analyzer control artifact ${name} has invalid containment or mode.`); } const coreUrl = import.meta.resolve("@codebase-radar/core"); if (!coreUrl.startsWith("file:")) throw new Error("CLI core must resolve to a file URL."); const coreEntry = realpathSync(fileURLToPath(coreUrl)); const fromCore = createRequire(resolve(dirname(coreEntry), "../package.json")); const verifier = realpathSync(fromCore.resolve("@codebase-radar/analyzer-runtime/runtime-verifier")); const anchor = realpathSync(fromCore.resolve("@codebase-radar/analyzer-runtime/trust-anchor")); const addon = realpathSync(resolve(dirname(verifier), "runtime-memfd-addon.node")); const addonMetadata = lstatSync(addon, { bigint: true }); if (!inside(cliRoot, coreEntry) || !inside(cliRoot, verifier) || !inside(cliRoot, anchor) || !inside(cliRoot, addon) || inside(targetRoot, verifier) || inside(targetRoot, anchor) || inside(targetRoot, addon) || !addonMetadata.isFile() || addonMetadata.isSymbolicLink() || addonMetadata.nlink !== 1n) throw new Error("CLI verifier and native bridge must resolve only from its own deployed dependency tree."); const nodeMetadata = lstatSync(nodePath, { bigint: true }); if (realpathSync(nodePath) !== nodePath || !nodeMetadata.isFile() || nodeMetadata.isSymbolicLink() || nodeMetadata.uid !== 0n || nodeMetadata.gid !== 0n || nodeMetadata.nlink !== 1n || (nodeMetadata.mode & 0o7777n) !== 0o755n || nodeMetadata.size < 1n || nodeMetadata.size > 268435456n) throw new Error("Pinned bootstrap Node ELF is not a bounded canonical root-owned executable."); const bridge = fromCore(addon); if (typeof bridge?.createData !== "function" || typeof bridge?.createExecutable !== "function" || typeof bridge?.seal !== "function" || typeof bridge?.getSeals !== "function") throw new Error("Deployed runtime memfd bridge API is invalid."); const requiredSeals = 0x0001 | 0x0002 | 0x0004 | 0x0008 | 0x0020; for (const [label, create, expectedMode] of [["data", bridge.createData, 0o444], ["executable", bridge.createExecutable, 0o555]]) { const descriptor = create(); try { if (!Number.isSafeInteger(descriptor) || descriptor < 0) throw new Error(`Memfd ${label} factory returned an invalid descriptor.`); if (label === "data") { let executeDenied = false; try { fchmodSync(descriptor, 0o555); } catch (error) { executeDenied = error?.code === "EPERM"; } if (!executeDenied) throw new Error("Data memfd accepted an executable mode despite MFD_NOEXEC_SEAL."); } fchmodSync(descriptor, expectedMode); let metadata = fstatSync(descriptor, { bigint: true }); if (!metadata.isFile() || metadata.nlink !== 0n || (metadata.mode & 0o7777n) !== BigInt(expectedMode)) throw new Error(`Memfd ${label} did not retain its exact mode.`); if (label === "data") { if (writeSync(descriptor, Buffer.from("data"), 0, 4, 0) !== 4) throw new Error("Data memfd short write."); } else { const source = openSync(nodePath, "r"); try { const sourceMetadata = fstatSync(source, { bigint: true }); if (!sourceMetadata.isFile() || sourceMetadata.nlink !== 1n || sourceMetadata.size !== nodeMetadata.size || sourceMetadata.size < 1n || sourceMetadata.size > 268435456n) throw new Error("Pinned Node stream source changed during the closure probe."); const hash = createHash("sha256"); const buffer = Buffer.allocUnsafe(65536); const byteLength = Number(sourceMetadata.size); let offset = 0; while (offset < byteLength) { const read = readSync(source, buffer, 0, Math.min(buffer.byteLength, byteLength - offset), offset); if (read <= 0) throw new Error("Pinned Node ELF stream was truncated."); hash.update(buffer.subarray(0, read)); let written = 0; while (written < read) { const count = writeSync(descriptor, buffer, written, read - written, offset + written); if (count <= 0) throw new Error("Executable memfd stream short write."); written += count; } offset += read; } if (hash.digest("hex") !== "f3432a45b03b2da0d270095fdd8813dc34cbea73f5fc8b18c7a384b7cf9b333a") throw new Error("Pinned Node ELF stream hash mismatched."); } finally { closeSync(source); } } fsyncSync(descriptor); const added = bridge.seal(descriptor); const seals = bridge.getSeals(descriptor); if ((added & requiredSeals) !== requiredSeals || (seals & requiredSeals) !== requiredSeals) throw new Error(`Memfd ${label} did not attest WRITE|GROW|SHRINK|SEAL|EXEC.`); metadata = fstatSync(descriptor, { bigint: true }); if (!metadata.isFile() || metadata.nlink !== 0n || (metadata.mode & 0o7777n) !== BigInt(expectedMode)) throw new Error(`Sealed memfd ${label} lost its exact mode.`); let writeDenied = false; try { writeSync(descriptor, Buffer.from("x"), 0, 1, 0); } catch (error) { writeDenied = error?.code === "EPERM"; } if (!writeDenied) throw new Error(`Sealed memfd ${label} accepted a post-seal write.`); if (label === "data") { let executeDenied = false; try { fchmodSync(descriptor, 0o555); } catch (error) { executeDenied = error?.code === "EPERM"; } if (!executeDenied) throw new Error("Sealed data memfd accepted execute permission."); } else { const result = spawnSync(`/proc/self/fd/${descriptor}`, ["--version"], { encoding: "utf8", env: { HOME: "/nonexistent", LANG: "C.UTF-8", LC_ALL: "C.UTF-8", NO_COLOR: "1", PATH: "/usr/bin:/bin" }, shell: false, windowsHide: true }); if (result.error || result.status !== 0 || String(result.stdout).trim() !== "v24.18.1" || String(result.stderr) !== "") throw new Error("Executable sealed memfd did not run the pinned Node ELF."); } } finally { closeSync(descriptor); } }'
+        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/analyzer-runtime deploy --prod /build/source/.zerops/analyzer-runtime
+        - /usr/bin/env -i HOME=/home/zerops LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/local/lib/radar-node-v24.18.1/bin:/usr/bin:/bin /home/zerops/.local/bin/pnpm --filter @codebase-radar/agent-runtime deploy --prod /build/source/.zerops/agent-runtime
+        # Both the preparation and verification roots are the same freshly
+        # staged absolute directory. The verifier rejects any root fallback.
+        # Atomic preparation alone obtains the immutable offline OSV snapshot
+        # at databases/osv/osv-scalibr/npm/all.zip (218758368 bytes,
+        # 38cb4b8116671e4b0d4c12f2309f180d78c886d1593aef2cb04ff42055fd8e69,
+        # generation 1786418349414076, max age 604800 s) and its legal
+        # provenance. Do not add a second downloader or network fallback here.
+        - /usr/bin/env -i HOME=/nonexistent LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/bin:/bin RADAR_RUNTIME_PREP_BOOTSTRAPPED=1 RADAR_ANALYZER_ROOT=/build/source/.zerops/analyzer-runtime /bin/bash --noprofile --norc /build/source/scripts/prepare-runtime-tools.sh /build/source/.zerops/analyzer-runtime/bin
+        - /usr/bin/env -i HOME=/nonexistent LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/bin:/bin RADAR_RUNTIME_VERIFY_BOOTSTRAPPED=1 RADAR_ANALYZER_ROOT=/build/source/.zerops/analyzer-runtime /bin/bash --noprofile --norc /build/source/scripts/verify-runtime-tools.sh verify --runtime-root /build/source/.zerops/analyzer-runtime --platform linux --architecture x64 --libc glibc
+        - test -x /build/source/.zerops/radar-cli/bin/radar.mjs
+        - test -x /build/source/.zerops/agent-runtime/node_modules/.bin/claude
+        - test -x /build/source/.zerops/agent-runtime/node_modules/.bin/codex
       deployFiles:
         - apps/radar/.output
+        - apps/radar/scripts/production-output-smoke.mjs
+        - .zerops/radar-cli
+        - .zerops/analyzer-control
         - .zerops/analyzer-runtime
         - .zerops/agent-runtime
       cache:
@@ -26,25 +214,396 @@ zerops:
         httpGet:
           port: 3000
           path: /api/ready
+        failureTimeout: 300
+        retryPeriod: 5
     run:
-      os: ubuntu
-      base: nodejs@24
+      # Keep build and runtime on the same explicit Noble base. The dedicated
+      # Node archive below is the sole bootstrap interpreter.
+      base: ubuntu@24.04
       prepareCommands:
+        # Keep the runtime image on the same explicitly verified Bubblewrap
+        # package. A mismatch fails image preparation, so readiness cannot
+        # advertise a deployment with an unreviewed native sandbox.
+        - test "$(. /etc/os-release && printf '%s' "$ID")" = ubuntu
+        - test "$(. /etc/os-release && printf '%s' "$VERSION_ID")" = 24.04
+        - test "$(/usr/bin/uname -s)" = Linux
+        - test "$(/usr/bin/uname -m)" = x86_64
+        - test "$(/usr/bin/dpkg --print-architecture)" = amd64
         - sudo apt-get update
-        - sudo apt-get install -y bubblewrap util-linux
+        # Keep build provenance identical to the build image. Do not treat
+        # dpkg metadata as runtime trust; init delegates the raw hash and
+        # behavioral in-sandbox verification to the trusted deployed doctor.
+        - sudo apt-get install -y --no-install-recommends bubblewrap=0.9.0-1ubuntu0.1 util-linux=2.39.3-9ubuntu6.5 coreutils=9.4-3ubuntu6.2 curl=8.5.0-2ubuntu10.11 ca-certificates=20260601~24.04.1 tar=1.35+dfsg-3ubuntu0.4 xz-utils=5.6.1+really5.4.5-1ubuntu0.3
+        - test -f /usr/bin/dpkg-query
+        - test -x /usr/bin/dpkg-query
+        - test ! -L /usr/bin/dpkg-query
+        - test "$(/usr/bin/realpath /usr/bin/dpkg-query)" = /usr/bin/dpkg-query
+        - test "$(/usr/bin/stat -c '%u:%g:%a:%h' /usr/bin/dpkg-query)" = 0:0:755:1
+        - test "$(/usr/bin/dpkg-query --showformat='${db:Status-Status}:${Version}:${Architecture}' --show util-linux)" = installed:2.39.3-9ubuntu6.5:amd64
+        - test "$(/usr/bin/dpkg-query --search /usr/bin/prlimit)" = util-linux:\ /usr/bin/prlimit
+        - test "$(/usr/bin/dpkg-query --showformat='${db:Status-Status}:${Version}:${Architecture}' --show coreutils)" = installed:9.4-3ubuntu6.2:amd64
+        - test "$(/usr/bin/dpkg-query --search /usr/bin/sha256sum)" = coreutils:\ /usr/bin/sha256sum
+        - test "$(/usr/bin/dpkg-query --showformat='${db:Status-Status}:${Version}:${Architecture}' --show curl)" = installed:8.5.0-2ubuntu10.11:amd64
+        - test "$(/usr/bin/dpkg-query --showformat='${db:Status-Status}:${Version}:${Architecture}' --show tar)" = installed:1.35+dfsg-3ubuntu0.4:amd64
+        - test "$(/usr/bin/dpkg-query --showformat='${db:Status-Status}:${Version}:${Architecture}' --show xz-utils)" = installed:5.6.1+really5.4.5-1ubuntu0.3:amd64
+        - test "$(/usr/bin/dpkg-query --showformat='${db:Status-Status}:${Version}:${Architecture}' --show ca-certificates)" = installed:20260601~24.04.1:all
+        - test -x /usr/bin/curl
+        - test -x /usr/bin/tar
+        - test -x /usr/bin/xz
+        - test -f /usr/bin/sha256sum
+        - test -x /usr/bin/sha256sum
+        - test ! -L /usr/bin/sha256sum
+        - test "$(/usr/bin/realpath /usr/bin/sha256sum)" = /usr/bin/sha256sum
+        - test "$(/usr/bin/stat -c '%u:%g:%a:%h' /usr/bin/sha256sum)" = 0:0:755:1
+        - test -f /usr/bin/prlimit
+        - test -x /usr/bin/prlimit
+        - test ! -L /usr/bin/prlimit
+        - test "$(/usr/bin/realpath /usr/bin/prlimit)" = /usr/bin/prlimit
+        - test "$(/usr/bin/stat -c '%u:%g:%a:%h' /usr/bin/prlimit)" = 0:0:755:1
+        - test "$(/usr/bin/sha256sum /usr/bin/prlimit)" = 'f27cfd8c1512a4cc6541b59b80cb4cdfd6ef28c34aa21db4299b48264cd0d128  /usr/bin/prlimit'
+        - test "$(/usr/bin/prlimit --version)" = 'prlimit from util-linux 2.39.3'
+        - test -f /usr/bin/bwrap
+        - test -x /usr/bin/bwrap
+        - test ! -L /usr/bin/bwrap
+        - test "$(/usr/bin/realpath /usr/bin/bwrap)" = /usr/bin/bwrap
+        - test "$(/usr/bin/stat -c '%u:%g:%a:%h' /usr/bin/bwrap)" = 0:0:755:1
+        - test "$(/usr/bin/sha256sum /usr/bin/bwrap)" = '52231e1caf55bcbc667b269f49c63599a6f7db4767ae6a039580d0ff853db712  /usr/bin/bwrap'
+        - test "$(/usr/bin/dpkg-query --showformat='${Version}' --show bubblewrap)" = 0.9.0-1ubuntu0.1
+        - test "$(/usr/bin/dpkg-query --search /usr/bin/bwrap)" = bubblewrap:\ /usr/bin/bwrap
+        # Install the same pinned Node archive used for the independent CLI
+        # bootstrap. Never depend on the moving nodejs@24 convenience binary.
+        - |-
+          set -eu
+          node_root=/usr/local/lib/radar-node-v24.18.1
+          node_archive_name=node-v24.18.1-linux-x64.tar.xz
+          node_archive_sha256=d6c664df3f3f61458e8c277585571328522d705166723a7c7823a9253a4d15a0
+          node_elf_sha256=f3432a45b03b2da0d270095fdd8813dc34cbea73f5fc8b18c7a384b7cf9b333a
+          test -x /usr/bin/curl
+          test -x /usr/bin/tar
+          test -d /usr/local/lib
+          test ! -L /usr/local/lib
+          test "$(/usr/bin/realpath /usr/local/lib)" = /usr/local/lib
+          test ! -e "$node_root"
+          test ! -L "$node_root"
+          stage="$(/usr/bin/mktemp -d /tmp/radar-node-v24.18.1-linux-x64.XXXXXX)"
+          case "$stage" in /tmp/radar-node-v24.18.1-linux-x64.*) ;; *) exit 1 ;; esac
+          cleanup() { /bin/rm -rf -- "$stage"; }
+          trap cleanup EXIT HUP INT TERM
+          archive="$stage/$node_archive_name"
+          /usr/bin/curl --disable --fail --silent --show-error --location --proto '=https' --tlsv1.2 --connect-timeout 15 --max-time 120 --retry 0 --output "$archive" -- https://nodejs.org/dist/v24.18.1/$node_archive_name
+          test -f "$archive"
+          test ! -L "$archive"
+          test "$(/usr/bin/sha256sum "$archive")" = "$node_archive_sha256  $archive"
+          /usr/bin/tar -xJf "$archive" --no-same-owner --no-same-permissions -C "$stage"
+          extracted="$stage/node-v24.18.1-linux-x64"
+          test -d "$extracted"
+          test ! -L "$extracted"
+          test -f "$extracted/bin/node"
+          test ! -L "$extracted/bin/node"
+          test -f "$extracted/include/node/node_api.h"
+          sudo /bin/mv -- "$extracted" "$node_root"
+          sudo /bin/chown -R root:root -- "$node_root"
+          sudo /bin/chmod -R go-w -- "$node_root"
+          sudo /bin/chmod 0755 -- "$node_root" "$node_root/bin" "$node_root/bin/node"
+          test -d "$node_root"
+          test ! -L "$node_root"
+          test -f "$node_root/bin/node"
+          test -x "$node_root/bin/node"
+          test ! -L "$node_root/bin/node"
+          test "$(/usr/bin/realpath "$node_root/bin/node")" = "$node_root/bin/node"
+          test "$(/usr/bin/stat -c '%u:%g:%a:%h' "$node_root/bin/node")" = 0:0:755:1
+          test "$(/usr/bin/sha256sum "$node_root/bin/node")" = "$node_elf_sha256  $node_root/bin/node"
+          test "$("$node_root/bin/node" --version)" = v24.18.1
       ports:
         - port: 3000
           protocol: tcp
           httpSupport: true
+      initCommands:
+        # Build artifacts are deployed under /var/www. Keep the application on
+        # those exact immutable siblings—there is no CWD, package-source, or
+        # stale .zerops fallback at runtime.
+        - test "$RADAR_ANALYZER_ROOT" = /var/www/.zerops/analyzer-runtime
+        - test "$RADAR_ANALYZER_CONTROL_ROOT" = /var/www/.zerops/analyzer-control
+        - test "$RADAR_AGENT_ROOT" = /var/www/.zerops/agent-runtime
+        - test "$RADAR_WORKSPACE_PARENT" = /var/www/.radar-workspaces
+        - test "$RADAR_ANALYSIS_CGROUP_ROOT" = /sys/fs/cgroup/radar-analysis
+        # The Modern app must receive a separately deployed, minimal control
+        # bundle. It is deliberately neither the analyzer target root nor the
+        # CLI closure. There is no repair/fallback path: an unexpected entry,
+        # link, owner, or writable mode aborts init; doctor later checks the
+        # anchor's exact per-file modes, sizes, and hashes.
+        - |-
+          set -efu
+          control_root=/var/www/.zerops/analyzer-control
+          test "$RADAR_ANALYZER_CONTROL_ROOT" = "$control_root"
+          test "$control_root" != "$RADAR_ANALYZER_ROOT"
+          test "$control_root" != /var/www/.zerops/radar-cli
+          test -d "$control_root"
+          test ! -L "$control_root"
+          test "$(/usr/bin/realpath "$control_root")" = "$control_root"
+          sudo /bin/chown root:root -- "$control_root"
+          sudo /bin/chmod 0555 -- "$control_root"
+          test "$(/usr/bin/stat -c '%u:%g:%a' "$control_root")" = 0:0:555
+          set -- "$control_root"/* "$control_root"/.[!.]* "$control_root"/..?*
+          entry_count=0
+          for entry in "$@"; do
+            if [ ! -e "$entry" ] && [ ! -L "$entry" ]; then
+              continue
+            fi
+            entry_count=$((entry_count + 1))
+            case "$entry" in
+              "$control_root/runtime-snapshot-loader.mjs"|"$control_root/resource-governance-launcher.mjs")
+                expected_mode=444
+                ;;
+              "$control_root/runtime-memfd-addon.node")
+                expected_mode=555
+                ;;
+              *) exit 1 ;;
+            esac
+            test -f "$entry"
+            test ! -L "$entry"
+            sudo /bin/chown root:root -- "$entry"
+            sudo /bin/chmod "$expected_mode" -- "$entry"
+            test "$(/usr/bin/stat -c '%u:%g:%a:%h' "$entry")" = "0:0:$expected_mode:1"
+          done
+          test "$entry_count" = 3
+        - /bin/mkdir -p -m 0700 -- /var/www/.radar-workspaces
+        - test -d /var/www/.radar-workspaces
+        - test ! -L /var/www/.radar-workspaces
+        - /bin/chmod 0700 -- /var/www/.radar-workspaces
+        - test "$(/usr/bin/stat -c '%u' /var/www/.radar-workspaces)" = "$(/usr/bin/id -u)"
+        - test "$(/usr/bin/stat -c '%a' /var/www/.radar-workspaces)" = 700
+        # Zerops service isolation is not itself proof that this service has a
+        # writable private cgroup-v2 subtree. Provision only the fixed child
+        # below after proving the current cgroup namespace maps to it exactly;
+        # never derive a fallback root. A read-only mount, a populated parent,
+        # absent controllers, a non-exclusive owner/mode, or any failed write
+        # aborts init. This init probe proves one disposable child's controls,
+        # attachment, kill/populated=0, and removal; the trusted doctor still
+        # proves concurrent isolation and the analyzer launch lifecycle.
+        - |-
+          set -efu
+          cgroup_mount=/sys/fs/cgroup
+          cgroup_root=/sys/fs/cgroup/radar-analysis
+          has_controller() {
+            controls="$(/usr/bin/tr '\n\t' '  ' < "$2")"
+            case " $controls " in *" $1 "*) return 0 ;; *) return 1 ;; esac
+          }
+          test "$RADAR_ANALYSIS_CGROUP_ROOT" = "$cgroup_root"
+          test -d "$cgroup_mount"
+          test ! -L "$cgroup_mount"
+          test "$(/usr/bin/realpath "$cgroup_mount")" = "$cgroup_mount"
+          test "$(/usr/bin/stat -fc %T "$cgroup_mount")" = cgroup2fs
+          unified_relative=''
+          while IFS=: read -r hierarchy controllers relative; do
+            if [ "$hierarchy" = 0 ] && [ -z "$controllers" ]; then
+              unified_relative="$relative"
+              break
+            fi
+          done < /proc/self/cgroup
+          case "$unified_relative" in
+            /) ;;
+            /*)
+              case "$unified_relative/" in *'//'* | *'/./'* | *'/../'*) exit 1 ;; esac
+              ;;
+            *) exit 1 ;;
+          esac
+          test "$unified_relative" = /
+          original_cgroup="$cgroup_mount${unified_relative%/}"
+          test "$(/usr/bin/realpath "$original_cgroup")" = "$original_cgroup"
+          test "$original_cgroup/radar-analysis" = "$cgroup_root"
+          test -f "$original_cgroup/cgroup.procs"
+          test ! -L "$original_cgroup/cgroup.procs"
+          test -w "$original_cgroup/cgroup.procs"
+          test -f "$original_cgroup/cgroup.controllers"
+          test ! -L "$original_cgroup/cgroup.controllers"
+          test -f "$original_cgroup/cgroup.subtree_control"
+          test ! -L "$original_cgroup/cgroup.subtree_control"
+          for controller in cpu memory pids; do
+            has_controller "$controller" "$original_cgroup/cgroup.controllers"
+          done
+          printf '%s\n' '+cpu +memory +pids' > "$original_cgroup/cgroup.subtree_control"
+          for controller in cpu memory pids; do
+            has_controller "$controller" "$original_cgroup/cgroup.subtree_control"
+          done
+          test ! -e "$cgroup_root"
+          test ! -L "$cgroup_root"
+          /bin/mkdir -m 0755 -- "$cgroup_root"
+          test -d "$cgroup_root"
+          test ! -L "$cgroup_root"
+          test "$(/usr/bin/realpath "$cgroup_root")" = "$cgroup_root"
+          test "$(/usr/bin/stat -c '%u:%g:%a' "$cgroup_root")" = "$(/usr/bin/id -u):$(/usr/bin/id -g):755"
+          test -f "$cgroup_root/cgroup.controllers"
+          test ! -L "$cgroup_root/cgroup.controllers"
+          test -f "$cgroup_root/cgroup.subtree_control"
+          test ! -L "$cgroup_root/cgroup.subtree_control"
+          for controller in cpu memory pids; do
+            has_controller "$controller" "$cgroup_root/cgroup.controllers"
+          done
+          printf '%s\n' '+cpu +memory +pids' > "$cgroup_root/cgroup.subtree_control"
+          for controller in cpu memory pids; do
+            has_controller "$controller" "$cgroup_root/cgroup.subtree_control"
+          done
+          for control in cgroup.procs cgroup.kill cgroup.events; do
+            test -f "$cgroup_root/$control"
+            test ! -L "$cgroup_root/$control"
+          done
+          test -w "$cgroup_root/cgroup.procs"
+          test -w "$cgroup_root/cgroup.kill"
+          set_control() {
+            control_path="$1/$2"
+            expected="$3"
+            test -f "$control_path"
+            test ! -L "$control_path"
+            printf '%s\n' "$expected" > "$control_path"
+            actual="$(/bin/cat "$control_path")"
+            test "$actual" = "$expected"
+          }
+          probe="$cgroup_root/radar-init-probe-$$"
+          test ! -e "$probe"
+          test ! -L "$probe"
+          /bin/mkdir -m 0755 -- "$probe"
+          test -d "$probe"
+          test ! -L "$probe"
+          test "$(/usr/bin/realpath "$probe")" = "$probe"
+          test "$(/usr/bin/stat -c '%u:%g:%a' "$probe")" = "$(/usr/bin/id -u):$(/usr/bin/id -g):755"
+          set_control "$probe" pids.max 128
+          set_control "$probe" memory.max 2147483648
+          set_control "$probe" memory.swap.max 0
+          set_control "$probe" memory.oom.group 1
+          set_control "$probe" cpu.max '200000 100000'
+          test -f "$probe/cgroup.procs"
+          test ! -L "$probe/cgroup.procs"
+          test -f "$probe/cgroup.kill"
+          test ! -L "$probe/cgroup.kill"
+          test -f "$probe/cgroup.events"
+          test ! -L "$probe/cgroup.events"
+          printf '%s\n' "$$" > "$probe/cgroup.procs"
+          attached="$(/bin/cat "$probe/cgroup.procs")"
+          case " $attached " in *" $$ "*) ;; *) exit 1 ;; esac
+          printf '%s\n' "$$" > "$original_cgroup/cgroup.procs"
+          returned="$(/bin/cat "$original_cgroup/cgroup.procs")"
+          case " $returned " in *" $$ "*) ;; *) exit 1 ;; esac
+          printf '%s\n' 1 > "$probe/cgroup.kill"
+          attempts=0
+          while :; do
+            events="$(/bin/cat "$probe/cgroup.events")"
+            case "$events" in *'populated 0'*) break ;; esac
+            attempts=$((attempts + 1))
+            test "$attempts" -lt 50
+            /bin/sleep 0.1
+          done
+          /bin/rmdir -- "$probe"
+          test ! -e "$probe"
+          test ! -L "$probe"
+        - test -x /var/www/.zerops/radar-cli/bin/radar.mjs
+        - test -x /var/www/.zerops/agent-runtime/node_modules/.bin/claude
+        - test -x /var/www/.zerops/agent-runtime/node_modules/.bin/codex
+        # Runtime package databases are mutable provenance, not trust roots.
+        # Establish only the canonical host paths here; the trusted CLI doctor
+        # below independently pins raw hashes and proves limits in the
+        # prlimit→bwrap child. Authenticate the hash helper before using it.
+        - test -f /usr/bin/sha256sum
+        - test -x /usr/bin/sha256sum
+        - test ! -L /usr/bin/sha256sum
+        - test "$(/usr/bin/realpath /usr/bin/sha256sum)" = /usr/bin/sha256sum
+        - test "$(/usr/bin/stat -c '%u:%g:%a:%h' /usr/bin/sha256sum)" = 0:0:755:1
+        - test -f /usr/bin/bwrap
+        - test -x /usr/bin/bwrap
+        - test ! -L /usr/bin/bwrap
+        - test "$(/usr/bin/realpath /usr/bin/bwrap)" = /usr/bin/bwrap
+        - test "$(/usr/bin/stat -c '%u:%g:%a:%h' /usr/bin/bwrap)" = 0:0:755:1
+        - test "$(/usr/bin/sha256sum /usr/bin/bwrap)" = '52231e1caf55bcbc667b269f49c63599a6f7db4767ae6a039580d0ff853db712  /usr/bin/bwrap'
+        - test -f /usr/bin/prlimit
+        - test -x /usr/bin/prlimit
+        - test ! -L /usr/bin/prlimit
+        - test "$(/usr/bin/realpath /usr/bin/prlimit)" = /usr/bin/prlimit
+        - test "$(/usr/bin/stat -c '%u:%g:%a:%h' /usr/bin/prlimit)" = 0:0:755:1
+        - test "$(/usr/bin/sha256sum /usr/bin/prlimit)" = 'f27cfd8c1512a4cc6541b59b80cb4cdfd6ef28c34aa21db4299b48264cd0d128  /usr/bin/prlimit'
+        # This isolated official Node installation is the only bootstrap
+        # interpreter. Its raw ELF is authenticated before doctor/app code;
+        # neither the target analyzer root nor moving nodejs@24 is executable.
+        - test -f /usr/local/lib/radar-node-v24.18.1/bin/node
+        - test -x /usr/local/lib/radar-node-v24.18.1/bin/node
+        - test ! -L /usr/local/lib/radar-node-v24.18.1/bin/node
+        - test "$(/usr/bin/realpath /usr/local/lib/radar-node-v24.18.1/bin/node)" = /usr/local/lib/radar-node-v24.18.1/bin/node
+        - test "$(/usr/bin/stat -c '%u:%g:%a:%h' /usr/local/lib/radar-node-v24.18.1/bin/node)" = 0:0:755:1
+        - test "$(/usr/bin/sha256sum /usr/local/lib/radar-node-v24.18.1/bin/node)" = 'f3432a45b03b2da0d270095fdd8813dc34cbea73f5fc8b18c7a384b7cf9b333a  /usr/local/lib/radar-node-v24.18.1/bin/node'
+        - test "$(/usr/local/lib/radar-node-v24.18.1/bin/node --version)" = v24.18.1
+        # The CLI owns the verifier dependency tree. It passes the analyzer
+        # root only as data, so target-side verifier/anchor substitution cannot
+        # authenticate the target itself. This is deliberately a hard gate:
+        # the deployed production code must anchor raw host-binary hashes,
+        # verify hard limits inside the prlimit→bwrap child, and require
+        # delegated cgroup-v2 lifecycle cleanup. Until that independent
+        # evidence exists, `doctor` exits non-zero and startup fails closed.
+        - >-
+          /usr/bin/env -i HOME=/nonexistent LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/bin:/bin
+          RADAR_ANALYZER_ROOT=/var/www/.zerops/analyzer-runtime
+          RADAR_ANALYZER_CONTROL_ROOT=/var/www/.zerops/analyzer-control
+          RADAR_WORKSPACE_PARENT=/var/www/.radar-workspaces
+          RADAR_ANALYSIS_CGROUP_ROOT=/sys/fs/cgroup/radar-analysis
+          /bin/sh -c 'cd /var/www/.zerops/radar-cli && exec /usr/local/lib/radar-node-v24.18.1/bin/node /var/www/.zerops/radar-cli/bin/radar.mjs doctor --format json'
+        # Prove that the actual Modern deployment consumes the explicit
+        # control root, that an independently cloned anchored control bundle
+        # remains ready, and that one-byte control mutation fails closed. The
+        # clone must preserve root ownership, so run this bounded acceptance
+        # smoke as root after the delegated cgroup and doctor gates succeed.
+        - >-
+          sudo /usr/bin/env -i HOME=/nonexistent LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/bin:/bin
+          RADAR_ANALYZER_ROOT=/var/www/.zerops/analyzer-runtime
+          RADAR_ANALYZER_CONTROL_ROOT=/var/www/.zerops/analyzer-control
+          RADAR_WORKSPACE_PARENT=/var/www/.radar-workspaces
+          RADAR_ANALYSIS_CGROUP_ROOT=/sys/fs/cgroup/radar-analysis
+          RADAR_OUTPUT_ROOT=/var/www/apps/radar/.output
+          RADAR_CLI_BIN=/var/www/.zerops/radar-cli/bin/radar.mjs
+          /bin/sh -c 'cd /var/www/apps/radar/.output && exec /usr/local/lib/radar-node-v24.18.1/bin/node /var/www/apps/radar/scripts/production-output-smoke.mjs'
+        # This is the fixed dogfood:max profile under the exact 2 CPU/4 GB
+        # candidate allocation. It becomes a real Linux acceptance only when
+        # the preceding cgroup and doctor gates pass on Zerops; it is never a
+        # Darwin/macOS claim and never runs against an arbitrary caller CWD.
+        - >-
+          /usr/bin/env -i HOME=/nonexistent LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/bin:/bin
+          RADAR_ANALYZER_ROOT=/var/www/.zerops/analyzer-runtime
+          RADAR_ANALYZER_CONTROL_ROOT=/var/www/.zerops/analyzer-control
+          RADAR_WORKSPACE_PARENT=/var/www/.radar-workspaces
+          RADAR_ANALYSIS_CGROUP_ROOT=/sys/fs/cgroup/radar-analysis
+          /bin/sh -c 'cd /var/www/.zerops/radar-cli && exec /usr/local/lib/radar-node-v24.18.1/bin/node /var/www/.zerops/radar-cli/bin/radar.mjs scan path /var/www/.zerops/analyzer-runtime/smoke --format json --quiet --fail-on never > /dev/null'
       envVariables:
         NODE_ENV: production
         PORT: "3000"
         DATABASE_URL: ${db_connectionString}
+        RADAR_PUBLIC_ORIGIN: "https://radar-21d6-3000.prg1.zerops.app"
+        # Absolute deploy siblings set by deployFiles; application code must
+        # reject missing, redirected, or unverified roots rather than fall back.
         RADAR_ANALYZER_ROOT: /var/www/.zerops/analyzer-runtime
+        # A separate three-file immutable control bundle supplies loader,
+        # resource launcher, and native memfd bridge to bundled app/core code.
+        # It is never resolved from the mutable analyzer target root.
+        RADAR_ANALYZER_CONTROL_ROOT: /var/www/.zerops/analyzer-control
         RADAR_AGENT_ROOT: /var/www/.zerops/agent-runtime
+        RADAR_WORKSPACE_PARENT: /var/www/.radar-workspaces
+        # A candidate only: init derives current membership solely to validate
+        # this exact child root, provisions it fail-closed, and doctor proves
+        # delegation/lifecycle. It is not a fallback to a shared service
+        # cgroup; missing or non-writable delegation keeps readiness down.
+        RADAR_ANALYSIS_CGROUP_ROOT: /sys/fs/cgroup/radar-analysis
         SCAN_CONCURRENCY: "1"
-      start: node apps/radar/.output/index.js
+      # Pin CWD, environment, interpreter, and entry file. `env -i` drops
+      # NODE_OPTIONS/NODE_PATH/loaders, inherited library hooks, and hostile
+      # caller state before application modules can resolve.
+      start: >-
+        exec /usr/bin/env -i HOME=/nonexistent LANG=C.UTF-8 LC_ALL=C.UTF-8 NO_COLOR=1 PATH=/usr/bin:/bin
+        NODE_ENV=production PORT=3000 DATABASE_URL="$DATABASE_URL" RADAR_PUBLIC_ORIGIN="$RADAR_PUBLIC_ORIGIN"
+        RADAR_ANALYZER_ROOT=/var/www/.zerops/analyzer-runtime RADAR_ANALYZER_CONTROL_ROOT=/var/www/.zerops/analyzer-control RADAR_AGENT_ROOT=/var/www/.zerops/agent-runtime
+        RADAR_WORKSPACE_PARENT=/var/www/.radar-workspaces RADAR_ANALYSIS_CGROUP_ROOT=/sys/fs/cgroup/radar-analysis
+        RADAR_AGENT_HOME_KEY_V1="$RADAR_AGENT_HOME_KEY_V1" SCAN_CONCURRENCY=1
+        /bin/sh -c 'cd /var/www/apps/radar/.output && exec /usr/local/lib/radar-node-v24.18.1/bin/node /var/www/apps/radar/.output/index.js'
       healthCheck:
         httpGet:
           port: 3000
-          path: /api/health
+          path: /api/ready
+        failureTimeout: 120
+        disconnectTimeout: 30
+        recoveryTimeout: 30
+        execPeriod: 30

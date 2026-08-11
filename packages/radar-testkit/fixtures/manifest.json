@@ -1,0 +1,126 @@
+{
+  "$schema": "https://codebase-radar.invalid/schemas/repository-fixtures-v1.json",
+  "schemaVersion": "codebase-radar.repository-fixtures/v1",
+  "safety": {
+    "networkRequired": false,
+    "executableFilesAllowed": false,
+    "packageScriptsAllowed": false,
+    "targetCommandsAllowed": false
+  },
+  "fixtures": [
+    {
+      "id": "clean",
+      "repository": "clean/repository",
+      "purpose": "Provide a minimal TypeScript repository with no intentionally seeded defect.",
+      "expectedSignals": [
+        "inventory includes package.json and src/arithmetic.ts",
+        "no seeded duplication, dependency, workflow, or structural-risk finding"
+      ]
+    },
+    {
+      "id": "duplicated",
+      "repository": "duplicated/repository",
+      "purpose": "Provide two independently named files containing the same non-trivial implementation block.",
+      "expectedSignals": [
+        "duplication analyzer reports the shared normalization block",
+        "evidence identifies both src/customer-label.ts and src/project-label.ts"
+      ]
+    },
+    {
+      "id": "structurally-risky",
+      "repository": "structurally-risky/repository",
+      "purpose": "Provide a small import cycle spanning three otherwise ordinary TypeScript modules.",
+      "expectedSignals": [
+        "structural analysis reports the accounts to billing to reports cycle",
+        "cycle evidence remains repository-relative"
+      ]
+    },
+    {
+      "id": "vulnerable-lockfile",
+      "repository": "vulnerable-lockfile/repository",
+      "purpose": "Provide a valid npm lockfile pinned to a dependency version with known advisories.",
+      "expectedSignals": [
+        "dependency analysis identifies lodash 4.17.20",
+        "advisory applicability is backed by package-lock.json rather than source imports"
+      ]
+    },
+    {
+      "id": "unsafe-workflow",
+      "repository": "unsafe-workflow/repository",
+      "purpose": "Provide a non-executable GitHub Actions document with intentionally unsafe trust and permission choices.",
+      "expectedSignals": [
+        "workflow analysis flags pull_request_target with write-all permissions",
+        "workflow analysis flags mutable action refs and checkout of pull-request head code"
+      ]
+    },
+    {
+      "id": "mixed-framework",
+      "repository": "mixed-framework/repository",
+      "purpose": "Provide React TSX and Vue SFC source in one package for deterministic mixed-framework detection.",
+      "expectedSignals": [
+        "inventory detects both React and Vue",
+        "framework-aware lint coverage includes .tsx and .vue files"
+      ]
+    },
+    {
+      "id": "empty",
+      "repository": null,
+      "purpose": "Exercise a genuinely empty source root without checking in a placeholder file.",
+      "expectedSignals": [
+        "inventory reports zero files",
+        "analysis returns a typed empty-source outcome without executing target code"
+      ],
+      "materialization": {
+        "kind": "empty-directory"
+      }
+    },
+    {
+      "id": "oversized-boundary",
+      "repository": null,
+      "purpose": "Exercise the first rejected byte beyond the configured source-size boundary without checking in a large artifact.",
+      "expectedSignals": [
+        "the configured source byte limit is accepted at the boundary",
+        "limit plus one byte is rejected as oversized before analyzer execution"
+      ],
+      "materialization": {
+        "kind": "generated-size-boundary",
+        "path": "payload/boundary.txt",
+        "acceptedSize": "source-byte-limit",
+        "rejectedSize": "source-byte-limit-plus-one",
+        "fillByte": 120
+      }
+    },
+    {
+      "id": "dirty-worktree",
+      "repository": null,
+      "purpose": "Describe a deterministic committed baseline plus tracked and untracked working-tree changes.",
+      "expectedSignals": [
+        "local snapshot includes the tracked modification and untracked file",
+        "source checkout content and Git status remain unchanged after the scan"
+      ],
+      "materialization": {
+        "kind": "git-dirty-worktree",
+        "commit": {
+          "src/status.ts": "export const status = 'committed';\n"
+        },
+        "workingTree": {
+          "modify": {
+            "src/status.ts": "export const status = 'modified';\n"
+          },
+          "add": {
+            "src/untracked.ts": "export const untracked = true;\n"
+          }
+        }
+      }
+    },
+    {
+      "id": "symlink-escape",
+      "repository": "symlink-escape/repository",
+      "purpose": "Provide a repository entry whose relative symlink target is outside the source root but remains fixture-local and harmless.",
+      "expectedSignals": [
+        "local source acquisition rejects src/escape.txt before reading its target",
+        "the fixture-local outside-root.txt sentinel is never copied into the isolated workspace"
+      ]
+    }
+  ]
+}

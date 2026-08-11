@@ -1,0 +1,1 @@
+fixture-local sentinel that must remain outside the acquired repository

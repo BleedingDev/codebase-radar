@@ -1,5 +1,5 @@
 import { NodeHttpClient, NodeServices } from '@effect/platform-node';
-import { Config, Context, FileSystem, Path } from 'effect';
+import { Config, Context } from 'effect';
 import {
   defineEffectBff,
   Effect,
@@ -20,7 +20,22 @@ import {
   HttpServerResponse,
 } from 'effect/unstable/http';
 import {
+  AnalysisRuntimeUnavailable,
+  DefaultBranchRevision,
+  decodeAnalysisSource,
+} from '@codebase-radar/contracts';
+import {
+  makeRadarProductionLayer,
+  makeUnavailableRadarRuntimePreflight,
+  RadarAnalysis,
+  RadarAnalysisLive,
+  RadarRuntimePreflight,
+  type RadarProductionOptions,
+} from '@codebase-radar/core';
+import {
+  AgentPriorityCapability,
   ApiFailure,
+  CapabilityUnavailable,
   HealthResponse,
   InvalidInput,
   NotFound,
@@ -41,17 +56,34 @@ import {
 } from '../shared/domain';
 import {
   AgentCoordinator,
+  AgentCoordinatorError,
   AgentCoordinatorLive,
 } from '../server/agent-coordinator';
-import { AgentRuntime, AgentRuntimeLive } from '../server/agent-runtime';
-import { AgentStore, AgentStoreLive } from '../server/agent-store';
+import {
+  AgentRuntime,
+  AgentRuntimeError,
+  AgentRuntimeLive,
+} from '../server/agent-runtime';
+import {
+  AgentScanVisibilityGate,
+  AgentScanVisibilityGateLive,
+  AgentVisibilityRejected,
+} from '../server/agent-visibility-gate';
+import {
+  AgentStore,
+  AgentStoreLive,
+  grantVisibleScanAccess,
+} from '../server/agent-store';
 import {
   persistAndAttachScan,
   ScanCoordinator,
   ScanCoordinatorLive,
 } from '../server/scan-runner';
-import { prioritizationBrief } from '../server/prioritization-brief';
-import { analyzerRoot } from '../server/analyzers';
+import {
+  buildFindingTaskpack,
+  buildPrioritizationBrief,
+  listImprovementBacklog,
+} from '../server/mcp-read-model';
 import { RadarStore, RadarStoreLive } from '../server/store';
 
 class ToolFailure extends Schema.TaggedErrorClass<ToolFailure>()('ToolFailure', {
@@ -167,11 +199,9 @@ const ToolHandlersLive = RadarToolkit.toLayer(
             Option.match({
               onNone: () => Effect.fail(toolFailure(`Scan ${scanId} was not found.`)),
               onSome: scan =>
-                scan.result
-                  ? Effect.succeed(scan.result)
-                  : Effect.fail(
-                      toolFailure(`Scan ${scanId} has no completed backlog yet.`),
-                    ),
+                listImprovementBacklog(scan).pipe(
+                  Effect.mapError(error => toolFailure(error.message)),
+                ),
             }),
           ),
           Effect.mapError(error =>
@@ -184,14 +214,9 @@ const ToolHandlersLive = RadarToolkit.toLayer(
             Option.match({
               onNone: () => Effect.fail(toolFailure(`Scan ${scanId} was not found.`)),
               onSome: scan =>
-                scan.result
-                  ? Effect.succeed(prioritizationBrief(scan)).pipe(
-                      Effect.filterOrFail(
-                        brief => brief !== undefined,
-                        () => toolFailure(`Scan ${scanId} has no completed backlog yet.`),
-                      ),
-                    )
-                  : Effect.fail(toolFailure(`Scan ${scanId} has no completed backlog yet.`)),
+                buildPrioritizationBrief(scan).pipe(
+                  Effect.mapError(error => toolFailure(error.message)),
+                ),
             }),
           ),
           Effect.mapError(error =>
@@ -203,40 +228,10 @@ const ToolHandlersLive = RadarToolkit.toLayer(
           Effect.flatMap(
             Option.match({
               onNone: () => Effect.fail(toolFailure(`Scan ${scanId} was not found.`)),
-              onSome: scan => {
-                const finding = scan.result?.findings.find(item => item.id === findingId);
-                if (!scan.result || !finding) {
-                  return Effect.fail(
-                    toolFailure(`Finding ${findingId} was not found in scan ${scanId}.`),
-                  );
-                }
-                return Effect.succeed(
-                  new FindingTaskpack({
-                    schemaVersion: 'codebase-radar.taskpack/v1',
-                    scanId,
-                    repository: scan.result.repository,
-                    finding,
-                    objective: finding.recommendation,
-                    acceptanceCriteria: [
-                      `Address the evidence represented by ${finding.fingerprint}.`,
-                      'Preserve or improve existing behavior and attributed test coverage.',
-                      'Run focused verification and report before/after evidence.',
-                    ],
-                    guardrails: [
-                      'Inference and advisory links provide context; they do not verify runtime impact.',
-                      'Inspect callers, blast radius, and affected tests before editing.',
-                      'Do not broaden the change beyond this finding without maintainer approval.',
-                    ],
-                    suggestedInvestigation: [
-                      ...finding.evidence.map(evidence =>
-                        evidence.path
-                          ? `${evidence.path}${evidence.line ? `:${evidence.line}` : ''} — ${evidence.message}`
-                          : evidence.message,
-                      ),
-                    ],
-                  }),
-                );
-              },
+              onSome: scan =>
+                buildFindingTaskpack(scan, findingId).pipe(
+                  Effect.mapError(error => toolFailure(error.message)),
+                ),
             }),
           ),
           Effect.mapError(error =>
@@ -269,10 +264,40 @@ const currentOwner = Effect.gen(function* () {
   return ownerId;
 });
 
+const agentPriorityUnavailableMessage =
+  'Agent Priority is unavailable in this deployment.';
+
+const agentPriorityUnavailable = () =>
+  new CapabilityUnavailable({
+    capability: 'agent-priority',
+    message: agentPriorityUnavailableMessage,
+  });
+
+/** Converts an optional capability probe into an explicit public state. */
+export const reportAgentPriorityCapability = <Failure, Requirements>(
+  ready: Effect.Effect<void, Failure, Requirements>,
+) =>
+  ready.pipe(
+    Effect.as(new AgentPriorityCapability({ status: 'ready' })),
+    Effect.catch(() =>
+      Effect.succeed(new AgentPriorityCapability({ status: 'unavailable' })),
+    ),
+  );
+
+class AgentPriorityAvailability extends Context.Service<AgentPriorityAvailability, {
+  readonly status: Effect.Effect<AgentPriorityCapability>;
+  readonly require: Effect.Effect<void, CapabilityUnavailable>;
+}>()('AgentPriorityAvailability') {}
+
+const requireAgentPriority = AgentPriorityAvailability.use(availability =>
+  availability.require,
+);
+
 const requiredAgentProfile = Effect.fn('requiredAgentProfile')(function* (
   ownerId: string,
   profileId: string,
 ) {
+  yield* requireAgentPriority;
   const store = yield* AgentStore;
   return yield* store.getProfile(ownerId, profileId).pipe(
     Effect.mapError(error => new ApiFailure({ message: error.message })),
@@ -286,8 +311,82 @@ const requiredAgentProfile = Effect.fn('requiredAgentProfile')(function* (
   );
 });
 
+/**
+ * The HTTP boundary accepts only a credential-free public GitHub repository,
+ * then lets the canonical source schema validate the stored identity.
+ */
+export const approvedGithubRepository = Effect.fn('approvedGithubRepository')(
+  function* (input: string) {
+    const trimmed = input.trim();
+    const isGithubUrlInput = trimmed.includes('://');
+    if (
+      /[\u0000-\u001f\u007f]/u.test(input) ||
+      trimmed.startsWith('/') ||
+      trimmed.startsWith('\\\\') ||
+      /^[A-Za-z]:[\\/]/u.test(trimmed) ||
+      trimmed.includes('?') ||
+      trimmed.includes('#') ||
+      (isGithubUrlInput &&
+        !/^https:\/\/github\.com(?:\/|$)/iu.test(trimmed))
+    ) {
+      return yield* new InvalidInput({
+        message: 'Only credential-free public GitHub repositories are accepted.',
+      });
+    }
+    const repository = yield* parseGithubRepository(trimmed).pipe(
+      Effect.mapError(
+        error => new InvalidInput({ message: error.message }),
+      ),
+    );
+    if (isGithubUrlInput) {
+      const pathname = yield* Effect.try({
+        try: () => new URL(trimmed).pathname,
+        catch: () =>
+          new InvalidInput({
+            message: 'Only credential-free public GitHub repositories are accepted.',
+          }),
+      });
+      const repositoryPath = `/${repository.owner}/${repository.repository}`;
+      if (
+        pathname !== repositoryPath &&
+        pathname !== `${repositoryPath}.git`
+      ) {
+        return yield* new InvalidInput({
+          message: 'Only credential-free public GitHub repositories are accepted.',
+        });
+      }
+    }
+    const source = yield* decodeAnalysisSource({
+      _tag: 'GitHubSource',
+      owner: repository.owner,
+      repository: repository.repository,
+      revision: new DefaultBranchRevision({}),
+    }).pipe(
+      Effect.mapError(
+        () =>
+          new InvalidInput({
+            message: 'Only credential-free public GitHub repositories are accepted.',
+          }),
+      ),
+    );
+    if (source._tag !== 'GitHubSource') {
+      return yield* new InvalidInput({
+        message: 'Only credential-free public GitHub repositories are accepted.',
+      });
+    }
+    const owner = source.owner.toLowerCase();
+    const name = source.repository.toLowerCase();
+    return {
+      owner,
+      repository: name,
+      url: `https://github.com/${owner}/${name}`,
+    };
+  },
+);
+
 class RuntimeReadiness extends Context.Service<RuntimeReadiness, {
   readonly check: Effect.Effect<void, ApiFailure>;
+  readonly agentPriority: Effect.Effect<AgentPriorityCapability>;
 }>()('RuntimeReadiness') {}
 
 const RuntimeReadinessLive = Layer.effect(
@@ -295,45 +394,24 @@ const RuntimeReadinessLive = Layer.effect(
   Effect.gen(function* () {
     const radarStore = yield* RadarStore;
     const agentStore = yield* AgentStore;
-    const agentRuntime = yield* AgentRuntime;
-    const fs = yield* FileSystem.FileSystem;
-    const pathService = yield* Path.Path;
-    const root = yield* analyzerRoot();
-    const essentials = [
-      'calldiff-analyzer.mjs',
-      'node_modules/.bin/calldiff',
-      'node_modules/.bin/oxlint',
-      'node_modules/.bin/jscpd',
-      'bin/tracedecay',
-      'bin/zizmor',
-      'bin/osv-scanner',
-      'config/jscpd.json',
-    ];
+    const agentPriority = yield* AgentPriorityAvailability;
+    const runtimePreflight = yield* RadarRuntimePreflight;
     const check = Effect.gen(function* () {
       yield* Effect.all([
         radarStore.ready,
         agentStore.ready,
-        agentRuntime.ready,
       ]);
-      for (const relative of essentials) {
-        const available = yield* fs.exists(pathService.resolve(root, relative));
-        if (!available) {
-          return yield* new ApiFailure({
-            message: `Analyzer runtime is missing ${relative}.`,
-          });
-        }
-      }
+      yield* runtimePreflight.check().pipe(Effect.asVoid);
     }).pipe(
       Effect.mapError(error =>
         error instanceof ApiFailure
           ? error
           : new ApiFailure({
-              message: error instanceof Error ? error.message : String(error),
-            }),
+              message: 'A required Radar service is unavailable.',
+          }),
       ),
     );
-    const cached = yield* Effect.cachedWithTTL(check, '30 seconds');
-    return RuntimeReadiness.of({ check: cached });
+    return RuntimeReadiness.of({ check, agentPriority: agentPriority.status });
   }),
 );
 
@@ -353,9 +431,11 @@ const RadarGroupLive = HttpApiBuilder.group(RadarApi, 'radar', handlers =>
         const radarStore = yield* RadarStore;
         const readiness = yield* RuntimeReadiness;
         yield* readiness.check;
+        const agentPriority = yield* readiness.agentPriority;
         return new ReadyResponse({
           status: 'ready',
           storage: radarStore.storage,
+          agentPriority,
         });
       }),
     )
@@ -366,6 +446,7 @@ const RadarGroupLive = HttpApiBuilder.group(RadarApi, 'radar', handlers =>
     )
     .handle('listAgentProfiles', () =>
       Effect.gen(function* () {
+        yield* requireAgentPriority;
         const ownerId = yield* currentOwner;
         const store = yield* AgentStore;
         const items = yield* store.listProfiles(ownerId).pipe(
@@ -376,6 +457,7 @@ const RadarGroupLive = HttpApiBuilder.group(RadarApi, 'radar', handlers =>
     )
     .handle('createAgentProfile', ({ payload }) =>
       Effect.gen(function* () {
+        yield* requireAgentPriority;
         const ownerId = yield* currentOwner;
         const store = yield* AgentStore;
         const profiles = yield* store.listProfiles(ownerId).pipe(
@@ -390,6 +472,7 @@ const RadarGroupLive = HttpApiBuilder.group(RadarApi, 'radar', handlers =>
     )
     .handle('beginAgentLogin', ({ params }) =>
       Effect.gen(function* () {
+        yield* requireAgentPriority;
         const ownerId = yield* currentOwner;
         const profile = yield* requiredAgentProfile(ownerId, params.profileId);
         const runtime = yield* AgentRuntime;
@@ -400,6 +483,7 @@ const RadarGroupLive = HttpApiBuilder.group(RadarApi, 'radar', handlers =>
     )
     .handle('pollAgentLogin', ({ params }) =>
       Effect.gen(function* () {
+        yield* requireAgentPriority;
         const ownerId = yield* currentOwner;
         const runtime = yield* AgentRuntime;
         return yield* runtime.pollLogin(ownerId, params.challengeId).pipe(
@@ -409,6 +493,7 @@ const RadarGroupLive = HttpApiBuilder.group(RadarApi, 'radar', handlers =>
     )
     .handle('submitAgentLoginInput', ({ params, payload }) =>
       Effect.gen(function* () {
+        yield* requireAgentPriority;
         const ownerId = yield* currentOwner;
         const runtime = yield* AgentRuntime;
         return yield* runtime.submitLoginInput(
@@ -422,6 +507,7 @@ const RadarGroupLive = HttpApiBuilder.group(RadarApi, 'radar', handlers =>
     )
     .handle('cancelAgentLogin', ({ params }) =>
       Effect.gen(function* () {
+        yield* requireAgentPriority;
         const ownerId = yield* currentOwner;
         const runtime = yield* AgentRuntime;
         yield* runtime.cancelLogin(ownerId, params.challengeId).pipe(
@@ -431,6 +517,7 @@ const RadarGroupLive = HttpApiBuilder.group(RadarApi, 'radar', handlers =>
     )
     .handle('refreshAgentProfile', ({ params }) =>
       Effect.gen(function* () {
+        yield* requireAgentPriority;
         const ownerId = yield* currentOwner;
         const profile = yield* requiredAgentProfile(ownerId, params.profileId);
         const runtime = yield* AgentRuntime;
@@ -441,6 +528,7 @@ const RadarGroupLive = HttpApiBuilder.group(RadarApi, 'radar', handlers =>
     )
     .handle('disconnectAgentProfile', ({ params }) =>
       Effect.gen(function* () {
+        yield* requireAgentPriority;
         const ownerId = yield* currentOwner;
         const profile = yield* requiredAgentProfile(ownerId, params.profileId);
         const runtime = yield* AgentRuntime;
@@ -451,6 +539,7 @@ const RadarGroupLive = HttpApiBuilder.group(RadarApi, 'radar', handlers =>
     )
     .handle('createPriorityReview', ({ params, payload }) =>
       Effect.gen(function* () {
+        yield* requireAgentPriority;
         const ownerId = yield* currentOwner;
         const agentStore = yield* AgentStore;
         const radarStore = yield* RadarStore;
@@ -467,24 +556,30 @@ const RadarGroupLive = HttpApiBuilder.group(RadarApi, 'radar', handlers =>
         if (Option.isNone(scan)) {
           return yield* new NotFound({ resource: 'scan', id: params.scanId });
         }
-        if (!scan.value.result) {
-          return yield* new InvalidInput({
-            message: 'The codebase review is not ready yet.',
+        const result = yield* listImprovementBacklog(scan.value).pipe(
+          Effect.mapError(error => new InvalidInput({ message: error.message })),
+        );
+        if (result.scanId !== scan.value.id) {
+          return yield* new ApiFailure({
+            message: 'The completed scan record could not be verified.',
           });
         }
         const review = yield* agentStore.createReview(
           ownerId,
           profile.id,
-          scan.value.id,
+          grantVisibleScanAccess(ownerId, result),
         ).pipe(
           Effect.mapError(error => new ApiFailure({ message: error.message })),
         );
-        yield* coordinator.enqueue(ownerId, review);
+        yield* coordinator.enqueue(ownerId, review).pipe(
+          Effect.mapError(error => new ApiFailure({ message: error.message })),
+        );
         return review;
       }),
     )
     .handle('getPriorityReview', ({ params }) =>
       Effect.gen(function* () {
+        yield* requireAgentPriority;
         const ownerId = yield* currentOwner;
         const store = yield* AgentStore;
         return yield* store.getReview(ownerId, params.reviewId).pipe(
@@ -498,6 +593,16 @@ const RadarGroupLive = HttpApiBuilder.group(RadarApi, 'radar', handlers =>
               onSome: Effect.succeed,
             }),
           ),
+        );
+      }),
+    )
+    .handle('cancelPriorityReview', ({ params }) =>
+      Effect.gen(function* () {
+        yield* requireAgentPriority;
+        const ownerId = yield* currentOwner;
+        const coordinator = yield* AgentCoordinator;
+        yield* coordinator.cancel(ownerId, params.reviewId).pipe(
+          Effect.mapError(error => new ApiFailure({ message: error.message })),
         );
       }),
     )
@@ -517,9 +622,7 @@ const RadarGroupLive = HttpApiBuilder.group(RadarApi, 'radar', handlers =>
       Effect.gen(function* () {
         const store = yield* RadarStore;
         const coordinator = yield* ScanCoordinator;
-        const repository = yield* parseGithubRepository(payload.repository).pipe(
-          Effect.mapError(error => new InvalidInput({ message: error.message })),
-        );
+        const repository = yield* approvedGithubRepository(payload.repository);
         const scan = yield* Effect.acquireUseRelease(
           coordinator.reserve(repository.owner, repository.repository).pipe(
             Effect.catchTags({
@@ -610,12 +713,220 @@ const PlatformLive = Layer.mergeAll(NodeServices.layer, NodeHttpClient.layerUndi
 const StoresLive = Layer.merge(RadarStoreLive, AgentStoreLive).pipe(
   Layer.provideMerge(PlatformLive),
 );
-const RuntimeLive = Layer.merge(ScanCoordinatorLive, AgentRuntimeLive).pipe(
+const unavailableProductionPath = (value: string | undefined) =>
+  value !== undefined &&
+    value !== '/' &&
+    value.trim() === value &&
+    value.startsWith('/') &&
+    !/[\u0000-\u001f\u007f]/u.test(value)
+    ? value
+    : undefined;
+
+/**
+ * Accept only explicit host-owned roots. The core factory performs the
+ * descriptor-relative metadata and trust-anchor verification; this boundary
+ * deliberately supplies no inferred paths or analyzer-target fallback.
+ */
+export const productionRuntimeOptionsFromEnvironment = (environment: {
+  readonly runtimeRoot: string | undefined;
+  readonly workspaceParent: string | undefined;
+  readonly resourceCgroupRoot: string | undefined;
+  readonly analyzerControlRoot: string | undefined;
+}) => {
+  const runtimeRoot = unavailableProductionPath(environment.runtimeRoot);
+  const workspaceParent = unavailableProductionPath(environment.workspaceParent);
+  const resourceCgroupRoot = unavailableProductionPath(
+    environment.resourceCgroupRoot,
+  );
+  const analyzerControlRoot = unavailableProductionPath(
+    environment.analyzerControlRoot,
+  );
+  return runtimeRoot === undefined ||
+    workspaceParent === undefined ||
+    resourceCgroupRoot === undefined ||
+    analyzerControlRoot === undefined ||
+    analyzerControlRoot === runtimeRoot
+    ? undefined
+    : {
+        runtimeRoot,
+        workspaceParent,
+        resourceCgroupRoot,
+        analyzerControlRoot,
+      } satisfies RadarProductionOptions;
+};
+const MissingProductionRuntimeLive = Layer.merge(
+  Layer.succeed(RadarRuntimePreflight, makeUnavailableRadarRuntimePreflight()),
+  RadarAnalysisLive(
+    RadarAnalysis.of({
+      analyze: () =>
+        Effect.fail(
+          new AnalysisRuntimeUnavailable({
+            message: 'The verified analyzer runtime is unavailable.',
+          }),
+        ),
+    }),
+  ),
+);
+/**
+ * Select the only production composition from explicit host configuration.
+ * Missing or malformed values deliberately retain the canonical unavailable
+ * preflight, so `/ready` cannot turn a partial configuration into readiness.
+ */
+export const productionRuntimeLayerFromEnvironment = (
+  environment: Parameters<typeof productionRuntimeOptionsFromEnvironment>[0],
+) => {
+  const options = productionRuntimeOptionsFromEnvironment(environment);
+  return options === undefined
+    ? MissingProductionRuntimeLive
+    : makeRadarProductionLayer(options);
+};
+const ProductionRuntimeLive = Layer.unwrap(
+  Effect.all({
+    runtimeRoot: Config.option(Config.string('RADAR_ANALYZER_ROOT')),
+    workspaceParent: Config.option(Config.string('RADAR_WORKSPACE_PARENT')),
+    resourceCgroupRoot: Config.option(Config.string('RADAR_ANALYSIS_CGROUP_ROOT')),
+    analyzerControlRoot: Config.option(Config.string('RADAR_ANALYZER_CONTROL_ROOT')),
+  }).pipe(
+    Effect.map(config =>
+      productionRuntimeLayerFromEnvironment({
+        runtimeRoot: Option.getOrUndefined(config.runtimeRoot),
+        workspaceParent: Option.getOrUndefined(config.workspaceParent),
+        resourceCgroupRoot: Option.getOrUndefined(config.resourceCgroupRoot),
+        analyzerControlRoot: Option.getOrUndefined(config.analyzerControlRoot),
+      }),
+    ),
+  ),
+);
+const CoreRuntimeLive = ScanCoordinatorLive.pipe(
+  Layer.provideMerge(ProductionRuntimeLive),
   Layer.provideMerge(StoresLive),
 );
-const ServicesLive = Layer.merge(AgentCoordinatorLive, RuntimeReadinessLive).pipe(
-  Layer.provideMerge(RuntimeLive),
+const VisibilityLive = AgentScanVisibilityGateLive.pipe(
+  Layer.provide(PlatformLive),
 );
+const unavailableAgentRuntime = () => new AgentRuntimeError({
+  message: agentPriorityUnavailableMessage,
+});
+const UnavailableAgentRuntimeLive = Layer.succeed(
+  AgentRuntime,
+  AgentRuntime.of({
+    ready: Effect.fail(unavailableAgentRuntime()),
+    beginLogin: () => Effect.fail(unavailableAgentRuntime()),
+    pollLogin: () => Effect.fail(unavailableAgentRuntime()),
+    submitLoginInput: () => Effect.fail(unavailableAgentRuntime()),
+    cancelLogin: () => Effect.fail(unavailableAgentRuntime()),
+    refreshStatus: () => Effect.fail(unavailableAgentRuntime()),
+    disconnect: () => Effect.fail(unavailableAgentRuntime()),
+    prioritizeChunk: () => Effect.fail(unavailableAgentRuntime()),
+    prioritizeMerge: () => Effect.fail(unavailableAgentRuntime()),
+  }),
+);
+const UnavailableAgentVisibilityLive = Layer.succeed(
+  AgentScanVisibilityGate,
+  AgentScanVisibilityGate.of({
+    verify: () =>
+      Effect.fail(new AgentVisibilityRejected({ code: 'scan-access-revoked' })),
+  }),
+);
+const unavailableAgentCoordinator = () => new AgentCoordinatorError({
+  message: agentPriorityUnavailableMessage,
+});
+const UnavailableAgentCoordinatorLive = Layer.succeed(
+  AgentCoordinator,
+  AgentCoordinator.of({
+    enqueue: () => Effect.fail(unavailableAgentCoordinator()),
+    cancel: () => Effect.fail(unavailableAgentCoordinator()),
+  }),
+);
+const UnavailableAgentPriorityAvailabilityLive = Layer.succeed(
+  AgentPriorityAvailability,
+  AgentPriorityAvailability.of({
+    status: Effect.succeed(new AgentPriorityCapability({ status: 'unavailable' })),
+    require: Effect.fail(agentPriorityUnavailable()),
+  }),
+);
+const UnavailableAgentFeatureLive = Layer.mergeAll(
+  UnavailableAgentRuntimeLive,
+  UnavailableAgentVisibilityLive,
+  UnavailableAgentCoordinatorLive,
+  UnavailableAgentPriorityAvailabilityLive,
+);
+const ActiveAgentPriorityAvailabilityLive = Layer.effect(
+  AgentPriorityAvailability,
+  Effect.gen(function* () {
+    const store = yield* AgentStore;
+    const runtime = yield* AgentRuntime;
+    const ready = Effect.all([store.ready, runtime.ready]).pipe(Effect.asVoid);
+    // Construct the coordinator only after its provider runtime is attested.
+    // A failure selects the fail-closed optional feature bundle below.
+    yield* ready;
+    const status = reportAgentPriorityCapability(ready);
+    return AgentPriorityAvailability.of({
+      status,
+      require: status.pipe(
+        Effect.flatMap(capability =>
+          capability.status === 'ready'
+            ? Effect.void
+            : Effect.fail(agentPriorityUnavailable()),
+        ),
+      ),
+    });
+  }),
+);
+const AgentRuntimeAndVisibilityLive = Layer.merge(
+  AgentRuntimeLive,
+  VisibilityLive,
+);
+const VerifiedAgentPriorityLive = ActiveAgentPriorityAvailabilityLive.pipe(
+  Layer.provideMerge(AgentRuntimeAndVisibilityLive),
+);
+const ActiveAgentFeatureLive = AgentCoordinatorLive.pipe(
+  Layer.provideMerge(VerifiedAgentPriorityLive),
+);
+const AgentFeatureLive = ActiveAgentFeatureLive.pipe(
+  Layer.catchCause(() => UnavailableAgentFeatureLive),
+);
+const ServicesLive = RuntimeReadinessLive.pipe(
+  Layer.provideMerge(AgentFeatureLive),
+  Layer.provideMerge(CoreRuntimeLive),
+);
+const canonicalConfiguredOrigin = (value: string): string | undefined => {
+  try {
+    const parsed = new URL(value);
+    return value.trim() === value &&
+      !value.includes('?') &&
+      !value.includes('#') &&
+      parsed.username === '' &&
+      parsed.password === '' &&
+      parsed.pathname === '/' &&
+      parsed.search === '' &&
+      parsed.hash === ''
+      ? parsed.origin
+      : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+export const isMcpRequestPath = (requestUrl: string) => {
+  try {
+    return new URL(requestUrl, 'https://radar.invalid').pathname === '/mcp';
+  } catch {
+    return false;
+  }
+};
+
+export const isMcpOriginAllowed = (
+  requestUrl: string,
+  requestOrigin: string | undefined,
+  configuredOrigin: string | undefined,
+) => {
+  if (!isMcpRequestPath(requestUrl)) return true;
+  if (requestOrigin === undefined || configuredOrigin === undefined) return false;
+  const expectedOrigin = canonicalConfiguredOrigin(configuredOrigin);
+  return expectedOrigin !== undefined && requestOrigin === expectedOrigin;
+};
+
 const McpOriginGuardLive = HttpRouter.middleware(
   Effect.gen(function* () {
     const configuredOrigin = yield* Config.option(Config.string('RADAR_PUBLIC_ORIGIN'));
@@ -623,17 +934,9 @@ const McpOriginGuardLive = HttpRouter.middleware(
       Effect.gen(function* () {
         const request = yield* HttpServerRequest.HttpServerRequest;
         const origin = request.headers['origin'];
-        if (request.url === '/mcp' && origin) {
-          const forwardedProtocol = request.headers['x-forwarded-proto']
-            ?.split(',')[0]
-            ?.trim();
-          const expectedOrigin = Option.getOrElse(
-            configuredOrigin,
-            () => `${forwardedProtocol || 'http'}://${request.headers['host'] || ''}`,
-          );
-          if (origin !== expectedOrigin) {
-            return HttpServerResponse.empty({ status: 403 });
-          }
+        const expectedOrigin = Option.getOrUndefined(configuredOrigin);
+        if (!isMcpOriginAllowed(request.url, origin, expectedOrigin)) {
+          return HttpServerResponse.empty({ status: 403 });
         }
         return yield* httpEffect;
       });

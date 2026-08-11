@@ -1,0 +1,91 @@
+[
+  {
+    "_tag": "AnalysisProgressUpdate",
+    "scanId": "scan-golden-001",
+    "sequence": 0,
+    "timestamp": "2026-08-11T10:00:00.000Z",
+    "stage": "preflight",
+    "completedWork": 0,
+    "totalWork": 7,
+    "percent": 0,
+    "terminal": false
+  },
+  {
+    "_tag": "AnalysisProgressUpdate",
+    "scanId": "scan-golden-001",
+    "sequence": 1,
+    "timestamp": "2026-08-11T10:00:01.000Z",
+    "stage": "materializing",
+    "completedWork": 1,
+    "totalWork": 7,
+    "percent": 14,
+    "terminal": false
+  },
+  {
+    "_tag": "AnalysisProgressUpdate",
+    "scanId": "scan-golden-001",
+    "sequence": 2,
+    "timestamp": "2026-08-11T10:00:02.000Z",
+    "stage": "inventory",
+    "completedWork": 2,
+    "totalWork": 7,
+    "percent": 28,
+    "terminal": false
+  },
+  {
+    "_tag": "AnalysisProgressUpdate",
+    "scanId": "scan-golden-001",
+    "sequence": 3,
+    "timestamp": "2026-08-11T10:00:03.000Z",
+    "stage": "analyzing",
+    "completedWork": 3,
+    "totalWork": 7,
+    "percent": 42,
+    "terminal": false
+  },
+  {
+    "_tag": "AnalysisProgressUpdate",
+    "scanId": "scan-golden-001",
+    "sequence": 4,
+    "timestamp": "2026-08-11T10:00:04.000Z",
+    "stage": "analyzing",
+    "completedWork": 4,
+    "totalWork": 7,
+    "percent": 57,
+    "terminal": false
+  },
+  {
+    "_tag": "AnalysisProgressUpdate",
+    "scanId": "scan-golden-001",
+    "sequence": 5,
+    "timestamp": "2026-08-11T10:00:05.000Z",
+    "stage": "prioritizing",
+    "completedWork": 5,
+    "totalWork": 7,
+    "percent": 71,
+    "terminal": false
+  },
+  {
+    "_tag": "AnalysisProgressUpdate",
+    "scanId": "scan-golden-001",
+    "sequence": 6,
+    "timestamp": "2026-08-11T10:00:06.000Z",
+    "stage": "comparing",
+    "completedWork": 6,
+    "totalWork": 7,
+    "percent": 85,
+    "terminal": false
+  },
+  {
+    "_tag": "AnalysisProgressTerminal",
+    "scanId": "scan-golden-001",
+    "sequence": 7,
+    "timestamp": "2026-08-11T10:00:07.000Z",
+    "stage": "terminal",
+    "completedWork": 7,
+    "totalWork": 7,
+    "percent": 100,
+    "terminal": true,
+    "outcome": "succeeded"
+  }
+]

@@ -9,8 +9,15 @@ import {
   Stream,
 } from 'effect';
 import { ChildProcess } from 'effect/unstable/process';
-import { AnalyzerCoverage, AnalyzerRun, Evidence } from '../shared/domain';
-import { AnalyzerOutput, FindingCandidate } from './analyzers';
+import { Evidence } from '@codebase-radar/contracts';
+import {
+  completeAnalyzerOutput,
+  FindingCandidate,
+  incompleteAnalyzerOutput,
+  notApplicableAnalyzerOutput,
+  pathSetProofAfterExactToolCoverage,
+  unprovenPathSetProof,
+} from './analyzers';
 import { RepositoryInventory, repositoryRelative } from './inventory';
 import { boundedDiagnostic, runCommand } from './process';
 
@@ -56,6 +63,7 @@ class ComplexityResult extends Schema.Class<ComplexityResult>(
 
 class CircularResult extends Schema.Class<CircularResult>('CircularResult')({
   cycle_count: Schema.Number,
+  cycles: Schema.Array(Schema.Array(Schema.String)),
 }) {}
 
 class HealthResult extends Schema.Class<HealthResult>('HealthResult')({
@@ -100,6 +108,7 @@ class TestRiskSummary extends Schema.Class<TestRiskSummary>('TestRiskSummary')({
 }) {}
 
 class TestRiskResult extends Schema.Class<TestRiskResult>('TestRiskResult')({
+  risks: Schema.Array(Schema.Unknown),
   summary: TestRiskSummary,
 }) {}
 
@@ -141,6 +150,7 @@ class DocFile extends Schema.Class<DocFile>('DocFile')({
 class DocCoverageResult extends Schema.Class<DocCoverageResult>(
   'DocCoverageResult',
 )({
+  file_count: Schema.Number,
   files: Schema.Array(DocFile),
   total_undocumented: Schema.Number,
 }) {}
@@ -196,6 +206,22 @@ const parseToolPayload = <S extends Schema.Constraint>(schema: S, stdout: string
     return payload.value;
   });
 
+const traceDecayResultLimit = 10_000;
+
+export const traceDecayCountTruncationWarning = (input: {
+  readonly tool: string;
+  readonly returned: number;
+  readonly reported?: number;
+  readonly limit: number;
+}) => {
+  if (input.reported !== undefined && input.returned !== input.reported) {
+    return `${input.tool}: returned ${input.returned} of ${input.reported} reported results`;
+  }
+  return input.returned >= input.limit
+    ? `${input.tool}: reached the ${input.limit}-result limit before completeness could be proven`
+    : undefined;
+};
+
 export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
   readonly scanRoot: string;
   readonly repoRoot: string;
@@ -207,24 +233,27 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
   const pathService = yield* Path.Path;
   const command = pathService.resolve(analyzerRoot, 'bin/tracedecay');
   const partial = (diagnostic: string, durationMs = 0) =>
-    new AnalyzerOutput({
-      run: new AnalyzerRun({
-        analyzer: 'TraceDecay',
-        analyzerVersion: '0.0.73',
-        profileVersion: 'structural-max/v2',
-        status: 'partial',
-        durationMs,
-        coverage: new AnalyzerCoverage({
-          eligibleFiles: inventory.sourceFiles.length,
-          analyzedFiles: 0,
-          omittedCapabilities: ['runtime coverage', 'dynamic dispatch', 'business impact'],
-          warnings: [diagnostic],
-        }),
-        observationCount: 0,
-        diagnostic,
-      }),
-      candidates: [],
+    incompleteAnalyzerOutput({
+      analyzer: 'TraceDecay',
+      analyzerVersion: '0.0.73',
+      status: 'partial',
+      durationMs,
+      eligibleFiles: inventory.sourceFiles.length,
+      analyzedFiles: 0,
+      observationCount: 0,
+      diagnostic,
+      warnings: [diagnostic],
+      pathSetProof: unprovenPathSetProof(inventory, inventory.sourceFiles),
     });
+  if (inventory.sourceFiles.length === 0) {
+    return notApplicableAnalyzerOutput({
+      analyzer: 'TraceDecay',
+      analyzerVersion: '0.0.73',
+      durationMs: 0,
+      code: 'no-eligible-input',
+      message: 'No supported source files were found.',
+    });
+  }
   if (!(yield* fs.exists(command))) {
     return partial('Pinned TraceDecay binary was not found.');
   }
@@ -371,12 +400,12 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
       );
       const complexity = yield* executeTool(
         'complexity',
-        { format: 'json', limit: 500 },
+        { format: 'json', limit: traceDecayResultLimit },
         ComplexityResult,
       );
       const coupling = yield* executeTool(
         'coupling',
-        { format: 'json', direction: 'fan_in', limit: 500 },
+        { format: 'json', direction: 'fan_in', limit: traceDecayResultLimit },
         CouplingResult,
       );
       const circular = yield* executeTool(
@@ -386,19 +415,19 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
       );
       const hotspots = yield* executeTool(
         'hotspots',
-        { format: 'json', limit: 500 },
+        { format: 'json', limit: traceDecayResultLimit },
         HotspotResult,
       );
       const testRisk = yield* executeTool(
         'test_risk',
-        { format: 'json', limit: 500, include_tested: true },
+        { format: 'json', limit: traceDecayResultLimit, include_tested: true },
         TestRiskResult,
       );
       const redundancy = yield* executeTool(
         'redundancy',
         {
           format: 'json',
-          max_pairs: 500,
+          max_pairs: traceDecayResultLimit,
           min_lines: 3,
           similarity_threshold: 0,
           include_naming_only: true,
@@ -408,12 +437,12 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
       );
       const docCoverage = yield* executeTool(
         'doc_coverage',
-        { format: 'json', limit: 500 },
+        { format: 'json', limit: traceDecayResultLimit },
         DocCoverageResult,
       );
       const unsafePatterns = yield* executeTool(
         'unsafe_patterns',
-        { format: 'json', limit: 2_000, exclude_tests: false },
+        { format: 'json', limit: traceDecayResultLimit, exclude_tests: false },
         UnsafeResult,
       );
       const deadCode = yield* executeTool(
@@ -422,22 +451,109 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
         DeadCodeResult,
       );
 
-      if (Option.isSome(redundancy) && redundancy.value.pair_count >= 500) {
-        warnings.push('redundancy: reached the 500-pair hard result envelope');
-      }
-      if (
-        Option.isSome(docCoverage) &&
-        docCoverage.value.files.reduce((total, file) => total + file.count, 0) <
-          docCoverage.value.total_undocumented
-      ) {
-        warnings.push('doc_coverage: not every undocumented symbol was returned');
-      }
-      if (
-        Option.isSome(unsafePatterns) &&
-        unsafePatterns.value.matches.length < unsafePatterns.value.match_count
-      ) {
-        warnings.push('unsafe_patterns: not every match was returned');
-      }
+      const countWarnings = [
+        Option.match(complexity, {
+          onNone: () => undefined,
+          onSome: result =>
+            traceDecayCountTruncationWarning({
+              tool: 'complexity',
+              returned: result.ranking.length,
+              reported: result.result_count,
+              limit: traceDecayResultLimit,
+            }),
+        }),
+        Option.match(coupling, {
+          onNone: () => undefined,
+          onSome: result =>
+            traceDecayCountTruncationWarning({
+              tool: 'coupling',
+              returned: result.ranking.length,
+              reported: result.result_count,
+              limit: traceDecayResultLimit,
+            }),
+        }),
+        Option.match(circular, {
+          onNone: () => undefined,
+          onSome: result =>
+            result.cycles.length !== result.cycle_count
+              ? `circular: returned ${result.cycles.length} of ${result.cycle_count} detected cycles`
+              : undefined,
+        }),
+        Option.match(hotspots, {
+          onNone: () => undefined,
+          onSome: result =>
+            traceDecayCountTruncationWarning({
+              tool: 'hotspots',
+              returned: result.hotspots.length,
+              reported: result.hotspot_count,
+              limit: traceDecayResultLimit,
+            }),
+        }),
+        Option.match(testRisk, {
+          onNone: () => undefined,
+          onSome: result =>
+            traceDecayCountTruncationWarning({
+              tool: 'test_risk',
+              returned: result.risks.length,
+              limit: traceDecayResultLimit,
+            }),
+        }),
+        Option.match(redundancy, {
+          onNone: () => undefined,
+          onSome: result =>
+            traceDecayCountTruncationWarning({
+              tool: 'redundancy',
+              returned: result.pairs.length,
+              reported: result.pair_count,
+              limit: traceDecayResultLimit,
+            }),
+        }),
+        Option.match(docCoverage, {
+          onNone: () => undefined,
+          onSome: result => {
+            const totalSymbols = result.files.reduce(
+              (total, file) => total + file.count,
+              0,
+            );
+            return totalSymbols !== result.total_undocumented
+              ? `doc_coverage: returned ${totalSymbols} of ${result.total_undocumented} undocumented symbols`
+              : traceDecayCountTruncationWarning({
+                tool: 'doc_coverage',
+                returned: result.files.length,
+                reported: result.file_count,
+                limit: traceDecayResultLimit,
+              });
+          },
+        }),
+        Option.match(unsafePatterns, {
+          onNone: () => undefined,
+          onSome: result =>
+            traceDecayCountTruncationWarning({
+              tool: 'unsafe_patterns',
+              returned: result.matches.length,
+              reported: result.match_count,
+              limit: traceDecayResultLimit,
+            }),
+        }),
+        Option.match(deadCode, {
+          onNone: () => undefined,
+          onSome: result =>
+            result.symbols.length !== result.dead_code_count
+              ? `dead_code: returned ${result.symbols.length} of ${result.dead_code_count} dead symbols`
+              : undefined,
+        }),
+        status.file_count !== inventory.sourceFiles.length
+          ? `status: indexed ${status.file_count} files but the audited TraceDecay inventory contains ${inventory.sourceFiles.length}`
+          : undefined,
+        Option.match(health, {
+          onNone: () => undefined,
+          onSome: result =>
+            result.files_analyzed !== inventory.sourceFiles.length
+              ? `health: analyzed ${result.files_analyzed} files but the audited TraceDecay inventory contains ${inventory.sourceFiles.length}`
+              : undefined,
+        }),
+      ];
+      warnings.push(...countWarnings.filter((warning): warning is string => warning !== undefined));
 
       const couplingByFile = new Map(
         Option.match(coupling, {
@@ -473,6 +589,7 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
               const graphEdges = hotspotByFile.get(findingPath ?? row.file) ?? 0;
               return new FindingCandidate({
                 fingerprintSeed: `tracedecay:complexity:${findingPath}:${row.name}:${row.line}`,
+                mechanism: 'Structural complexity hotspot',
                 title: `Structural hotspot: ${row.name}`,
                 category: 'maintainability',
                 summary:
@@ -489,6 +606,7 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
                     line: row.line,
                   }),
                 ],
+                externalReferences: [],
                 tags: [
                   'tracedecay',
                   'complexity',
@@ -514,6 +632,7 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
           candidates.push(
             new FindingCandidate({
               fingerprintSeed: `tracedecay:coupling:${findingPath}`,
+              mechanism: 'Static file coupling',
               title: `High file coupling: ${findingPath}`,
               category: 'architecture',
               summary:
@@ -529,6 +648,7 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
                   path: findingPath,
                 }),
               ],
+              externalReferences: [],
               tags: ['tracedecay', 'coupling', 'architecture'],
               consequence: Math.min(76, 30 + row.coupled_files * 3),
               blastRadius: Math.min(92, 40 + row.coupled_files * 5),
@@ -548,6 +668,7 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
           candidates.push(
             new FindingCandidate({
               fingerprintSeed: `tracedecay:hotspot:${findingPath}:${row.name}:${row.line}`,
+              mechanism: 'Static dependency hotspot',
               title: `Dependency hotspot: ${row.name}`,
               category: 'architecture',
               summary:
@@ -564,6 +685,7 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
                   line: row.line,
                 }),
               ],
+              externalReferences: [],
               tags: ['tracedecay', 'hotspot', 'change-impact'],
               consequence: Math.min(74, 28 + row.total * 2),
               blastRadius: Math.min(94, 38 + row.incoming * 4),
@@ -592,6 +714,7 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
           candidates.push(
             new FindingCandidate({
               fingerprintSeed: `tracedecay:redundancy:${[left.id, right.id].sort().join(':')}`,
+              mechanism: 'Structural duplicate candidate',
               title: `${pair.severity === 'definite' ? 'Definite' : pair.severity === 'likely' ? 'Likely' : 'Possible'} duplicate: ${left.name} / ${right.name}`,
               category: 'maintainability',
               summary:
@@ -615,6 +738,7 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
                   line: right.line,
                 }),
               ],
+              externalReferences: [],
               tags: [
                 'tracedecay',
                 'redundancy',
@@ -641,6 +765,7 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
           candidates.push(
             new FindingCandidate({
               fingerprintSeed: `tracedecay:dead-code:${symbol.file}:${symbol.name}:${symbol.line}`,
+              mechanism: 'Static reachability gap',
               title: `Possibly unreachable: ${symbol.name}`,
               category: 'maintainability',
               summary:
@@ -657,6 +782,7 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
                   line: symbol.line,
                 }),
               ],
+              externalReferences: [],
               tags: [
                 'tracedecay',
                 'dead-code',
@@ -681,6 +807,7 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
           candidates.push(
             new FindingCandidate({
               fingerprintSeed: `tracedecay:doc-coverage:${file.file}`,
+              mechanism: 'Public API documentation coverage',
               title: `${file.count} undocumented public symbols in ${file.file}`,
               category: 'maintainability',
               summary:
@@ -698,6 +825,7 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
                     line: symbol.line,
                   }),
               ),
+              externalReferences: [],
               tags: ['tracedecay', 'documentation', 'public-contract'],
               consequence: Math.min(50, 18 + file.count * 2),
               blastRadius: Math.min(62, 24 + file.count * 3),
@@ -714,6 +842,7 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
           candidates.push(
             new FindingCandidate({
               fingerprintSeed: `tracedecay:unsafe:${match.file}:${match.line}:${match.kind}`,
+              mechanism: 'Unsafe failure pattern',
               title: `Unsafe failure pattern: ${match.kind}`,
               category: 'reliability',
               summary:
@@ -731,6 +860,7 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
                   excerpt: match.source,
                 }),
               ],
+              externalReferences: [],
               tags: [
                 'tracedecay',
                 'unsafe-pattern',
@@ -756,6 +886,7 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
         candidates.push(
           new FindingCandidate({
             fingerprintSeed: 'tracedecay:test-risk:excluded',
+            mechanism: 'Static test-risk attribution coverage',
             title: `Static test attribution excluded ${summary.buckets.excluded} functions`,
             category: 'reliability',
             summary:
@@ -770,6 +901,7 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
                 message: `${summary.buckets.excluded} functions excluded from static test-risk attribution`,
               }),
             ],
+            externalReferences: [],
             tags: [
               'tracedecay',
               'test-risk',
@@ -792,6 +924,7 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
         candidates.push(
           new FindingCandidate({
             fingerprintSeed: 'tracedecay:test-risk:repository',
+            mechanism: 'Static test attribution coverage',
             title: `Static test attribution covers ${summary.coverage_pct.toFixed(1)}% of functions`,
             category: 'reliability',
             summary:
@@ -806,6 +939,7 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
                 message: `${summary.coverage_pct.toFixed(1)}% static test attribution`,
               }),
             ],
+            externalReferences: [],
             tags: ['tracedecay', 'test-risk', 'static-attribution'],
             consequence: Math.min(76, 40 + (100 - summary.coverage_pct) * 0.3),
             blastRadius: Math.min(82, 42 + summary.total_functions / 5),
@@ -821,6 +955,7 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
         candidates.push(
           new FindingCandidate({
             fingerprintSeed: 'tracedecay:circular:repository',
+            mechanism: 'Static dependency cycle',
             title: `${cycleCount} dependency ${cycleCount === 1 ? 'cycle' : 'cycles'} detected`,
             category: 'architecture',
             summary:
@@ -835,6 +970,7 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
                 message: `${cycleCount} static graph cycles detected`,
               }),
             ],
+            externalReferences: [],
             tags: ['tracedecay', 'cycle', 'architecture'],
             consequence: Math.min(80, 48 + cycleCount * 4),
             blastRadius: Math.min(88, 58 + cycleCount * 3),
@@ -888,26 +1024,44 @@ export const runTraceDecay = Effect.fn('runTraceDecay')(function* (input: {
           onNone: () => 0,
           onSome: result => result.dead_code_count,
         });
-      return new AnalyzerOutput({
-        run: new AnalyzerRun({
+      const durationMs = (yield* Clock.currentTimeMillis) - startedAt;
+      const coverageWarnings = [
+        'Static structure does not establish runtime coverage, dynamic dispatch, or business impact.',
+        ...warnings,
+      ];
+      if (warnings.length > 0) {
+        return incompleteAnalyzerOutput({
           analyzer: 'TraceDecay',
           analyzerVersion: '0.0.73',
-          profileVersion: 'structural-max/v2',
-          status: warnings.length > 0 ? 'partial' : 'complete',
-          durationMs: (yield* Clock.currentTimeMillis) - startedAt,
-          coverage: new AnalyzerCoverage({
-            eligibleFiles: status.file_count,
-            analyzedFiles: status.file_count,
-            omittedCapabilities: [
-              'runtime coverage',
-              'dynamic dispatch',
-              'business impact',
-            ],
-            warnings,
-          }),
+          status: 'partial',
+          durationMs,
+          eligibleFiles: inventory.sourceFiles.length,
+          analyzedFiles: status.file_count,
           observationCount,
-        }),
+          diagnostic: 'One or more TraceDecay reports were unavailable.',
+          candidates,
+          warnings: coverageWarnings,
+          pathSetProof: unprovenPathSetProof(
+            inventory,
+            inventory.sourceFiles,
+          ),
+        });
+      }
+      const pathSetProof = pathSetProofAfterExactToolCoverage(
+        inventory,
+        inventory.sourceFiles,
+        inventory.sourceFiles,
+      ) ?? unprovenPathSetProof(inventory, inventory.sourceFiles);
+      return completeAnalyzerOutput({
+        analyzer: 'TraceDecay',
+        analyzerVersion: '0.0.73',
+        durationMs,
+        eligibleFiles: inventory.sourceFiles.length,
+        analyzedFiles: status.file_count,
+        observationCount,
         candidates,
+        warnings: coverageWarnings,
+        pathSetProof,
       });
     }),
   ).pipe(

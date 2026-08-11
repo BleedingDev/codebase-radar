@@ -30,6 +30,15 @@ export class ApiFailure extends Schema.TaggedErrorClass<ApiFailure>()(
   },
 ) {}
 
+/** A deliberately disabled optional product capability, never a core outage. */
+export class CapabilityUnavailable extends Schema.TaggedErrorClass<CapabilityUnavailable>()(
+  'CapabilityUnavailable',
+  {
+    capability: Schema.Literal('agent-priority'),
+    message: Schema.String,
+  },
+) {}
+
 export class InvalidInput extends Schema.TaggedErrorClass<InvalidInput>()(
   'InvalidInput',
   {
@@ -48,9 +57,22 @@ export class HealthResponse extends Schema.Class<HealthResponse>('HealthResponse
   runtime: Schema.Literal('ultramodern-effect'),
 }) {}
 
+export const AgentPriorityCapabilityStatus = Schema.Literals([
+  'ready',
+  'unavailable',
+]);
+
+/** Always present so a core-ready deployment cannot hide Agent Priority state. */
+export class AgentPriorityCapability extends Schema.Class<AgentPriorityCapability>(
+  'AgentPriorityCapability',
+)({
+  status: AgentPriorityCapabilityStatus,
+}) {}
+
 export class ReadyResponse extends Schema.Class<ReadyResponse>('ReadyResponse')({
   status: Schema.Literal('ready'),
   storage: Schema.Literals(['memory', 'postgres']),
+  agentPriority: AgentPriorityCapability,
 }) {}
 
 export class ScanListResponse extends Schema.Class<ScanListResponse>(
@@ -60,6 +82,7 @@ export class ScanListResponse extends Schema.Class<ScanListResponse>(
 }) {}
 
 const ApiFailureHttp = ApiFailure.pipe(HttpApiSchema.status(500));
+const CapabilityUnavailableHttp = CapabilityUnavailable.pipe(HttpApiSchema.status(503));
 const InvalidInputHttp = InvalidInput.pipe(HttpApiSchema.status(400));
 const NotFoundHttp = NotFound.pipe(HttpApiSchema.status(404));
 
@@ -84,34 +107,38 @@ export const RadarApi = HttpApi.make('RadarApi').add(
     )
     .add(
       HttpApiEndpoint.get('listAgentProfiles', '/agent-profiles', {
-        error: ApiFailureHttp,
+        error: Schema.Union([ApiFailureHttp, CapabilityUnavailableHttp]),
         success: AgentProfileList,
       }),
     )
     .add(
       HttpApiEndpoint.post('createAgentProfile', '/agent-profiles', {
-        error: ApiFailureHttp,
+        error: Schema.Union([ApiFailureHttp, CapabilityUnavailableHttp]),
         payload: Schema.Struct({ provider: AgentProvider }),
         success: AgentProfile,
       }),
     )
     .add(
       HttpApiEndpoint.post('beginAgentLogin', '/agent-profiles/:profileId/login', {
-        error: Schema.Union([NotFoundHttp, ApiFailureHttp]),
+        error: Schema.Union([
+          NotFoundHttp,
+          ApiFailureHttp,
+          CapabilityUnavailableHttp,
+        ]),
         params: { profileId: Schema.String },
         success: AgentLoginChallenge,
       }),
     )
     .add(
       HttpApiEndpoint.get('pollAgentLogin', '/agent-logins/:challengeId', {
-        error: ApiFailureHttp,
+        error: Schema.Union([ApiFailureHttp, CapabilityUnavailableHttp]),
         params: { challengeId: Schema.String },
         success: AgentLoginChallenge,
       }),
     )
     .add(
       HttpApiEndpoint.post('submitAgentLoginInput', '/agent-logins/:challengeId/input', {
-        error: ApiFailureHttp,
+        error: Schema.Union([ApiFailureHttp, CapabilityUnavailableHttp]),
         params: { challengeId: Schema.String },
         payload: Schema.Struct({ value: Schema.String }),
         success: AgentLoginChallenge,
@@ -119,28 +146,41 @@ export const RadarApi = HttpApi.make('RadarApi').add(
     )
     .add(
       HttpApiEndpoint.delete('cancelAgentLogin', '/agent-logins/:challengeId', {
-        error: ApiFailureHttp,
+        error: Schema.Union([ApiFailureHttp, CapabilityUnavailableHttp]),
         params: { challengeId: Schema.String },
         success: Schema.Void,
       }),
     )
     .add(
       HttpApiEndpoint.post('refreshAgentProfile', '/agent-profiles/:profileId/status', {
-        error: Schema.Union([NotFoundHttp, ApiFailureHttp]),
+        error: Schema.Union([
+          NotFoundHttp,
+          ApiFailureHttp,
+          CapabilityUnavailableHttp,
+        ]),
         params: { profileId: Schema.String },
         success: AgentProfile,
       }),
     )
     .add(
       HttpApiEndpoint.delete('disconnectAgentProfile', '/agent-profiles/:profileId', {
-        error: Schema.Union([NotFoundHttp, ApiFailureHttp]),
+        error: Schema.Union([
+          NotFoundHttp,
+          ApiFailureHttp,
+          CapabilityUnavailableHttp,
+        ]),
         params: { profileId: Schema.String },
         success: Schema.Void,
       }),
     )
     .add(
       HttpApiEndpoint.post('createPriorityReview', '/scans/:scanId/priority-reviews', {
-        error: Schema.Union([InvalidInputHttp, NotFoundHttp, ApiFailureHttp]),
+        error: Schema.Union([
+          InvalidInputHttp,
+          NotFoundHttp,
+          ApiFailureHttp,
+          CapabilityUnavailableHttp,
+        ]),
         params: { scanId: Schema.String },
         payload: Schema.Struct({ profileId: Schema.String }),
         success: AgentPriorityReview,
@@ -148,9 +188,20 @@ export const RadarApi = HttpApi.make('RadarApi').add(
     )
     .add(
       HttpApiEndpoint.get('getPriorityReview', '/priority-reviews/:reviewId', {
-        error: Schema.Union([NotFoundHttp, ApiFailureHttp]),
+        error: Schema.Union([
+          NotFoundHttp,
+          ApiFailureHttp,
+          CapabilityUnavailableHttp,
+        ]),
         params: { reviewId: Schema.String },
         success: AgentPriorityReview,
+      }),
+    )
+    .add(
+      HttpApiEndpoint.delete('cancelPriorityReview', '/priority-reviews/:reviewId', {
+        error: Schema.Union([ApiFailureHttp, CapabilityUnavailableHttp]),
+        params: { reviewId: Schema.String },
+        success: Schema.Void,
       }),
     )
     .add(
@@ -169,7 +220,6 @@ export const RadarApi = HttpApi.make('RadarApi').add(
         payload: Schema.Struct({
           repository: Schema.String,
           audience: Audience,
-          profileId: Schema.optional(Schema.String),
         }),
         success: ScanRecord,
       }),

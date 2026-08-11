@@ -1,0 +1,16 @@
+name: Unsafe fixture
+
+on:
+  pull_request_target:
+
+permissions: write-all
+
+jobs:
+  inspect-untrusted-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: true
+      - uses: github/codeql-action/analyze@main

@@ -1,0 +1,84 @@
+diff --git a/dist/cjs/plugins/deploy/platforms/node.js b/dist/cjs/plugins/deploy/platforms/node.js
+index 9bc82ece82fc9145756b3679641532506a7e1655..5b5045a80823fbf3023e8663c51cca239a937162 100644
+--- a/dist/cjs/plugins/deploy/platforms/node.js
++++ b/dist/cjs/plugins/deploy/platforms/node.js
+@@ -78,6 +78,10 @@ const createNodePreset = ({ appContext, modernConfig })=>{
+             const filter = (filePath)=>!filePath.startsWith(staticDirectory) && !filePath.endsWith('.map');
+             const entry = isEsmProject ? await (0, index_js_namespaceObject.resolveESMDependency)('@modern-js/prod-server') : require.resolve('@modern-js/prod-server');
+             if (!entry) throw new Error('Cannot find @modern-js/prod-server');
++            const nodeModulesMarker = `${external_node_path_default().sep}node_modules${external_node_path_default().sep}`;
++            const nodeModulesIndex = entry.indexOf(nodeModulesMarker);
++            if (nodeModulesIndex <= 0) throw new Error('Cannot determine the deploy trace root from @modern-js/prod-server');
++            const traceRoot = entry.slice(0, nodeModulesIndex);
+             const prodServerPackage = await (0, npmAliases_js_namespaceObject.readPackageIdentity)(entry);
+             await (0, external_ndepe_namespaceObject.nodeDepEmit)({
+                 appDir: appDirectory,
+@@ -89,6 +93,12 @@ const createNodePreset = ({ appContext, modernConfig })=>{
+                     return '@modern-js/utils' === pkgName;
+                 },
+                 entryFilter: filter,
++                traceOptions: {
++                    ignore (filePath) {
++                        const absolutePath = external_node_path_default().resolve('/', filePath);
++                        return absolutePath !== traceRoot && !absolutePath.startsWith(`${traceRoot}${external_node_path_default().sep}`);
++                    }
++                },
+                 transformPackageJson: ({ pkgJSON })=>{
+                     if (!pkgJSON.exports) return pkgJSON;
+                     return {
+diff --git a/dist/esm/plugins/deploy/platforms/node.mjs b/dist/esm/plugins/deploy/platforms/node.mjs
+index 89bf0a3b68d5ed9032efa2ec65d7022f70b1ecf3..15c50530b11347184fab29a998093b5963f88864 100644
+--- a/dist/esm/plugins/deploy/platforms/node.mjs
++++ b/dist/esm/plugins/deploy/platforms/node.mjs
+@@ -36,6 +36,10 @@ const createNodePreset = ({ appContext, modernConfig })=>{
+             const filter = (filePath)=>!filePath.startsWith(staticDirectory) && !filePath.endsWith('.map');
+             const entry = isEsmProject ? await resolveESMDependency('@modern-js/prod-server') : require.resolve('@modern-js/prod-server');
+             if (!entry) throw new Error('Cannot find @modern-js/prod-server');
++            const nodeModulesMarker = `${node_path.sep}node_modules${node_path.sep}`;
++            const nodeModulesIndex = entry.indexOf(nodeModulesMarker);
++            if (nodeModulesIndex <= 0) throw new Error('Cannot determine the deploy trace root from @modern-js/prod-server');
++            const traceRoot = entry.slice(0, nodeModulesIndex);
+             const prodServerPackage = await readPackageIdentity(entry);
+             await nodeDepEmit({
+                 appDir: appDirectory,
+@@ -47,6 +51,12 @@ const createNodePreset = ({ appContext, modernConfig })=>{
+                     return '@modern-js/utils' === pkgName;
+                 },
+                 entryFilter: filter,
++                traceOptions: {
++                    ignore (filePath) {
++                        const absolutePath = node_path.resolve('/', filePath);
++                        return absolutePath !== traceRoot && !absolutePath.startsWith(`${traceRoot}${node_path.sep}`);
++                    }
++                },
+                 transformPackageJson: ({ pkgJSON })=>{
+                     if (!pkgJSON.exports) return pkgJSON;
+                     return {
+diff --git a/dist/esm-node/plugins/deploy/platforms/node.mjs b/dist/esm-node/plugins/deploy/platforms/node.mjs
+index 18476182a42d05ceeaf49aa090db1ed454a4cf2d..d4ec08e6a644cc22cf187eca381bfec012eb62be 100644
+--- a/dist/esm-node/plugins/deploy/platforms/node.mjs
++++ b/dist/esm-node/plugins/deploy/platforms/node.mjs
+@@ -38,6 +38,10 @@ const createNodePreset = ({ appContext, modernConfig })=>{
+             const filter = (filePath)=>!filePath.startsWith(staticDirectory) && !filePath.endsWith('.map');
+             const entry = isEsmProject ? await resolveESMDependency('@modern-js/prod-server') : require.resolve('@modern-js/prod-server');
+             if (!entry) throw new Error('Cannot find @modern-js/prod-server');
++            const nodeModulesMarker = `${node_path.sep}node_modules${node_path.sep}`;
++            const nodeModulesIndex = entry.indexOf(nodeModulesMarker);
++            if (nodeModulesIndex <= 0) throw new Error('Cannot determine the deploy trace root from @modern-js/prod-server');
++            const traceRoot = entry.slice(0, nodeModulesIndex);
+             const prodServerPackage = await readPackageIdentity(entry);
+             await nodeDepEmit({
+                 appDir: appDirectory,
+@@ -49,6 +53,12 @@ const createNodePreset = ({ appContext, modernConfig })=>{
+                     return '@modern-js/utils' === pkgName;
+                 },
+                 entryFilter: filter,
++                traceOptions: {
++                    ignore (filePath) {
++                        const absolutePath = node_path.resolve('/', filePath);
++                        return absolutePath !== traceRoot && !absolutePath.startsWith(`${traceRoot}${node_path.sep}`);
++                    }
++                },
+                 transformPackageJson: ({ pkgJSON })=>{
+                     if (!pkgJSON.exports) return pkgJSON;
+                     return {

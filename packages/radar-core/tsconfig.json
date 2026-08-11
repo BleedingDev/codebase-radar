@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2024",
+    "types": ["node", "vitest/globals"],
+    "verbatimModuleSyntax": true
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}

@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "forceConsistentCasingInFileNames": true,
+    "lib": ["ES2024"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2024",
+    "types": ["node", "vitest/globals"],
+    "verbatimModuleSyntax": true
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts", "vitest.config.ts"]
+}
